@@ -4,17 +4,13 @@
  * and Redis for production
  */
 
-import { RateLimiterMemory, RateLimiterRedis } from 'rate-limiter-flexible';
-import type { RateLimiterAbstract } from 'rate-limiter-flexible';
-import { logger } from './logger';
-import {
-  RATE_LIMIT_TIERS,
-  type RateLimitTier,
-  getRateLimitTierForPath,
-} from './security';
+import { RateLimiterMemory, RateLimiterRedis } from 'rate-limiter-flexible'
+import type { RateLimiterAbstract } from 'rate-limiter-flexible'
+import { logger } from './logger'
+import { RATE_LIMIT_TIERS, type RateLimitTier, getRateLimitTierForPath } from './security'
 
 // Determine if we're in production
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction = process.env.NODE_ENV === 'production'
 
 // Redis configuration (production only)
 const redisConfig = {
@@ -22,7 +18,7 @@ const redisConfig = {
   port: parseInt(process.env.REDIS_PORT || '6379', 10),
   password: process.env.REDIS_PASSWORD,
   enableOfflineQueue: false,
-};
+}
 
 /**
  * Create a rate limiter instance for a specific tier
@@ -30,7 +26,7 @@ const redisConfig = {
  * @returns Rate limiter instance
  */
 function createRateLimiter(tier: RateLimitTier): RateLimiterAbstract {
-  const config = RATE_LIMIT_TIERS[tier];
+  const config = RATE_LIMIT_TIERS[tier]
 
   // In production with Redis available, use Redis store
   if (isProduction && process.env.REDIS_HOST) {
@@ -40,12 +36,12 @@ function createRateLimiter(tier: RateLimitTier): RateLimiterAbstract {
         keyPrefix: `rate_limit_${tier}`,
         points: config.points,
         duration: config.duration,
-      });
-    } catch (error) {
+      })
+    } catch (_error) {
       logger.warn(
-        { error, tier },
+        { _error, tier },
         'Failed to create Redis rate limiter, falling back to memory store'
-      );
+      )
     }
   }
 
@@ -54,7 +50,7 @@ function createRateLimiter(tier: RateLimitTier): RateLimiterAbstract {
     keyPrefix: `rate_limit_${tier}`,
     points: config.points,
     duration: config.duration,
-  });
+  })
 }
 
 // Cache of rate limiter instances
@@ -66,17 +62,17 @@ const rateLimiters: Record<RateLimitTier, RateLimiterAbstract> = {
   admin: createRateLimiter('admin'),
   chat: createRateLimiter('chat'),
   chart: createRateLimiter('chart'),
-};
+}
 
 /**
  * Rate limit check result
  */
 export interface RateLimitResult {
-  allowed: boolean;
-  limit: number;
-  remaining: number;
-  resetTime: Date;
-  retryAfter?: number; // Seconds until next request allowed
+  allowed: boolean
+  limit: number
+  remaining: number
+  resetTime: Date
+  retryAfter?: number // Seconds until next request allowed
 }
 
 /**
@@ -89,11 +85,11 @@ export async function checkRateLimit(
   identifier: string,
   tier: RateLimitTier = 'default'
 ): Promise<RateLimitResult> {
-  const limiter = rateLimiters[tier];
-  const config = RATE_LIMIT_TIERS[tier];
+  const limiter = rateLimiters[tier]
+  const config = RATE_LIMIT_TIERS[tier]
 
   try {
-    const rateLimitRes = await limiter.consume(identifier);
+    const rateLimitRes = await limiter.consume(identifier)
 
     // Request allowed
     return {
@@ -101,29 +97,29 @@ export async function checkRateLimit(
       limit: config.points,
       remaining: rateLimitRes.remainingPoints,
       resetTime: new Date(Date.now() + rateLimitRes.msBeforeNext),
-    };
+    }
   } catch (rejRes) {
     // Request blocked - rate limit exceeded
     if (rejRes && typeof rejRes === 'object' && 'msBeforeNext' in rejRes) {
-      const msBeforeNext = (rejRes as { msBeforeNext: number }).msBeforeNext;
+      const msBeforeNext = (rejRes as { msBeforeNext: number }).msBeforeNext
       return {
         allowed: false,
         limit: config.points,
         remaining: 0,
         resetTime: new Date(Date.now() + msBeforeNext),
         retryAfter: Math.ceil(msBeforeNext / 1000),
-      };
+      }
     }
 
     // Unknown error, block the request
-    logger.error({ error: rejRes, identifier, tier }, 'Rate limiter error');
+    logger.error({ error: rejRes, identifier, tier }, 'Rate limiter error')
     return {
       allowed: false,
       limit: config.points,
       remaining: 0,
       resetTime: new Date(Date.now() + 60000),
       retryAfter: 60,
-    };
+    }
   }
 }
 
@@ -137,8 +133,8 @@ export async function checkRateLimitForPath(
   identifier: string,
   path: string
 ): Promise<RateLimitResult> {
-  const tier = getRateLimitTierForPath(path);
-  return checkRateLimit(identifier, tier);
+  const tier = getRateLimitTierForPath(path)
+  return checkRateLimit(identifier, tier)
 }
 
 /**
@@ -151,13 +147,13 @@ export function getRateLimitHeaders(result: RateLimitResult): Record<string, str
     'X-RateLimit-Limit': String(result.limit),
     'X-RateLimit-Remaining': String(result.remaining),
     'X-RateLimit-Reset': String(Math.ceil(result.resetTime.getTime() / 1000)),
-  };
-
-  if (result.retryAfter) {
-    headers['Retry-After'] = String(result.retryAfter);
   }
 
-  return headers;
+  if (result.retryAfter) {
+    headers['Retry-After'] = String(result.retryAfter)
+  }
+
+  return headers
 }
 
 /**
@@ -172,24 +168,21 @@ export async function penalizeClient(
   tier: RateLimitTier = 'default',
   points: number = 5
 ): Promise<void> {
-  const limiter = rateLimiters[tier];
+  const limiter = rateLimiters[tier]
 
   try {
     // Consume the specified points
     for (let i = 0; i < points; i++) {
-      await limiter.consume(identifier);
+      await limiter.consume(identifier)
     }
 
-    logger.warn(
-      { identifier, tier, points },
-      'Rate limit penalty applied'
-    );
-  } catch (error) {
+    logger.warn({ identifier, tier, points }, 'Rate limit penalty applied')
+  } catch {
     // Already at limit, which is fine for a penalty
     logger.info(
       { identifier, tier, points },
       'Rate limit penalty applied (client already at limit)'
-    );
+    )
   }
 }
 
@@ -198,23 +191,16 @@ export async function penalizeClient(
  * @param identifier Client identifier
  * @param tier Rate limit tier (if not provided, resets all tiers)
  */
-export async function resetRateLimit(
-  identifier: string,
-  tier?: RateLimitTier
-): Promise<void> {
+export async function resetRateLimit(identifier: string, tier?: RateLimitTier): Promise<void> {
   if (tier) {
-    const limiter = rateLimiters[tier];
-    await limiter.delete(identifier);
+    const limiter = rateLimiters[tier]
+    await limiter.delete(identifier)
   } else {
     // Reset all tiers
-    await Promise.all(
-      Object.values(rateLimiters).map((limiter) =>
-        limiter.delete(identifier)
-      )
-    );
+    await Promise.all(Object.values(rateLimiters).map(limiter => limiter.delete(identifier)))
   }
 
-  logger.info({ identifier, tier: tier || 'all' }, 'Rate limit reset');
+  logger.info({ identifier, tier: tier || 'all' }, 'Rate limit reset')
 }
 
 /**
@@ -227,11 +213,11 @@ export async function getRateLimitStatus(
   identifier: string,
   tier: RateLimitTier = 'default'
 ): Promise<RateLimitResult> {
-  const limiter = rateLimiters[tier];
-  const config = RATE_LIMIT_TIERS[tier];
+  const limiter = rateLimiters[tier]
+  const config = RATE_LIMIT_TIERS[tier]
 
   try {
-    const res = await limiter.get(identifier);
+    const res = await limiter.get(identifier)
 
     if (!res) {
       // No record exists, full limit available
@@ -240,7 +226,7 @@ export async function getRateLimitStatus(
         limit: config.points,
         remaining: config.points,
         resetTime: new Date(Date.now() + config.duration * 1000),
-      };
+      }
     }
 
     return {
@@ -248,14 +234,14 @@ export async function getRateLimitStatus(
       limit: config.points,
       remaining: res.remainingPoints,
       resetTime: new Date(Date.now() + res.msBeforeNext),
-    };
-  } catch (error) {
-    logger.error({ error, identifier, tier }, 'Error getting rate limit status');
+    }
+  } catch (_error) {
+    logger.error({ _error, identifier, tier }, 'Error getting rate limit status')
     return {
       allowed: false,
       limit: config.points,
       remaining: 0,
       resetTime: new Date(Date.now() + 60000),
-    };
+    }
   }
 }

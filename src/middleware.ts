@@ -3,14 +3,14 @@
  * Handles security headers, rate limiting, and request logging
  */
 
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { logger, logSecurity } from './lib/logger';
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { logger, logSecurity } from './lib/logger'
 import {
   checkRateLimitForPath,
   getRateLimitHeaders,
   type RateLimitResult,
-} from './lib/rate-limiter';
+} from './lib/rate-limiter'
 import {
   generateNonce,
   generateRequestId,
@@ -18,7 +18,7 @@ import {
   isSuspiciousUserAgent,
   SECURITY_HEADERS,
   generateCspHeader,
-} from './lib/security';
+} from './lib/security'
 
 // ============================================================================
 // Configuration
@@ -33,22 +33,22 @@ const RATE_LIMIT_EXEMPT_PATHS = [
   '/sitemap.xml',
   '/health',
   '/api/health',
-];
+]
 
-// Paths that are always public
-const PUBLIC_PATHS = [
-  '/',
-  '/login',
-  '/register',
-  '/forgot-password',
-  '/reset-password',
-  '/about',
-  '/pricing',
-  '/privacy',
-  '/terms',
-  '/api/auth',
-  '/api/webhook',
-];
+// Paths that are always public (for future use in auth middleware)
+// const PUBLIC_PATHS = [
+//   '/',
+//   '/login',
+//   '/register',
+//   '/forgot-password',
+//   '/reset-password',
+//   '/about',
+//   '/pricing',
+//   '/privacy',
+//   '/terms',
+//   '/api/auth',
+//   '/api/webhook',
+// ];
 
 // File extensions to skip middleware processing
 const STATIC_EXTENSIONS = [
@@ -66,7 +66,7 @@ const STATIC_EXTENSIONS = [
   '.eot',
   '.json',
   '.xml',
-];
+]
 
 // ============================================================================
 // Helper Functions
@@ -76,16 +76,14 @@ const STATIC_EXTENSIONS = [
  * Check if path should bypass rate limiting
  */
 function isRateLimitExempt(path: string): boolean {
-  return RATE_LIMIT_EXEMPT_PATHS.some(
-    (exempt) => path.startsWith(exempt) || path === exempt
-  );
+  return RATE_LIMIT_EXEMPT_PATHS.some(exempt => path.startsWith(exempt) || path === exempt)
 }
 
 /**
  * Check if path is a static file
  */
 function isStaticFile(path: string): boolean {
-  return STATIC_EXTENSIONS.some((ext) => path.endsWith(ext));
+  return STATIC_EXTENSIONS.some(ext => path.endsWith(ext))
 }
 
 /**
@@ -93,14 +91,14 @@ function isStaticFile(path: string): boolean {
  * Combines IP and user ID if available
  */
 function getUserIdentifier(request: NextRequest): string {
-  const ip = getClientIp(Object.fromEntries(request.headers.entries()));
-  const userId = request.cookies.get('user_id')?.value;
+  const ip = getClientIp(Object.fromEntries(request.headers.entries()))
+  const userId = request.cookies.get('user_id')?.value
 
   if (userId) {
-    return `${ip}:${userId}`;
+    return `${ip}:${userId}`
   }
 
-  return ip;
+  return ip
 }
 
 /**
@@ -119,16 +117,13 @@ function logSecurityEvent(
     userAgent: request.headers.get('user-agent')?.slice(0, 200),
     requestId: request.headers.get('x-request-id'),
     ...context,
-  });
+  })
 }
 
 /**
  * Create rate limit exceeded response
  */
-function createRateLimitResponse(
-  result: RateLimitResult,
-  requestId: string
-): NextResponse {
+function createRateLimitResponse(result: RateLimitResult, requestId: string): NextResponse {
   const response = NextResponse.json(
     {
       error: 'Rate limit exceeded',
@@ -142,9 +137,9 @@ function createRateLimitResponse(
         'X-Request-Id': requestId,
       },
     }
-  );
+  )
 
-  return response;
+  return response
 }
 
 /**
@@ -162,7 +157,7 @@ function createForbiddenResponse(requestId: string): NextResponse {
         'X-Request-Id': requestId,
       },
     }
-  );
+  )
 }
 
 // ============================================================================
@@ -170,56 +165,56 @@ function createForbiddenResponse(requestId: string): NextResponse {
 // ============================================================================
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
-  const startTime = performance.now();
-  const requestId = generateRequestId();
-  const path = request.nextUrl.pathname;
-  const method = request.method;
+  const startTime = performance.now()
+  const requestId = generateRequestId()
+  const path = request.nextUrl.pathname
+  const method = request.method
 
   // Generate CSP nonce for this request
-  const nonce = generateNonce();
+  const nonce = generateNonce()
 
   // Skip middleware for static files
   if (isStaticFile(path)) {
-    return NextResponse.next();
+    return NextResponse.next()
   }
 
   // Check for suspicious user agents
-  const userAgent = request.headers.get('user-agent');
+  const userAgent = request.headers.get('user-agent')
   if (isSuspiciousUserAgent(userAgent)) {
     logSecurityEvent('suspicious_user_agent', 'warn', request, {
       userAgent: userAgent?.slice(0, 200),
-    });
+    })
 
-    return createForbiddenResponse(requestId);
+    return createForbiddenResponse(requestId)
   }
 
   // Check rate limit for this request
   if (!isRateLimitExempt(path)) {
-    const identifier = getUserIdentifier(request);
-    const rateLimitResult = await checkRateLimitForPath(identifier, path);
+    const identifier = getUserIdentifier(request)
+    const rateLimitResult = await checkRateLimitForPath(identifier, path)
 
     if (!rateLimitResult.allowed) {
       logSecurityEvent('rate_limit_exceeded', 'warn', request, {
         identifier: identifier.slice(0, 50), // Partial for privacy
         retryAfter: rateLimitResult.retryAfter,
-      });
+      })
 
-      return createRateLimitResponse(rateLimitResult, requestId);
+      return createRateLimitResponse(rateLimitResult, requestId)
     }
 
     // Continue with rate limit headers
-    const rateLimitHeaders = getRateLimitHeaders(rateLimitResult);
+    const rateLimitHeaders = getRateLimitHeaders(rateLimitResult)
 
     // Process the request
-    const response = await processRequest(request, requestId, nonce);
+    const response = await processRequest(request, requestId, nonce)
 
     // Add rate limit headers to response
     Object.entries(rateLimitHeaders).forEach(([key, value]) => {
-      response.headers.set(key, value);
-    });
+      response.headers.set(key, value)
+    })
 
     // Log request completion
-    const duration = Math.round(performance.now() - startTime);
+    const duration = Math.round(performance.now() - startTime)
     logger.info(
       {
         requestId,
@@ -229,15 +224,15 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
         rateLimitRemaining: rateLimitResult.remaining,
       },
       `${method} ${path} - ${duration}ms`
-    );
+    )
 
-    return response;
+    return response
   }
 
   // Process without rate limiting
-  const response = await processRequest(request, requestId, nonce);
+  const response = await processRequest(request, requestId, nonce)
 
-  const duration = Math.round(performance.now() - startTime);
+  const duration = Math.round(performance.now() - startTime)
   logger.debug(
     {
       requestId,
@@ -246,9 +241,9 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       duration,
     },
     `${method} ${path} - ${duration}ms (exempt)`
-  );
+  )
 
-  return response;
+  return response
 }
 
 /**
@@ -260,9 +255,9 @@ async function processRequest(
   nonce: string
 ): Promise<NextResponse> {
   // Clone headers and add request ID
-  const headers = new Headers(request.headers);
-  headers.set('x-request-id', requestId);
-  headers.set('x-csp-nonce', nonce);
+  const headers = new Headers(request.headers)
+  headers.set('x-request-id', requestId)
+  headers.set('x-csp-nonce', nonce)
 
   // Create modified request
   const modifiedRequest = new NextRequest(request.url, {
@@ -278,20 +273,20 @@ async function processRequest(
     referrer: request.referrer,
     referrerPolicy: request.referrerPolicy,
     signal: request.signal,
-  });
+  })
 
   // Get the response
   const response = NextResponse.next({
     request: modifiedRequest,
-  });
+  })
 
   // Add security headers
-  addSecurityHeaders(response, nonce);
+  addSecurityHeaders(response, nonce)
 
   // Add request ID to response
-  response.headers.set('X-Request-Id', requestId);
+  response.headers.set('X-Request-Id', requestId)
 
-  return response;
+  return response
 }
 
 /**
@@ -300,16 +295,16 @@ async function processRequest(
 function addSecurityHeaders(response: NextResponse, nonce: string): void {
   // Add standard security headers
   Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
-    response.headers.set(key, value);
-  });
+    response.headers.set(key, value)
+  })
 
   // Add Content Security Policy with nonce
-  const cspHeader = generateCspHeader(nonce);
-  response.headers.set('Content-Security-Policy', cspHeader);
+  const cspHeader = generateCspHeader(nonce)
+  response.headers.set('Content-Security-Policy', cspHeader)
 
   // Add additional headers
-  response.headers.set('X-DNS-Prefetch-Control', 'on');
-  response.headers.set('X-Download-Options', 'noopen');
+  response.headers.set('X-DNS-Prefetch-Control', 'on')
+  response.headers.set('X-Download-Options', 'noopen')
 }
 
 // ============================================================================
@@ -332,4 +327,4 @@ export const config = {
       ],
     },
   ],
-};
+}
