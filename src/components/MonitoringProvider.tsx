@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useCallback, ReactNode } from 'react'
 import { initPerformanceTracking, reportWebVitals, cleanupPerformanceTracking } from '@/lib/monitoring/performance'
+import { logger } from '@/lib/logger'
 import * as Sentry from '@sentry/nextjs'
 
 interface MonitoringContextType {
@@ -27,7 +28,7 @@ export function MonitoringProvider({
   children,
   userId,
   userProperties,
-}: MonitoringProviderProps) {
+}: MonitoringProviderProps): JSX.Element {
   // Initialize performance tracking on mount
   useEffect(() => {
     initPerformanceTracking()
@@ -50,7 +51,7 @@ export function MonitoringProvider({
 
     // Make handler available globally for Next.js
     if (typeof window !== 'undefined') {
-      (window as any).webVitals = reportWebVitalsHandler
+      (window as unknown as { webVitals: typeof reportWebVitalsHandler }).webVitals = reportWebVitalsHandler
     }
 
     return () => {
@@ -80,14 +81,13 @@ export function MonitoringProvider({
     })
 
     // Send to analytics if configured
-    if (typeof window !== 'undefined' && (window as any).gtag) {
-      (window as any).gtag('event', eventName, properties)
+    if (typeof window !== 'undefined' && (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag) {
+      (window as unknown as { gtag: (...args: unknown[]) => void }).gtag('event', eventName, properties)
     }
 
     // Log in development
     if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
-      console.log('[Analytics]', eventName, properties)
+      logger.debug({ event: eventName, properties }, '[Analytics]')
     }
   }, [])
 
@@ -100,8 +100,7 @@ export function MonitoringProvider({
 
     // Log in development
     if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
-      console.error('[Analytics Error]', error, context)
+      logger.error({ error: error.message, context }, '[Analytics Error]')
     }
   }, [])
 
@@ -114,8 +113,8 @@ export function MonitoringProvider({
     })
 
     // Send to analytics if configured
-    if (typeof window !== 'undefined' && (window as any).gtag) {
-      (window as any).gtag('config', process.env.NEXT_PUBLIC_GA_ID, {
+    if (typeof window !== 'undefined' && (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag) {
+      (window as unknown as { gtag: (...args: unknown[]) => void }).gtag('config', process.env.NEXT_PUBLIC_GA_ID, {
         page_title: pageName,
         page_location: typeof window !== 'undefined' ? window.location.href : '',
         ...properties,
@@ -124,8 +123,7 @@ export function MonitoringProvider({
 
     // Log in development
     if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
-      console.log('[Page View]', pageName, properties)
+      logger.debug({ page: pageName, properties }, '[Page View]')
     }
   }, [])
 

@@ -3,6 +3,8 @@
  * Comprehensive error handling for StarPath Astrology
  */
 
+import { logger, logError as logErrorToLogger } from './logger'
+
 // Environment check
 const isProduction = process.env.NODE_ENV === 'production'
 const isDevelopment = process.env.NODE_ENV === 'development'
@@ -207,26 +209,11 @@ export function getErrorResponse(error: Error): ErrorResponse {
  * Logs errors without exposing sensitive information
  */
 export function logError(error: Error, context?: Record<string, unknown>): void {
-  const timestamp = new Date().toISOString()
-
-  // Build safe context (exclude sensitive fields)
-  const safeContext = context
-    ? Object.fromEntries(
-        Object.entries(context).filter(
-          ([key]) =>
-            !['password', 'token', 'secret', 'apiKey', 'creditCard', 'ssn'].some(
-              sensitive => key.toLowerCase().includes(sensitive)
-            )
-        )
-      )
-    : undefined
-
   const errorData = {
-    timestamp,
     name: error.name,
     message: error.message,
     stack: isDevelopment ? error.stack : undefined,
-    context: safeContext,
+    context,
     ...(error instanceof AppError && {
       statusCode: error.statusCode,
       severity: error.severity,
@@ -234,18 +221,8 @@ export function logError(error: Error, context?: Record<string, unknown>): void 
     }),
   }
 
-  // Use console.error in development, structured logging in production
-  if (isDevelopment) {
-    console.error('[ERROR]', errorData)
-  } else {
-    // Production: structured JSON log for log aggregation
-    console.error(JSON.stringify(errorData))
-
-    // TODO: Send to error tracking service (Sentry, etc.)
-    // if (process.env.SENTRY_DSN) {
-    //   captureException(error, { extra: safeContext })
-    // }
-  }
+  // Use structured logger
+  logger.error(errorData, error.message)
 }
 
 /**
@@ -258,9 +235,9 @@ export async function reportError(
 ): Promise<{ success: boolean; reportId?: string }> {
   const reportId = `ERR-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
-  const reportData = {
+  // Log the report
+  logger.error({
     reportId,
-    timestamp: new Date().toISOString(),
     error: {
       name: error.name,
       message: error.message,
@@ -269,10 +246,10 @@ export async function reportError(
     userDescription,
     userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'server',
     url: typeof window !== 'undefined' ? window.location.href : undefined,
-  }
-
-  // Log the report
-  console.error('[ERROR REPORT]', reportData)
+  }, 'Error report submitted')
+    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'server',
+    url: typeof window !== 'undefined' ? window.location.href : undefined,
+  }, 'Error report submitted')
 
   // TODO: Send to error tracking service
   // if (process.env.ERROR_REPORTING_ENDPOINT) {
@@ -283,7 +260,7 @@ export async function reportError(
   //       body: JSON.stringify(reportData),
   //     })
   //   } catch (e) {
-  //     console.error('Failed to send error report:', e)
+  //     logger.error({ error: e }, 'Failed to send error report')
   //   }
   // }
 

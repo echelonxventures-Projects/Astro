@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/nextjs'
+import { logger } from '../logger'
 
 // Sentry DSN from environment
 const SENTRY_DSN = process.env.SENTRY_DSN
@@ -111,7 +112,7 @@ function sanitizeEvent(event: Sentry.Event): Sentry.Event {
  */
 export function initSentry() {
   if (!SENTRY_DSN) {
-    console.log('Sentry: No DSN configured, skipping initialization')
+    logger.info('Sentry: No DSN configured, skipping initialization')
     return
   }
 
@@ -189,7 +190,7 @@ export function initSentry() {
     debug: ENVIRONMENT === 'development',
   })
 
-  console.log('Sentry: Initialized successfully')
+  logger.info('Sentry: Initialized successfully')
 }
 
 /**
