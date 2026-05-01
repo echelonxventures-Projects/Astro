@@ -105,7 +105,7 @@ async function checkAnthropic(): Promise<HealthCheck> {
   }
 }
 
-export async function GET() {
+export async function GET(): Promise<NextResponse> {
   const checks = await Promise.all([
     checkDatabase(),
     checkStripe(),
@@ -151,7 +151,7 @@ export async function GET() {
 }
 
 // HEAD request for simple health checks (load balancers)
-export async function HEAD() {
+export async function HEAD(): Promise<NextResponse> {
   try {
     await prisma.$queryRaw`SELECT 1`
     return new NextResponse(null, { status: 200 })

@@ -7,21 +7,25 @@ const mockUpsert = vi.fn()
 const mockBcryptCompare = vi.fn()
 const mockBcryptHash = vi.fn()
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 vi.mock('@/lib/db', () => ({
   prisma: {
-    user: {
-      findUnique: (...args: any[]) => mockFindUnique(...args),
-      create: (...args: any[]) => mockCreate(...args)
-    },
-    account: {
-      upsert: (...args: any[]) => mockUpsert(...args)
-    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    findUnique: (...args: any[]) => mockFindUnique(...args),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    create: (...args: any[]) => mockCreate(...args)
+  },
+  account: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    upsert: (...args: any[]) => mockUpsert(...args)
   }
 }))
 
 vi.mock('bcryptjs', () => ({
   default: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     compare: (...args: any[]) => mockBcryptCompare(...args),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     hash: (...args: any[]) => mockBcryptHash(...args)
   }
 }))
@@ -71,6 +75,7 @@ describe('Auth Configuration', () => {
       const user = { id: 'user-123', role: 'user', name: 'Test User' }
       const account = { provider: 'credentials' }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await authOptions.callbacks?.jwt?.({
         token,
         user,
@@ -88,6 +93,7 @@ describe('Auth Configuration', () => {
       const token = { sub: 'user-123', id: 'user-123', role: 'user' }
       const sessionUpdate = { name: 'Updated Name' }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await authOptions.callbacks?.jwt?.({
         token,
         session: sessionUpdate,
@@ -103,6 +109,7 @@ describe('Auth Configuration', () => {
       const session = { user: { email: 'test@example.com' } }
       const token = { id: 'user-123', role: 'user' }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await authOptions.callbacks?.session?.({
         session,
         token
@@ -115,6 +122,7 @@ describe('Auth Configuration', () => {
 
   describe('SignIn Callback', () => {
     it('should allow sign in', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await authOptions.callbacks?.signIn?.({
         user: { email: 'test@example.com' },
         account: { provider: 'credentials' }
@@ -146,6 +154,7 @@ describe('Auth Configuration', () => {
         session_state: null
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await authOptions.callbacks?.signIn?.({
         user,
         account,
@@ -167,6 +176,7 @@ describe('Auth Configuration', () => {
         expect.fail('Authorize function not found')
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await authorize({ email: '', password: '' } as any, {} as any)
       expect(result).toBeNull()
     })
@@ -183,6 +193,7 @@ describe('Auth Configuration', () => {
         expect.fail('Authorize function not found')
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await authorize(
         { email: 'test@example.com', password: 'wrongpassword' } as any,
         {} as any
@@ -213,6 +224,7 @@ describe('Auth Configuration', () => {
         expect.fail('Authorize function not found')
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await authorize(
         { email: 'test@example.com', password: 'correctpassword' } as any,
         {} as any
@@ -252,6 +264,7 @@ describe('Auth Configuration', () => {
         expect.fail('Authorize function not found')
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await authorize(
         { email: 'test@example.com', password: 'wrongpassword' } as any,
         {} as any

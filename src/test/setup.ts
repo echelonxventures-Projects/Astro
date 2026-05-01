@@ -1,5 +1,6 @@
-import '@testing-library/jest-dom'
 import { vi } from 'vitest'
+import '@testing-library/jest-dom'
+import { cleanup } from '@testing-library/react'
 
 // Mock environment variables
 process.env.NEXTAUTH_SECRET = 'test-secret-key-for-testing-only-minimum-32-characters'
@@ -61,7 +62,6 @@ vi.mock('@/lib/logger', () => ({
 }))
 
 // Clean up after each test
-import { cleanup } from '@testing-library/react'
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()

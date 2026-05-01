@@ -1,8 +1,8 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, Page } from '@playwright/test'
 
 test.describe('Birth Chart Creation', () => {
   // Helper function to create and login a user
-  async function createAndLoginUser(page: any) {
+  async function createAndLoginUser(page: Page): Promise<{ email: string }> {
     const testEmail = `chart-test-${Date.now()}@example.com`
     const testPassword = 'Password123!'
 
@@ -141,7 +141,7 @@ test.describe('Birth Chart Creation', () => {
         const chart = await response.json()
 
         // Navigate to view the chart
-        await page.goto(`/chart`)
+        await page.goto('/chart')
 
         // Should show chart data
         await expect(page.getByText(/sun|moon|mercury|venus|mars/i).first()).toBeVisible()

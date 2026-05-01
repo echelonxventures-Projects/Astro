@@ -101,7 +101,7 @@ test.describe('Authentication Flows', () => {
       await expect(page.getByText('Sign in to access your cosmic profile')).toBeVisible()
     })
 
-    test('should allow user to log in', async ({ page, context }) => {
+    test('should allow user to log in', async ({ page }) => {
       // Create a test user first
       const testEmail = `login-test-${Date.now()}@example.com`
       const testPassword = 'Password123!'

@@ -5,7 +5,7 @@ import { registry } from '@/lib/monitoring/metrics'
  * Prometheus metrics endpoint
  * Returns metrics in Prometheus exposition format
  */
-export async function GET() {
+export async function GET(): Promise<NextResponse> {
   const metrics = registry.getPrometheusMetrics()
 
   return new NextResponse(metrics, {
@@ -22,7 +22,7 @@ export async function GET() {
 /**
  * Metrics as JSON for debugging
  */
-export async function POST() {
+export async function POST(): Promise<NextResponse> {
   const metrics = registry.getMetricsAsJSON()
 
   return NextResponse.json(metrics, {

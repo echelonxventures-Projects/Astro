@@ -75,16 +75,18 @@ async function checkSeeding(): Promise<boolean> {
   }
 }
 
-export async function GET() {
+async function checkDatabaseConnection(): Promise<boolean> {
+  try {
+    await prisma.$queryRaw`SELECT 1`
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function GET(): Promise<NextResponse> {
   const checks = await Promise.all([
-    (async () => {
-      try {
-        await prisma.$queryRaw`SELECT 1`
-        return true
-      } catch {
-        return false
-      }
-    })(),
+    checkDatabaseConnection(),
     checkMigrations(),
     checkSeeding(),
   ])
@@ -127,7 +129,7 @@ export async function GET() {
 }
 
 // HEAD request for simple readiness checks
-export async function HEAD() {
+export async function HEAD(): Promise<NextResponse> {
   try {
     await prisma.$queryRaw`SELECT 1`
     const migrationStatus = await checkMigrations()

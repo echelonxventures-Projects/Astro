@@ -4,7 +4,7 @@ import { FullConfig } from '@playwright/test'
  * Global setup for Playwright tests
  * Runs once before all tests
  */
-async function globalSetup(config: FullConfig) {
+async function globalSetup(_config: FullConfig): Promise<void> {
   console.log('Starting global setup...')
 
   // Set up test environment variables if needed
@@ -19,8 +19,8 @@ async function globalSetup(config: FullConfig) {
       if (response.ok) {
         console.log(`Server is running at ${baseURL}`)
       }
-    } catch (error) {
-      console.log(`Server not yet available at ${baseURL}, webServer will start it`)
+    } catch (_error) {
+      console.log(`Server not yet available, webServer will start it`)
     }
   }
 

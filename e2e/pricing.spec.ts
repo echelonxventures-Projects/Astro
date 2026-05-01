@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, Page } from '@playwright/test'
 
 test.describe('Pricing Page', () => {
   test.beforeEach(async ({ page }) => {
@@ -76,7 +76,7 @@ test.describe('Pricing Page', () => {
 
     if (await regionSelect.isVisible().catch(() => false)) {
       // Get initial price
-      const initialPrice = await page.locator('text=/\\$\\d+/i').first().textContent()
+      await page.locator('text=/\\$\\d+/i').first().textContent()
 
       // Change region
       await regionSelect.selectOption({ index: 1 })
@@ -144,7 +144,7 @@ test.describe('Pricing Page', () => {
 })
 
 test.describe('Pricing - Authenticated User', () => {
-  async function createAndLoginUser(page: any) {
+  async function createAndLoginUser(page: Page): Promise<void> {
     const testEmail = `pricing-test-${Date.now()}@example.com`
     const testPassword = 'Password123!'
 
