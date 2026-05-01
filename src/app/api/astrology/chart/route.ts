@@ -2,13 +2,13 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 import type { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import { prisma } from '@/lib/db'
 import { generateBirthChart } from '@/lib/astrology/calculations'
-import { logger } from '@/lib/logger'
-import { cacheKeys } from '@/lib/cache-keys'
+import { auth } from '@/lib/auth'
 import { cache, DEFAULT_TTLS } from '@/lib/cache'
+import { cacheKeys } from '@/lib/cache-keys'
 import { generateInputHash } from '@/lib/cache-keys'
+import { prisma } from '@/lib/db'
+import { logger } from '@/lib/logger'
 
 /**
  * POST /api/astrology/chart
@@ -34,10 +34,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     // Validate required fields
     if (!birthDate || !birthTime || !latitude || !longitude) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
     // Create a hash for cache lookup
@@ -101,10 +98,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     })
   } catch (error) {
     logger.debug({ error, userId: session.user.id }, 'Error generating birth chart')
-    return NextResponse.json(
-      { error: 'Failed to generate birth chart' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to generate birth chart' }, { status: 500 })
   }
 }
 
@@ -112,7 +106,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
  * GET /api/astrology/chart
  * Get user's saved birth charts
  */
-export async function GET(_req: NextRequest): Promise<NextResponse> {
+export async function GET(): Promise<NextResponse> {
   const session = await auth()
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -137,9 +131,6 @@ export async function GET(_req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ charts })
   } catch (error) {
     logger.debug({ error, userId: session.user.id }, 'Error fetching charts')
-    return NextResponse.json(
-      { error: 'Failed to fetch charts' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch charts' }, { status: 500 })
   }
 }
