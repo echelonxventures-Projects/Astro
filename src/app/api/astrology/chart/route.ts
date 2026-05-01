@@ -1,0 +1,145 @@
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+import type { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
+import { generateBirthChart } from '@/lib/astrology/calculations'
+import { logger } from '@/lib/logger'
+import { cacheKeys } from '@/lib/cache-keys'
+import { cache, DEFAULT_TTLS } from '@/lib/cache'
+import { generateInputHash } from '@/lib/cache-keys'
+
+/**
+ * POST /api/astrology/chart
+ * Generate and save a birth chart
+ */
+export async function POST(req: NextRequest): Promise<NextResponse> {
+  const session = await auth()
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const body = await req.json()
+    const {
+      birthDate,
+      birthTime,
+      birthPlace,
+      latitude,
+      longitude,
+      timezone,
+      name = 'My Birth Chart',
+    } = body
+
+    // Validate required fields
+    if (!birthDate || !birthTime || !latitude || !longitude) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      )
+    }
+
+    // Create a hash for cache lookup
+    const calculationKey = generateInputHash({
+      birthDate,
+      birthTime,
+      birthPlace,
+      latitude,
+      longitude,
+      timezone,
+    })
+    const cacheKey = cacheKeys.chartCalculation(calculationKey)
+
+    // Try to get cached calculation
+    const cachedCalculation = await cache.get<ReturnType<typeof generateBirthChart>>(cacheKey)
+
+    let chartData: ReturnType<typeof generateBirthChart>
+
+    if (cachedCalculation) {
+      logger.debug({ userId: session.user.id, cacheKey }, 'Using cached chart calculation')
+      chartData = cachedCalculation
+    } else {
+      // Generate birth chart
+      chartData = generateBirthChart(
+        new Date(birthDate),
+        birthTime,
+        birthPlace || 'Unknown',
+        latitude,
+        longitude,
+        timezone || 'UTC'
+      )
+
+      // Cache the calculation for 1 hour
+      await cache.set(cacheKey, chartData, DEFAULT_TTLS.CHART_CALCULATION)
+      logger.debug({ userId: session.user.id, cacheKey }, 'Cached chart calculation')
+    }
+
+    // Save to database
+    const chart = await prisma.birthChart.create({
+      data: {
+        userId: session.user.id,
+        name,
+        birthDate: new Date(birthDate),
+        birthTime,
+        birthPlace: birthPlace || 'Unknown',
+        latitude,
+        longitude,
+        timezone: timezone || 'UTC',
+        planets: chartData.planets as unknown,
+        houses: chartData.houses as unknown,
+        aspects: chartData.aspects as unknown,
+      },
+    })
+
+    // Invalidate user's chart list cache
+    await cache.delete(cacheKeys.userCharts(session.user.id))
+
+    return NextResponse.json({
+      id: chart.id,
+      ...chartData,
+    })
+  } catch (error) {
+    logger.debug({ error, userId: session.user.id }, 'Error generating birth chart')
+    return NextResponse.json(
+      { error: 'Failed to generate birth chart' },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * GET /api/astrology/chart
+ * Get user's saved birth charts
+ */
+export async function GET(_req: NextRequest): Promise<NextResponse> {
+  const session = await auth()
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const cacheKey = cacheKeys.userCharts(session.user.id)
+
+    // Try cache first using cacheFirst strategy
+    const charts = await cache.cacheFirst(
+      cacheKey,
+      async () => {
+        logger.debug({ userId: session.user.id }, 'Fetching charts from database')
+        return await prisma.birthChart.findMany({
+          where: { userId: session.user.id },
+          orderBy: { createdAt: 'desc' },
+        })
+      },
+      DEFAULT_TTLS.CHART_CALCULATION // 1 hour
+    )
+
+    return NextResponse.json({ charts })
+  } catch (error) {
+    logger.debug({ error, userId: session.user.id }, 'Error fetching charts')
+    return NextResponse.json(
+      { error: 'Failed to fetch charts' },
+      { status: 500 }
+    )
+  }
+}
