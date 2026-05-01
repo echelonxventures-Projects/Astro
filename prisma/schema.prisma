@@ -1,0 +1,532 @@
+// StarPath Astrology Database Schema
+// https://pris.ly/d/prisma-schema
+// Uses SQLite for local dev by default - see schema.prisma.postgresql for PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Updated User model with payment gateway fields
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  emailVerified     DateTime?
+  name              String?
+  image             String?
+  passwordHash      String?
+  role              String    @default("user") // user, admin
+
+  // Birth details for astrology calculations
+  birthDate         DateTime?
+  birthTime         String?   // Stored as "HH:mm" format
+  birthPlace        String?
+  birthLatitude     Float?
+  birthLongitude    Float?
+  birthTimezone     String?
+
+  // Subscription status
+  subscriptionStatus String   @default("free") // free, premium, cancelled
+  stripeCustomerId   String?
+  stripeSubscriptionId String?
+  razorpayCustomerId String?  // Razorpay customer ID
+  subscriptionPlan   String?  // monthly, yearly
+  currentPeriodEnd   DateTime?
+  preferredGateway   String?  // User's preferred payment gateway key
+
+  // Gateway metadata (JSON for storing additional gateway-specific data)
+  gatewayMetadata    String?  // JSON: { stripe: {}, razorpay: {}, ... }
+
+  // Timestamps
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  accounts          Account[]
+  sessions          Session[]
+  birthCharts       BirthChart[]
+  readings          Reading[]
+  chatSessions      ChatSession[]
+  subscriptions     Subscription[]
+  payments          Payment[]
+  transactions      PaymentTransaction[]
+  devices           UserDevice[]
+  memories          UserMemory[]
+  astroProfiles     AstroProfile[]
+  notifications     Notification[]
+
+  @@index([subscriptionStatus])
+  @@index([email])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model BirthChart {
+  id              String   @id @default(cuid())
+  userId          String
+  profileId       String?
+  name            String   @default("My Birth Chart")
+
+  // Input data
+  birthDate       DateTime
+  birthTime       String
+  birthPlace      String
+  latitude        Float
+  longitude       Float
+  timezone        String
+
+  // Calculated data (stored as JSON)
+  planets         Json     // All planetary positions
+  houses          Json     // House cusps
+  aspects         Json     // Major aspects
+
+  // Calculated at
+  createdAt       DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile         AstroProfile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([userId, createdAt])
+}
+
+model Reading {
+  id              String   @id @default(cuid())
+  userId          String
+  profileId       String?
+  type            String   // daily, love, career, compatibility, transit, natal
+  title           String?
+  content         String
+  input           Json     // Input parameters (birth data, partner data, etc.)
+  aiGenerated     Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile         AstroProfile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+
+  @@index([userId, type])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}
+
+model ChatSession {
+  id              String   @id @default(cuid())
+  userId          String
+  title           String?
+  messages        Json     // Array of {role, content, timestamp}
+  metadata        Json?    // User data: name, birthDate, birthTime, birthPlace
+  createdAt       DateTime @default(now())
+  lastActiveAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([lastActiveAt])
+}
+
+model Subscription {
+  id                  String   @id @default(cuid())
+  userId              String
+  stripeSubscriptionId String   @unique
+  plan                String   // monthly, yearly
+  status              String   // active, past_due, canceled, incomplete
+  currentPeriodEnd    DateTime
+  cancelAtPeriodEnd   Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([stripeSubscriptionId])
+}
+
+model Payment {
+  id                String   @id @default(cuid())
+  userId            String
+  stripePaymentId   String   @unique
+  amount            Int      // In cents
+  currency          String   @default("usd")
+  status            String   // succeeded, pending, failed
+  createdAt         DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([stripePaymentId])
+  @@index([status, createdAt])
+}
+
+// Application settings for configurable features
+model AppSettings {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// AI Provider configuration - fully dynamic
+model AIProviderConfig {
+  id          String   @id @default(cuid())
+  name        String   // Display name (e.g., "Free Plan AI", "Premium AI")
+  plan        String?  // Associated subscription plan (free, monthly, yearly, or custom)
+  provider    String   @default("ollama") // ollama, anthropic, gemini, openai, etc.
+  model       String   @default("llama3.2")
+  apiKey      String?  // For paid providers
+  ollamaUrl   String?  // For Ollama provider
+  baseUrl     String?  // For custom providers
+  maxTokens   Int      @default(512)
+  enabled     Boolean  @default(true)
+  isDefault   Boolean  @default(false)
+  description String?
+  metadata    String?  // JSON for additional config
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([plan])
+}
+
+// Configurable regions for multi-region support
+model Region {
+  id          String   @id @default(cuid())
+  name        String   // Display name (e.g., "United States", "Europe", "India")
+  key         String   @unique // Internal key (e.g., "us", "eu", "in")
+  code        String   @unique // ISO country code or region code
+  currency    String   @default("usd") // Default currency for this region
+  currencies  String?  // JSON array of supported currencies [{code, symbol, name}]
+  isActive    Boolean  @default(true)
+  isDefault   Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  priceMultiplier Float    @default(1.0) // For regional pricing adjustments
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([key])
+  @@index([code])
+  @@index([isActive])
+}
+
+// Configurable subscription plans - fully dynamic pricing
+model SubscriptionPlan {
+  id              String   @id @default(cuid())
+  name            String   // Display name (e.g., "Free", "Premium Monthly")
+  key             String   @unique // Internal key (e.g., "free", "monthly", "yearly")
+  description     String?
+  price           Int      @default(0) // Price in cents (base price)
+  currency        String   @default("usd") // Base currency
+  interval        String?  // monthly, yearly, or null for free
+  stripePriceId   String?  // Stripe Price ID for this plan (base)
+  stripeProductId String?  // Stripe Product ID
+  isActive        Boolean  @default(true)
+  isPopular       Boolean  @default(false) // Show "Most Popular" badge
+  sortOrder       Int      @default(0) // Order for display
+  features        String?  // JSON array of feature strings
+  aiConfig        String?  // JSON for AI provider config (provider, model, maxTokens)
+  metadata        String?  // JSON for additional config
+
+  // Regional pricing overrides
+  regionalPricing String?  // JSON object: { "eu": { price, currency, stripePriceId }, "in": {...} }
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  featureAccess   PlanFeatureAccess[]
+
+  @@index([key])
+  @@index([isActive])
+}
+
+// Configurable features for comparison table
+model PlanFeature {
+  id          String   @id @default(cuid())
+  name        String   // Display name (e.g., "Daily Horoscope")
+  key         String   @unique // Internal key (e.g., "daily_horoscope")
+  description String?
+  category    String?  // Grouping category (e.g., "readings", "support", "ai")
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  featureAccess PlanFeatureAccess[]
+
+  @@index([key])
+  @@index([isActive])
+  @@index([category])
+}
+
+// Plan-Feature relationship (which features each plan includes)
+model PlanFeatureAccess {
+  id        String   @id @default(cuid())
+  planId    String
+  featureId String
+  enabled   Boolean  @default(true) // Whether this plan has access to this feature
+  value     String?  // Optional value (e.g., "3" for "3 AI readings per month")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  feature PlanFeature  @relation(fields: [featureId], references: [id], onDelete: Cascade)
+  plan    SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, featureId])
+  @@index([planId])
+  @@index([featureId])
+}
+
+// Payment Gateway configuration - supports Stripe, Razorpay, PayPal, etc.
+model PaymentGateway {
+  id                String   @id @default(cuid())
+  name              String   // Display name (e.g., "Stripe", "Razorpay")
+  key               String   @unique // Internal key (stripe, razorpay, paypal)
+  description       String?
+  apiKey            String?  // Encrypted API key
+  apiSecret         String?  // Encrypted API secret
+  webhookSecret     String?  // Encrypted webhook signing secret
+  publicKey         String?  // Public key for client-side (e.g., Razorpay Key ID)
+  isEnabled         Boolean  @default(true)
+  isDefault         Boolean  @default(false)
+  supportedCurrencies String? // JSON array: ["USD", "EUR", "INR"]
+  supportedCountries  String? // JSON array: ["US", "GB", "IN"]
+  config            String?  // JSON for provider-specific config
+  testMode          Boolean  @default(false)
+  sortOrder         Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  paymentMethods    PaymentMethod[]
+  gatewayPlans      GatewayPlan[]
+  transactions      PaymentTransaction[]
+
+  @@index([key])
+  @@index([isEnabled])
+}
+
+// Payment Methods available per gateway (UPI, Cards, Netbanking, etc.)
+model PaymentMethod {
+  id                String   @id @default(cuid())
+  gatewayId         String
+  name              String   // Display name (e.g., "UPI", "Credit Card")
+  key               String   // Internal key (upi, card, netbanking, wallet, bnpl)
+  description       String?
+  icon              String?  // Icon name or URL
+  isEnabled         Boolean  @default(true)
+  sortOrder         Int      @default(0)
+  supportedCurrencies String? // JSON array of supported currencies
+  supportedCountries  String? // JSON array of supported countries
+  config            String?  // JSON for method-specific config
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  gateway           PaymentGateway @relation(fields: [gatewayId], references: [id], onDelete: Cascade)
+
+  @@unique([gatewayId, key])
+  @@index([gatewayId])
+  @@index([isEnabled])
+}
+
+// Gateway-specific plan configuration (links plans to gateway plan IDs)
+model GatewayPlan {
+  id                String   @id @default(cuid())
+  gatewayId         String
+  planId            String   // Reference to SubscriptionPlan.key
+  gatewayPlanId     String   // External plan ID (Stripe Price ID, Razorpay Plan ID)
+  name              String
+  description       String?
+  price             Int      // Price in smallest currency unit
+  currency          String   // ISO currency code
+  interval          String   // monthly, yearly, etc.
+  isActive          Boolean  @default(true)
+  isPopular         Boolean  @default(false)
+  sortOrder         Int      @default(0)
+  features          String?  // JSON array of features
+  regionalPricing   String?  // JSON for regional pricing overrides
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  gateway           PaymentGateway @relation(fields: [gatewayId], references: [id], onDelete: Cascade)
+  transactions      PaymentTransaction[]
+
+  @@unique([gatewayId, gatewayPlanId])
+  @@index([gatewayId])
+  @@index([isActive])
+}
+
+// Unified payment transactions across all gateways
+model PaymentTransaction {
+  id                  String   @id @default(cuid())
+  userId              String
+  gatewayId           String
+  gatewayPlanId       String?
+  amount              Int      // Amount in smallest currency unit
+  currency            String   // ISO currency code
+  gatewayTransactionId String  // External transaction ID
+  status              String   // pending, success, failed, refunded, disputed
+  paymentMethod       String?  // Method used (upi, card, etc.)
+  errorCode           String?  // Error code if failed
+  errorMessage        String?  // Error message if failed
+  metadata            String?  // JSON for additional data
+  refundedAmount      Int      @default(0)
+  refundReason        String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gateway             PaymentGateway   @relation(fields: [gatewayId], references: [id])
+  gatewayPlan         GatewayPlan?     @relation(fields: [gatewayPlanId], references: [id])
+
+  @@index([userId])
+  @@index([gatewayId])
+  @@index([status])
+  @@index([gatewayTransactionId])
+  @@index([createdAt])
+}
+
+// Active user sessions for device tracking
+model UserDevice {
+  id                String   @id @default(cuid())
+  userId            String
+  deviceName        String?
+  deviceType        String?
+  browser           String?
+  os                String?
+  ipAddress         String?
+  location          String?
+  userAgent         String?
+  sessionId         String   @unique
+  lastActiveAt      DateTime @default(now())
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Persistent memory for AI conversations
+model UserMemory {
+  id                String   @id @default(cuid())
+  userId            String
+  category          String
+  key               String
+  value             String
+  source            String?
+  confidence        Float    @default(1.0)
+  importance        Int      @default(1)
+  expiresAt         DateTime?
+  lastUsedAt        DateTime @default(now())
+  useCount          Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@index([userId])
+}
+
+// Multiple astro profiles per account
+model AstroProfile {
+  id                String   @id @default(cuid())
+  userId            String
+  name              String
+  relationship      String?
+  isDefault         Boolean  @default(false)
+  birthDate         DateTime
+  birthTime         String
+  birthPlace        String
+  latitude          Float
+  longitude         Float
+  timezone          String
+  gender            String?
+  photoUrl          String?
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  birthCharts       BirthChart[]
+  readings          Reading[]
+
+  @@index([userId])
+}
+
+// Notifications
+model Notification {
+  id                String   @id @default(cuid())
+  userId            String
+  type              String
+  title             String
+  message           String
+  data              String?
+  isRead            Boolean  @default(false)
+  readAt            DateTime?
+  createdAt         DateTime @default(now())
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+}
+
+// Payment audit log for comprehensive transaction tracking
+model PaymentAuditLog {
+  id                String   @id @default(cuid())
+  action            String   // payment_intent_created, payment_captured, refund_processed, etc.
+  userId            String?
+  transactionId     String?
+  gateway           String?
+  amount            Int?
+  currency          String?
+  status            String   // success, failure, pending, warning
+  ipAddress         String?
+  userAgent         String?
+  metadata          String?  // JSON for additional data
+  error             String?
+  createdAt         DateTime @default(now())
+
+  @@index([userId])
+  @@index([transactionId])
+  @@index([action])
+  @@index([status])
+  @@index([createdAt])
+  @@index([gateway])
+}
