@@ -1,0 +1,97 @@
+# ===========================================
+# StarPath Astrology - Development Services Only
+# ===========================================
+# Usage: docker-compose -f docker-compose.dev.yml up -d
+# This provides PostgreSQL and Redis for local development
+# The Next.js app runs outside Docker (npm run dev)
+
+version: "3.8"
+
+services:
+  # PostgreSQL Database for Development
+  # ===========================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: starpath-dev-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=starpath
+      - POSTGRES_USER=starpath
+      - POSTGRES_PASSWORD=devpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./init-postgres:/docker-entrypoint-initdb.d:ro
+    networks:
+      - starpath-dev-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U starpath -d starpath"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Redis for Development
+  # ===========================================
+  redis:
+    image: redis:7-alpine
+    container_name: starpath-dev-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - starpath-dev-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Prisma Studio (Optional - Database GUI)
+  # ===========================================
+  # Uncomment to use Prisma Studio for database management
+  # studio:
+  #   image: node:20-alpine
+  #   container_name: starpath-prisma-studio
+  #   working_dir: /app
+  #   command: npx prisma studio --port 5555 --hostname 0.0.0.0
+  #   environment:
+  #     - DATABASE_URL=postgresql://starpath:devpassword@postgres:5432/starpath?schema=public
+  #   ports:
+  #     - "5555:5555"
+  #   volumes:
+  #     - .:/app
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   networks:
+  #     - starpath-dev-network
+
+# Networks
+# ===========================================
+networks:
+  starpath-dev-network:
+    driver: bridge
+
+# Volumes
+# ===========================================
+volumes:
+  postgres_dev_data:
+    driver: local
+  redis_dev_data:
+    driver: local
