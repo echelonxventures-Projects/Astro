@@ -1,13 +1,13 @@
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
+import { NextRequest, NextResponse } from 'next/server'
+import type { Stripe } from 'stripe'
 import { prisma } from '@/lib/db'
 import { logger } from '@/lib/logger'
-import type { Stripe } from 'stripe'
 
-const isDev = process.env.NODE_ENV === 'development'
+const _isDev = process.env.NODE_ENV === 'development'
 
 /**
  * Stripe Webhook Handler
@@ -30,17 +30,10 @@ export async function POST(req: NextRequest) {
   let event: Stripe.Event
 
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET || ''
-    )
+    event = stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET || '')
   } catch (error) {
     logger.debug({ error }, 'Webhook signature verification failed')
-    return NextResponse.json(
-      { error: 'Invalid signature' },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
   try {
@@ -161,9 +154,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true })
   } catch (error) {
     logger.error({ error }, 'Webhook handler error')
-    return NextResponse.json(
-      { error: 'Webhook handler failed' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 })
   }
 }

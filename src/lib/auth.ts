@@ -1,12 +1,12 @@
 import NextAuth, { type AuthOptions, type Session } from 'next-auth'
 import { getServerSession } from 'next-auth/next'
+import Apple from 'next-auth/providers/apple'
 import Credentials from 'next-auth/providers/credentials'
-import Google from 'next-auth/providers/google'
+import Discord from 'next-auth/providers/discord'
 import Facebook from 'next-auth/providers/facebook'
 import GitHub from 'next-auth/providers/github'
-import Discord from 'next-auth/providers/discord'
+import Google from 'next-auth/providers/google'
 import Twitter from 'next-auth/providers/twitter'
-import Apple from 'next-auth/providers/apple'
 import { logger } from './logger'
 
 // Runtime validation for production (not during build)
@@ -37,95 +37,106 @@ const buildProviders = () => {
 
   // Google OAuth (always included if credentials exist)
   if (hasCredentials(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET)) {
-    providers.push(Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }))
+    providers.push(
+      Google({
+        clientId: process.env.GOOGLE_CLIENT_ID!,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      })
+    )
   }
 
   // Facebook OAuth
   if (hasCredentials(process.env.FACEBOOK_CLIENT_ID, process.env.FACEBOOK_CLIENT_SECRET)) {
-    providers.push(Facebook({
-      clientId: process.env.FACEBOOK_CLIENT_ID!,
-      clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
-    }))
+    providers.push(
+      Facebook({
+        clientId: process.env.FACEBOOK_CLIENT_ID!,
+        clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
+      })
+    )
   }
 
   // GitHub OAuth
   if (hasCredentials(process.env.GITHUB_CLIENT_ID, process.env.GITHUB_CLIENT_SECRET)) {
-    providers.push(GitHub({
-      clientId: process.env.GITHUB_CLIENT_ID!,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-    }))
+    providers.push(
+      GitHub({
+        clientId: process.env.GITHUB_CLIENT_ID!,
+        clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+      })
+    )
   }
 
   // Discord OAuth
   if (hasCredentials(process.env.DISCORD_CLIENT_ID, process.env.DISCORD_CLIENT_SECRET)) {
-    providers.push(Discord({
-      clientId: process.env.DISCORD_CLIENT_ID!,
-      clientSecret: process.env.DISCORD_CLIENT_SECRET!,
-    }))
+    providers.push(
+      Discord({
+        clientId: process.env.DISCORD_CLIENT_ID!,
+        clientSecret: process.env.DISCORD_CLIENT_SECRET!,
+      })
+    )
   }
 
   // Twitter/X OAuth
   if (hasCredentials(process.env.TWITTER_CLIENT_ID, process.env.TWITTER_CLIENT_SECRET)) {
-    providers.push(Twitter({
-      clientId: process.env.TWITTER_CLIENT_ID!,
-      clientSecret: process.env.TWITTER_CLIENT_SECRET!,
-      version: '2.0', // OAuth 2.0
-    }))
+    providers.push(
+      Twitter({
+        clientId: process.env.TWITTER_CLIENT_ID!,
+        clientSecret: process.env.TWITTER_CLIENT_SECRET!,
+        version: '2.0', // OAuth 2.0
+      })
+    )
   }
 
   // Apple OAuth (requires special setup)
   if (hasCredentials(process.env.APPLE_CLIENT_ID, process.env.APPLE_CLIENT_SECRET)) {
-    providers.push(Apple({
-      clientId: process.env.APPLE_CLIENT_ID!,
-      clientSecret: process.env.APPLE_CLIENT_SECRET!,
-    }))
+    providers.push(
+      Apple({
+        clientId: process.env.APPLE_CLIENT_ID!,
+        clientSecret: process.env.APPLE_CLIENT_SECRET!,
+      })
+    )
   }
 
   // Credentials provider (email/password) - always included
-  providers.push(Credentials({
-    name: 'credentials',
-    credentials: {
-      email: { label: 'Email', type: 'email' },
-      password: { label: 'Password', type: 'password' },
-    },
-    async authorize(credentials) {
-      if (!credentials?.email || !credentials?.password) {
-        return null
-      }
+  providers.push(
+    Credentials({
+      name: 'credentials',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null
+        }
 
-      // Lazy import prisma and bcrypt
-      const { prisma } = await import('@/lib/db')
-      const bcrypt = (await import('bcryptjs')).default
+        // Lazy import prisma and bcrypt
+        const { prisma } = await import('@/lib/db')
+        const bcrypt = (await import('bcryptjs')).default
 
-      const user = await prisma.user.findUnique({
-        where: { email: credentials.email },
-      })
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+        })
 
-      if (!user || !user.passwordHash) {
-        return null
-      }
+        if (!user || !user.passwordHash) {
+          return null
+        }
 
-      const isPasswordValid = await bcrypt.compare(
-        credentials.password,
-        user.passwordHash
-      )
+        const isPasswordValid = await bcrypt.compare(credentials.password, user.passwordHash)
 
-      if (!isPasswordValid) {
-        return null
-      }
+        if (!isPasswordValid) {
+          return null
+        }
 
-      return {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        image: user.image,
-        role: user.role,
-      }
-    },
-  }))
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.image,
+          role: user.role,
+        }
+      },
+    })
+  )
 
   return providers
 }
@@ -192,7 +203,7 @@ export const authOptions: AuthOptions = {
       }
       return session
     },
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account, profile: _profile }) {
       // Handle OAuth sign-in - create user if not exists
       if (account?.provider && account.provider !== 'credentials') {
         const { prisma } = await import('@/lib/db')

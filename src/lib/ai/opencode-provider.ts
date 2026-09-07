@@ -4,10 +4,15 @@
  * OpenCode provides free models like minimax-m2.5-free, nemotron-3-super-free
  */
 
-import type { AIProvider, TextCompletionRequest, VisionCompletionRequest, AIProviderConfig } from './provider'
+import type {
+  AIProvider,
+  TextCompletionRequest,
+  VisionCompletionRequest,
+  AIProviderConfig,
+} from './provider'
 
 // Free models available on OpenCode
-const FREE_OPENCODE_MODELS = [
+const _FREE_OPENCODE_MODELS = [
   { provider: 'opencode', model: 'hy3-preview-free' },
   { provider: 'opencode', model: 'minimax-m2.5-free' },
   { provider: 'opencode', model: 'nemotron-3-super-free' },
@@ -20,7 +25,7 @@ export class OpenCodeProvider implements AIProvider {
   private baseUrl: string
   private model: string
   private providerId: string
-  private maxTokens: number
+  private _maxTokens: number
   private sessionId: string | null = null
 
   constructor(config: AIProviderConfig) {
@@ -34,11 +39,11 @@ export class OpenCodeProvider implements AIProvider {
       this.providerId = 'opencode'
       this.model = config.model || 'minimax-m2.5-free'
     }
-    this.maxTokens = config.maxTokens || 512
+    this._maxTokens = config.maxTokens || 512
   }
 
   async complete(request: TextCompletionRequest): Promise<string> {
-    const { messages, system, maxTokens } = request
+    const { messages, system, maxTokens: _maxTokens } = request
 
     // Create or reuse session
     const sessionId = await this.getOrCreateSession()
@@ -66,24 +71,27 @@ export class OpenCodeProvider implements AIProvider {
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-        const errorMessage = errorData.error?.message || errorData.message || `HTTP ${response.status}`
-        throw new Error(`OpenCode error: ${errorMessage}`)
+        const errorData = await response.json().catch(() => ({ _error: 'Unknown _error' }))
+        const errorMessage =
+          errorData._error?.message || errorData.message || `HTTP ${response.status}`
+        throw new Error(`OpenCode _error: ${errorMessage}`)
       }
 
       const data = await response.json()
       // Extract text from response parts
       return this.extractTextFromParts(data.parts)
-    } catch (error: any) {
-      if (error.message.includes('fetch failed')) {
-        throw new Error('Unable to connect to OpenCode server. Make sure OpenCode server is running: opencode serve --port 8080')
+    } catch (_error: any) {
+      if (_error.message.includes('fetch failed')) {
+        throw new Error(
+          'Unable to connect to OpenCode server. Make sure OpenCode server is running: opencode serve --port 8080'
+        )
       }
-      throw error
+      throw _error
     }
   }
 
   async completeWithVision(request: VisionCompletionRequest): Promise<string> {
-    const { messages, system, maxTokens, imageUrl } = request
+    const { messages, system, maxTokens: _maxTokens, imageUrl } = request
 
     const sessionId = await this.getOrCreateSession()
     const parts = this.formatMessagesToParts(messages, imageUrl)
@@ -108,17 +116,17 @@ export class OpenCodeProvider implements AIProvider {
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-        throw new Error(`OpenCode error: ${errorData.error?.message || response.status}`)
+        const errorData = await response.json().catch(() => ({ _error: 'Unknown _error' }))
+        throw new Error(`OpenCode _error: ${errorData._error?.message || response.status}`)
       }
 
       const data = await response.json()
       return this.extractTextFromParts(data.parts)
-    } catch (error: any) {
-      if (error.message.includes('fetch failed')) {
+    } catch (_error: any) {
+      if (_error.message.includes('fetch failed')) {
         throw new Error('Unable to connect to OpenCode server for image analysis.')
       }
-      throw error
+      throw _error
     }
   }
 
@@ -152,7 +160,7 @@ export class OpenCodeProvider implements AIProvider {
       }
       this.sessionId = newSessionId
       return newSessionId
-    } catch (error) {
+    } catch (_error) {
       throw new Error('Unable to create OpenCode session. Ensure OpenCode server is running.')
     }
   }
@@ -189,9 +197,7 @@ export class OpenCodeProvider implements AIProvider {
       return ''
     }
 
-    const textParts = parts
-      .filter(p => p.type === 'text' && p.text)
-      .map(p => p.text)
+    const textParts = parts.filter(p => p.type === 'text' && p.text).map(p => p.text)
 
     return textParts.join('\n')
   }

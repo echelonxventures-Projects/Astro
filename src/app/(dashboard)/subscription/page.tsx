@@ -1,10 +1,10 @@
 export const dynamic = 'force-dynamic'
 
-import { auth } from '@/lib/auth'
-import { redirect } from 'next/navigation'
-import { prisma } from '@/lib/db'
-import Link from 'next/link'
 import { Sparkles, Check, Calendar, CreditCard } from 'lucide-react'
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 
 export default async function SubscriptionPage() {
   const session = await auth()
@@ -25,7 +25,7 @@ export default async function SubscriptionPage() {
   }
 
   const isPremium = user.subscriptionStatus === 'premium'
-  const currentSubscription = user.subscriptions.find((s) => s.status === 'active')
+  const currentSubscription = user.subscriptions.find(s => s.status === 'active')
 
   return (
     <>
@@ -131,7 +131,7 @@ export default async function SubscriptionPage() {
                       'Transit forecasts',
                       'Priority support',
                       'Ad-free experience',
-                    ].map((feature) => (
+                    ].map(feature => (
                       <div key={feature} className="flex items-center gap-2">
                         <Check className="w-4 h-4 text-green-400" />
                         <span>{feature}</span>
@@ -143,8 +143,8 @@ export default async function SubscriptionPage() {
             ) : (
               <div>
                 <p className="text-purple-200 mb-6">
-                  Upgrade to Premium to unlock unlimited AI readings, detailed birth chart
-                  analysis, compatibility reports, and more.
+                  Upgrade to Premium to unlock unlimited AI readings, detailed birth chart analysis,
+                  compatibility reports, and more.
                 </p>
                 <Link
                   href="/pricing"
@@ -161,7 +161,7 @@ export default async function SubscriptionPage() {
             <div className="glass rounded-3xl p-8">
               <h2 className="text-2xl font-bold mb-6">Payment History</h2>
               <div className="space-y-3">
-                {user.payments.map((payment) => (
+                {user.payments.map(payment => (
                   <div
                     key={payment.id}
                     className="flex items-center justify-between p-4 bg-white/5 rounded-xl"
@@ -174,9 +174,7 @@ export default async function SubscriptionPage() {
                         {new Date(payment.createdAt).toLocaleDateString()}
                       </div>
                     </div>
-                    <div className="font-semibold">
-                      ${(payment.amount / 100).toFixed(2)}
-                    </div>
+                    <div className="font-semibold">${(payment.amount / 100).toFixed(2)}</div>
                   </div>
                 ))}
               </div>

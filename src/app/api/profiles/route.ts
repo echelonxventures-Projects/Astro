@@ -3,17 +3,16 @@ export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { logError } from '@/lib/logger'
 import {
   createAstroProfile,
   getUserProfiles,
-  getAstroProfile,
   updateAstroProfile,
   setDefaultProfile,
   deleteAstroProfile,
   getProfileOptions,
   getProfileWithChart,
 } from '@/lib/profiles'
-import { logError } from '@/lib/logger'
 
 /**
  * GET /api/profiles
@@ -50,10 +49,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ profiles })
   } catch (error) {
     logError('Error fetching profiles', error, { userId: session.user.id })
-    return NextResponse.json(
-      { error: 'Failed to fetch profiles' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch profiles' }, { status: 500 })
   }
 }
 
@@ -83,10 +79,7 @@ export async function POST(req: NextRequest) {
     } = body
 
     if (!name || !birthDate || !birthTime || !birthPlace || !latitude || !longitude) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
     const profile = await createAstroProfile({
@@ -109,10 +102,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (error) {
     logError('Error creating profile', error, { userId: session.user.id })
-    return NextResponse.json(
-      { error: 'Failed to create profile' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to create profile' }, { status: 500 })
   }
 }
 
@@ -131,10 +121,7 @@ export async function PATCH(req: NextRequest) {
     const { profileId, updates, setAsDefault } = body
 
     if (!profileId) {
-      return NextResponse.json(
-        { error: 'Missing profileId' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing profileId' }, { status: 400 })
     }
 
     if (setAsDefault) {
@@ -160,10 +147,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'No action specified' }, { status: 400 })
   } catch (error) {
     logError('Error updating profile', error, { userId: session.user.id })
-    return NextResponse.json(
-      { error: 'Failed to update profile' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 })
   }
 }
 
@@ -182,10 +166,7 @@ export async function DELETE(req: NextRequest) {
     const profileId = url.searchParams.get('id')
 
     if (!profileId) {
-      return NextResponse.json(
-        { error: 'Missing profile id' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing profile id' }, { status: 400 })
     }
 
     await deleteAstroProfile(profileId, session.user.id)

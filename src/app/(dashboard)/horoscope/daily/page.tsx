@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { Sparkles, Loader2, Heart, Briefcase, Share2 } from 'lucide-react'
 import Link from 'next/link'
-import { Sparkles, ChevronLeft, Loader2, Heart, Briefcase, Share2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import { useState, useEffect } from 'react'
 
 export default function DailyHoroscopePage() {
-  const { data: session, status } = useSession()
+  const { data: _session, status } = useSession()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [reading, setReading] = useState<any>(null)
@@ -98,9 +98,7 @@ export default function DailyHoroscopePage() {
                 day: 'numeric',
               })}
             </h1>
-            <p className="text-purple-200">
-              Your personalized cosmic guidance for today
-            </p>
+            <p className="text-purple-200">Your personalized cosmic guidance for today</p>
           </div>
 
           {/* Generate Button */}
@@ -110,8 +108,8 @@ export default function DailyHoroscopePage() {
                 <Sparkles className="w-12 h-12 text-purple-400" />
               </div>
               <p className="text-purple-200 mb-6 max-w-md mx-auto">
-                Ready to discover what the stars have aligned for you today?
-                Generate your personalized daily horoscope based on your birth chart.
+                Ready to discover what the stars have aligned for you today? Generate your
+                personalized daily horoscope based on your birth chart.
               </p>
               <button
                 onClick={generateReading}

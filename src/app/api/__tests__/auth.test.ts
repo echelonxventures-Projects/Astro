@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { NextRequest } from 'next/server'
-import { POST as signupHandler } from '../auth/signup/route'
 import bcrypt from 'bcryptjs'
+import { NextRequest } from 'next/server'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { POST as signupHandler } from '../auth/signup/route'
 
 // Mock dependencies
 const mockFindUnique = vi.fn()
@@ -12,24 +12,24 @@ vi.mock('@/lib/db', () => ({
   prisma: {
     user: {
       findUnique: (...args: any[]) => mockFindUnique(...args),
-      create: (...args: any[]) => mockCreate(...args)
-    }
-  }
+      create: (...args: any[]) => mockCreate(...args),
+    },
+  },
 }))
 
 vi.mock('@/lib/logger', () => ({
-  logError: (...args: any[]) => mockLogError(...args)
+  logError: (...args: any[]) => mockLogError(...args),
 }))
 
 vi.mock('bcryptjs', () => ({
   default: {
-    hash: vi.fn()
-  }
+    hash: vi.fn(),
+  },
 }))
 
 function createRequest(body: unknown): NextRequest {
   return {
-    json: () => Promise.resolve(body)
+    json: () => Promise.resolve(body),
   } as NextRequest
 }
 
@@ -50,7 +50,7 @@ describe('Auth API - Signup', () => {
       mockCreate.mockResolvedValue({
         id: 'user-123',
         email: 'newuser@example.com',
-        name: 'New User'
+        name: 'New User',
       })
 
       const hashedPassword = 'hashedpassword123'
@@ -59,7 +59,7 @@ describe('Auth API - Signup', () => {
       const request = createRequest({
         name: 'New User',
         email: 'newuser@example.com',
-        password: 'Password123!'
+        password: 'Password123!',
       })
 
       const response = await signupHandler(request)
@@ -75,7 +75,7 @@ describe('Auth API - Signup', () => {
     it('should reject signup with missing email', async () => {
       const request = createRequest({
         name: 'User',
-        password: 'Password123!'
+        password: 'Password123!',
       })
 
       const response = await signupHandler(request)
@@ -88,7 +88,7 @@ describe('Auth API - Signup', () => {
     it('should reject signup with missing password', async () => {
       const request = createRequest({
         name: 'User',
-        email: 'user@example.com'
+        email: 'user@example.com',
       })
 
       const response = await signupHandler(request)
@@ -101,13 +101,13 @@ describe('Auth API - Signup', () => {
     it('should reject duplicate email', async () => {
       mockFindUnique.mockResolvedValue({
         id: 'existing-user',
-        email: 'existing@example.com'
+        email: 'existing@example.com',
       })
 
       const request = createRequest({
         name: 'User',
         email: 'existing@example.com',
-        password: 'Password123!'
+        password: 'Password123!',
       })
 
       const response = await signupHandler(request)
@@ -128,15 +128,17 @@ describe('Auth API - Signup', () => {
       const request = createRequest({
         name: 'Test User',
         email: 'test@example.com',
-        password
+        password,
       })
 
       await signupHandler(request)
 
       expect(bcrypt.hash).toHaveBeenCalledWith(password, 12)
-      expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
-        passwordHash: hashedPassword
-      }))
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          passwordHash: hashedPassword,
+        })
+      )
     })
 
     it('should handle database errors gracefully', async () => {
@@ -145,7 +147,7 @@ describe('Auth API - Signup', () => {
       const request = createRequest({
         name: 'User',
         email: 'user@example.com',
-        password: 'Password123!'
+        password: 'Password123!',
       })
 
       const response = await signupHandler(request)

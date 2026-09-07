@@ -1,4 +1,15 @@
 import { describe, it, expect, vi } from 'vitest'
+
+vi.mock('../logger', () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    fatal: vi.fn(),
+  },
+}))
+
 import {
   AppError,
   ValidationError,
@@ -15,8 +26,9 @@ import {
   isOperationalError,
   asyncHandler,
   safeJsonParse,
-  withRetry
+  withRetry,
 } from '../error-handling'
+import { logger } from '../logger'
 
 describe('Error Handling', () => {
   describe('AppError', () => {
@@ -88,7 +100,12 @@ describe('Error Handling', () => {
     })
 
     it('should create AuthError with all auth types', () => {
-      const types: ('login' | 'session' | 'permission' | 'token')[] = ['login', 'session', 'permission', 'token']
+      const types: ('login' | 'session' | 'permission' | 'token')[] = [
+        'login',
+        'session',
+        'permission',
+        'token',
+      ]
       for (const type of types) {
         const error = new AuthError('Test', type)
         expect(error.authType).toBe(type)
@@ -200,7 +217,8 @@ describe('Error Handling', () => {
 
   describe('logError', () => {
     it('should log error without throwing', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const errorSpy = vi.mocked(logger.error)
+      errorSpy.mockClear()
 
       const error = new Error('Test error')
       const context = { userId: '123', password: 'secret123', token: 'abc' }
@@ -208,23 +226,24 @@ describe('Error Handling', () => {
       // Should not throw
       expect(() => logError(error, context)).not.toThrow()
 
-      expect(consoleSpy).toHaveBeenCalled()
+      expect(errorSpy).toHaveBeenCalled()
 
-      consoleSpy.mockRestore()
+      errorSpy.mockClear()
     })
 
     it('should include error name and message', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const errorSpy = vi.mocked(logger.error)
+      errorSpy.mockClear()
 
       const error = new AppError('Test error', 500)
       logError(error)
 
-      expect(consoleSpy).toHaveBeenCalled()
-      const logOutput = JSON.parse((consoleSpy.mock.calls[0] as any[])[0])
+      expect(errorSpy).toHaveBeenCalled()
+      const logOutput = errorSpy.mock.calls[0][0] as { name: string; message: string }
       expect(logOutput.name).toBe('AppError')
       expect(logOutput.message).toBe('Test error')
 
-      consoleSpy.mockRestore()
+      errorSpy.mockClear()
     })
   })
 
@@ -239,14 +258,15 @@ describe('Error Handling', () => {
     })
 
     it('should include error details in report', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const errorSpy = vi.mocked(logger.error)
+      errorSpy.mockClear()
 
       const error = new Error('Test error')
       await reportError(error, 'User description')
 
-      expect(consoleSpy).toHaveBeenCalled()
+      expect(errorSpy).toHaveBeenCalled()
 
-      consoleSpy.mockRestore()
+      errorSpy.mockClear()
     })
   })
 
@@ -302,7 +322,9 @@ describe('Error Handling', () => {
     it('should return payment message for PaymentError', () => {
       const error = new PaymentError('Card declined')
       const message = getUserErrorMessage(error)
-      expect(message).toBe('Payment processing failed. Please check your payment details and try again.')
+      expect(message).toBe(
+        'Payment processing failed. Please check your payment details and try again.'
+      )
     })
 
     it('should return database message for DatabaseError', () => {
@@ -314,13 +336,17 @@ describe('Error Handling', () => {
     it('should return AI service message for AIServiceError', () => {
       const error = new AIServiceError()
       const message = getUserErrorMessage(error)
-      expect(message).toBe('Our AI service is temporarily unavailable. Please try again in a moment.')
+      expect(message).toBe(
+        'Our AI service is temporarily unavailable. Please try again in a moment.'
+      )
     })
 
     it('should return generic message for unknown errors', () => {
       const error = new Error('Unknown error')
       const message = getUserErrorMessage(error)
-      expect(message).toBe('Something went wrong. Please try again or contact support if the problem persists.')
+      expect(message).toBe(
+        'Something went wrong. Please try again or contact support if the problem persists.'
+      )
     })
   })
 
@@ -350,7 +376,9 @@ describe('Error Handling', () => {
     })
 
     it('should catch and rethrow errors', async () => {
-      const fn = async () => { throw new Error('Failed') }
+      const fn = async () => {
+        throw new Error('Failed')
+      }
       const wrapped = asyncHandler(fn)
       await expect(wrapped()).rejects.toThrow('Failed')
     })
@@ -385,7 +413,8 @@ describe('Error Handling', () => {
     })
 
     it('should retry on retryable error', async () => {
-      const operation = vi.fn()
+      const operation = vi
+        .fn()
         .mockRejectedValueOnce(new DatabaseError('First failure'))
         .mockResolvedValueOnce('success')
 
@@ -398,9 +427,9 @@ describe('Error Handling', () => {
     it('should throw after max retries', async () => {
       const operation = vi.fn().mockRejectedValue(new DatabaseError('Always fails'))
 
-      await expect(
-        withRetry(operation, { maxRetries: 2, baseDelay: 10 })
-      ).rejects.toThrow('Always fails')
+      await expect(withRetry(operation, { maxRetries: 2, baseDelay: 10 })).rejects.toThrow(
+        'Always fails'
+      )
 
       expect(operation).toHaveBeenCalledTimes(3) // Initial + 2 retries
     })
@@ -408,9 +437,9 @@ describe('Error Handling', () => {
     it('should not retry non-retryable errors', async () => {
       const operation = vi.fn().mockRejectedValue(new ValidationError('Invalid input'))
 
-      await expect(
-        withRetry(operation, { maxRetries: 3, baseDelay: 10 })
-      ).rejects.toThrow('Invalid input')
+      await expect(withRetry(operation, { maxRetries: 3, baseDelay: 10 })).rejects.toThrow(
+        'Invalid input'
+      )
 
       expect(operation).toHaveBeenCalledTimes(1)
     })

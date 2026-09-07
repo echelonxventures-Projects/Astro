@@ -3,10 +3,10 @@
  * Provides authentication and authorization check before rendering client component
  */
 
-import { auth } from '@/lib/auth'
-import { prisma } from '@/lib/db'
 import { redirect } from 'next/navigation'
 import SettingsClient from './page.client'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 
 export default async function SettingsPage() {
   // Check authentication

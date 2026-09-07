@@ -3,14 +3,14 @@ export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { getAIProviderConfig, setSetting } from '@/lib/settings'
 import { logError } from '@/lib/logger'
+import { getAIProviderConfig, setSetting } from '@/lib/settings'
 
 /**
  * GET /api/settings
  * Get current AI provider configuration
  */
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   const session = await auth()
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
  * POST /api/settings
  * Save AI provider configuration
  */
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
   const session = await auth()
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const body = await req.json()
+    const body = await _req.json()
     const { provider, model, ollamaUrl, anthropicApiKey, geminiApiKey } = body
 
     // Validate provider
@@ -87,9 +87,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     logError('Error saving settings', error, { userId: session.user.id })
-    return NextResponse.json(
-      { error: 'Failed to save settings' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to save settings' }, { status: 500 })
   }
 }

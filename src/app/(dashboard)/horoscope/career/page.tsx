@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { Briefcase, Loader2, Sparkles } from 'lucide-react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import { useState, useEffect } from 'react'
 
 export default function CareerHoroscopePage() {
-  const { data: session, status } = useSession()
+  const { data: _session, status } = useSession()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [reading, setReading] = useState<any>(null)
@@ -91,8 +91,8 @@ export default function CareerHoroscopePage() {
                 <Briefcase className="w-12 h-12 text-indigo-400" />
               </div>
               <p className="text-purple-200 mb-6 max-w-md mx-auto">
-                Unlock insights about your career path, professional strengths, and
-                the best timing for career moves.
+                Unlock insights about your career path, professional strengths, and the best timing
+                for career moves.
               </p>
               <button
                 onClick={generateReading}

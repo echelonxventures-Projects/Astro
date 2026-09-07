@@ -3,7 +3,7 @@
  * Comprehensive error handling for StarPath Astrology
  */
 
-import { logger, logError as logErrorToLogger } from './logger'
+import { logger } from './logger'
 
 // Environment check
 const isProduction = process.env.NODE_ENV === 'production'
@@ -188,9 +188,8 @@ export function getErrorResponse(error: Error): ErrorResponse {
   if (error instanceof AppError) {
     return {
       status: error.statusCode,
-      message: isProduction && !error.isOperational
-        ? 'An unexpected error occurred'
-        : error.message,
+      message:
+        isProduction && !error.isOperational ? 'An unexpected error occurred' : error.message,
       code: error.constructor.name,
       details: error instanceof ValidationError ? error.fieldErrors : undefined,
     }
@@ -236,20 +235,20 @@ export async function reportError(
   const reportId = `ERR-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
   // Log the report
-  logger.error({
-    reportId,
-    error: {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
+  logger.error(
+    {
+      reportId,
+      error: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      },
+      userDescription,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'server',
+      url: typeof window !== 'undefined' ? window.location.href : undefined,
     },
-    userDescription,
-    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'server',
-    url: typeof window !== 'undefined' ? window.location.href : undefined,
-  }, 'Error report submitted')
-    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'server',
-    url: typeof window !== 'undefined' ? window.location.href : undefined,
-  }, 'Error report submitted')
+    'Error report submitted'
+  )
 
   // TODO: Send to error tracking service
   // if (process.env.ERROR_REPORTING_ENDPOINT) {
@@ -329,9 +328,7 @@ export function isOperationalError(error: Error): boolean {
 /**
  * Async error wrapper for API routes
  */
-export function asyncHandler<T extends (...args: unknown[]) => Promise<unknown>>(
-  fn: T
-): T {
+export function asyncHandler<T extends (...args: unknown[]) => Promise<unknown>>(fn: T): T {
   return (async (...args: unknown[]) => {
     try {
       return await fn(...args)

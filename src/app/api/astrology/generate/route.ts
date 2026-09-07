@@ -2,8 +2,6 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import { prisma } from '@/lib/db'
 import {
   generateDailyHoroscope,
   generateLoveHoroscope,
@@ -11,9 +9,11 @@ import {
   generateCompatibilityReading,
   chatWithAstrologer,
 } from '@/lib/ai/astrology-prompts'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 import { logger } from '@/lib/logger'
 
-const isDev = process.env.NODE_ENV === 'development'
+const _isDev = process.env.NODE_ENV === 'development'
 
 /**
  * POST /api/astrology/generate
@@ -46,8 +46,14 @@ export async function POST(req: NextRequest) {
       planets: chart.planets as any[],
       houses: chart.houses as any[],
       aspects: chart.aspects as any[],
-      ascendant: (chart as any).ascendant || { sign: (chart.houses as any[])?.[0]?.sign || 'Unknown', degree: 0 },
-      midheaven: (chart as any).midheaven || { sign: (chart.houses as any[])?.[9]?.sign || 'Unknown', degree: 0 },
+      ascendant: (chart as any).ascendant || {
+        sign: (chart.houses as any[])?.[0]?.sign || 'Unknown',
+        degree: 0,
+      },
+      midheaven: (chart as any).midheaven || {
+        sign: (chart.houses as any[])?.[9]?.sign || 'Unknown',
+        degree: 0,
+      },
     }
 
     let title = ''
@@ -88,10 +94,7 @@ export async function POST(req: NextRequest) {
         })
 
         if (!partnerChart) {
-          return NextResponse.json(
-            { error: 'Partner chart not found' },
-            { status: 404 }
-          )
+          return NextResponse.json({ error: 'Partner chart not found' }, { status: 404 })
         }
 
         const partnerChartData = {
@@ -115,10 +118,7 @@ export async function POST(req: NextRequest) {
 
       case 'chat': {
         if (!message) {
-          return NextResponse.json(
-            { error: 'Message required for chat' },
-            { status: 400 }
-          )
+          return NextResponse.json({ error: 'Message required for chat' }, { status: 400 })
         }
 
         // Get conversation history from latest chat session
@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
           orderBy: { lastActiveAt: 'desc' },
         })
 
-        const messages = chatSession?.messages as any[] || []
+        const messages = (chatSession?.messages as any[]) || []
 
         const response = await chatWithAstrologer(chartData, message, messages)
 
@@ -138,10 +138,7 @@ export async function POST(req: NextRequest) {
       }
 
       default:
-        return NextResponse.json(
-          { error: 'Invalid reading type' },
-          { status: 400 }
-        )
+        return NextResponse.json({ error: 'Invalid reading type' }, { status: 400 })
     }
 
     // Save the reading
@@ -164,9 +161,6 @@ export async function POST(req: NextRequest) {
     })
   } catch (error) {
     logger.debug({ error, userId: session.user.id }, 'Error generating reading')
-    return NextResponse.json(
-      { error: 'Failed to generate reading' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to generate reading' }, { status: 500 })
   }
 }

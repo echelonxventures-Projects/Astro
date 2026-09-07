@@ -4,20 +4,16 @@ export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import {
-  getGateway,
-  getDefaultGateway,
-  getEnabledGateways,
-} from '@/lib/payment'
 import { logError } from '@/lib/logger'
+import { getGateway, getDefaultGateway, getEnabledGateways } from '@/lib/payment'
 
 /**
  * POST /api/payment/checkout
- * Create a checkout session with the selected or default payment gateway
+ * Create a checkout _session with the selected or default payment gateway
  */
 export async function POST(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user) {
+  const _session = await auth()
+  if (!_session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -26,14 +22,11 @@ export async function POST(req: NextRequest) {
     const { planId, gatewayKey, paymentMethod } = body
 
     if (!planId) {
-      return NextResponse.json(
-        { error: 'Plan ID required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Plan ID required' }, { status: 400 })
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: _session.user.id },
     })
 
     if (!user) {
@@ -46,17 +39,14 @@ export async function POST(req: NextRequest) {
     })
 
     if (!plan || !plan.isActive) {
-      return NextResponse.json(
-        { error: 'Invalid or inactive plan' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid or inactive plan' }, { status: 400 })
     }
 
     // Free plan - no checkout needed
     if (plan.price === 0) {
       return NextResponse.json({
         message: 'Free plan activated',
-        plan: planId
+        plan: planId,
       })
     }
 
@@ -112,16 +102,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (!gateway) {
-      return NextResponse.json(
-        { error: 'No payment gateway configured' },
-        { status: 503 }
-      )
+      return NextResponse.json({ error: 'No payment gateway configured' }, { status: 503 })
     }
 
     const successUrl = `${process.env.NEXTAUTH_URL}/subscription?success=true&session_id={CHECKOUT_SESSION_ID}`
     const cancelUrl = `${process.env.NEXTAUTH_URL}/pricing?canceled=true`
 
-    // Create checkout session
+    // Create checkout _session
     const checkoutResult = await gateway.createCheckoutSession({
       userId: user.id,
       email: user.email,
@@ -165,11 +152,8 @@ export async function POST(req: NextRequest) {
       gateway: gateway.key,
     })
   } catch (error) {
-    logError('Error creating checkout session', error, { userId: session.user.id })
-    return NextResponse.json(
-      { error: 'Failed to create checkout session' },
-      { status: 500 }
-    )
+    logError('Error creating checkout _session', error, { userId: _session.user.id })
+    return NextResponse.json({ error: 'Failed to create checkout _session' }, { status: 500 })
   }
 }
 
@@ -178,7 +162,7 @@ export async function POST(req: NextRequest) {
  * Get available gateways and plans for checkout
  */
 export async function GET(req: NextRequest) {
-  const session = await auth()
+  const _session = await auth()
 
   const searchParams = req.nextUrl.searchParams
   const planId = searchParams.get('plan')
@@ -189,7 +173,7 @@ export async function GET(req: NextRequest) {
     const gateways = await getEnabledGateways()
 
     const gatewayInfo = await Promise.all(
-      gateways.map(async (gw) => {
+      gateways.map(async gw => {
         const gatewayRecord = await prisma.paymentGateway.findUnique({
           where: { key: gw.key },
           include: {
@@ -203,11 +187,12 @@ export async function GET(req: NextRequest) {
           key: gw.key,
           name: gw.name,
           isDefault: gatewayRecord?.isDefault || false,
-          paymentMethods: gatewayRecord?.paymentMethods.map((pm) => ({
-            key: pm.key,
-            name: pm.name,
-            icon: pm.icon,
-          })) || [],
+          paymentMethods:
+            gatewayRecord?.paymentMethods.map(pm => ({
+              key: pm.key,
+              name: pm.name,
+              icon: pm.icon,
+            })) || [],
         }
       })
     )
@@ -232,16 +217,18 @@ export async function GET(req: NextRequest) {
           include: { gateway: true },
         })
 
-        plans = [{
-          ...plan,
-          gatewayOptions: gatewayPlans.map((gp) => ({
-            gatewayKey: gp.gateway.key,
-            gatewayName: gp.gateway.name,
-            price: gp.price,
-            currency: gp.currency,
-            gatewayPlanId: gp.gatewayPlanId,
-          })),
-        }]
+        plans = [
+          {
+            ...plan,
+            gatewayOptions: gatewayPlans.map(gp => ({
+              gatewayKey: gp.gateway.key,
+              gatewayName: gp.gateway.name,
+              price: gp.price,
+              currency: gp.currency,
+              gatewayPlanId: gp.gatewayPlanId,
+            })),
+          },
+        ]
       }
     } else {
       const allPlans = await prisma.subscriptionPlan.findMany({
@@ -259,9 +246,6 @@ export async function GET(req: NextRequest) {
     })
   } catch (error) {
     logError('Error fetching checkout data', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch checkout data' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch checkout data' }, { status: 500 })
   }
 }

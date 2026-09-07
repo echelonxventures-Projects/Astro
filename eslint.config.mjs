@@ -23,7 +23,11 @@ const eslintConfig = defineConfig([
     rules: {
       "@typescript-eslint/explicit-function-return-type": "warn",
       "@typescript-eslint/no-explicit-any": "warn",
-      "@typescript-eslint/no-unused-vars": "error",
+      "@typescript-eslint/no-unused-vars": ["error", {
+        argsIgnorePattern: "^_",
+        varsIgnorePattern: "^_",
+        caughtErrorsIgnorePattern: "^_"
+      }],
       "import/order": ["error", { alphabetize: { order: "asc" } }],
       "unused-imports/no-unused-imports": "error",
     },

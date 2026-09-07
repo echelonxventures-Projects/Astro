@@ -6,9 +6,9 @@
 
 export interface AIProviderConfig {
   provider: 'anthropic' | 'ollama' | 'gemini' | 'openrouter' | 'nvidia' | 'opencode'
-  apiKey?: string        // For Anthropic/Gemini/OpenRouter/NVIDIA
-  ollamaUrl?: string     // Default: http://localhost:11434
-  baseUrl?: string       // For OpenRouter, NVIDIA, OpenCode
+  apiKey?: string // For Anthropic/Gemini/OpenRouter/NVIDIA
+  ollamaUrl?: string // Default: http://localhost:11434
+  baseUrl?: string // For OpenRouter, NVIDIA, OpenCode
   model: string
   maxTokens?: number
 }
@@ -20,7 +20,7 @@ export interface TextCompletionRequest {
 }
 
 export interface VisionCompletionRequest extends TextCompletionRequest {
-  imageUrl?: string      // Base64 or URL of image
+  imageUrl?: string // Base64 or URL of image
   imageMimeType?: string // e.g., 'image/jpeg'
 }
 
@@ -55,13 +55,21 @@ export async function getProviderConfig(): Promise<AIProviderConfig> {
 
   const settings = await prisma.appSettings.findMany({
     where: {
-      key: { in: ['AI_PROVIDER', 'AI_MODEL', 'OLLAMA_URL', 'ANTHROPIC_API_KEY', 'GEMINI_API_KEY', 'OPENROUTER_API_KEY', 'NVIDIA_API_KEY'] }
-    }
+      key: {
+        in: [
+          'AI_PROVIDER',
+          'AI_MODEL',
+          'OLLAMA_URL',
+          'ANTHROPIC_API_KEY',
+          'GEMINI_API_KEY',
+          'OPENROUTER_API_KEY',
+          'NVIDIA_API_KEY',
+        ],
+      },
+    },
   })
 
-  const settingsMap = Object.fromEntries(
-    settings.map(s => [s.key, s.value])
-  )
+  const settingsMap = Object.fromEntries(settings.map(s => [s.key, s.value]))
 
   // Priority 1: OpenRouter (free tier available)
   const openrouterKey = settingsMap['OPENROUTER_API_KEY'] || process.env.OPENROUTER_API_KEY
@@ -135,7 +143,7 @@ export async function getProviderConfig(): Promise<AIProviderConfig> {
   }
 }
 
-function getDefaultModel(provider: string): string {
+function _getDefaultModel(provider: string): string {
   switch (provider) {
     case 'anthropic':
       return 'claude-sonnet-4-20250514'
@@ -184,7 +192,9 @@ export async function getAIProvider(): Promise<AIProvider> {
  * Get AI provider for a specific subscription plan
  * This allows different tiers to use different models
  */
-export async function getAIProviderForPlan(plan: 'free' | 'monthly' | 'yearly'): Promise<AIProvider> {
+export async function getAIProviderForPlan(
+  plan: 'free' | 'monthly' | 'yearly'
+): Promise<AIProvider> {
   const { getAIPlanConfig } = await import('./plan-config')
   const config = await getAIPlanConfig(plan)
 
@@ -194,12 +204,23 @@ export async function getAIProviderForPlan(plan: 'free' | 'monthly' | 'yearly'):
   }
 
   const providerConfig: AIProviderConfig = {
-    provider: config.provider as 'anthropic' | 'ollama' | 'gemini' | 'openrouter' | 'nvidia' | 'opencode',
+    provider: config.provider as
+      | 'anthropic'
+      | 'ollama'
+      | 'gemini'
+      | 'openrouter'
+      | 'nvidia'
+      | 'opencode',
     apiKey: config.apiKey || undefined,
     ollamaUrl: config.ollamaUrl || 'http://localhost:11434',
-    baseUrl: config.provider === 'openrouter' ? 'https://openrouter.ai/api/v1' :
-             config.provider === 'nvidia' ? 'https://integrate.api.nvidia.com/v1' :
-             config.provider === 'opencode' ? 'http://localhost:8080' : undefined,
+    baseUrl:
+      config.provider === 'openrouter'
+        ? 'https://openrouter.ai/api/v1'
+        : config.provider === 'nvidia'
+          ? 'https://integrate.api.nvidia.com/v1'
+          : config.provider === 'opencode'
+            ? 'http://localhost:8080'
+            : undefined,
     model: config.model,
     maxTokens: config.maxTokens,
   }

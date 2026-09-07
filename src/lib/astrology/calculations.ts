@@ -5,15 +5,32 @@
 
 // Zodiac signs
 export const ZODIAC_SIGNS = [
-  'Aries', 'Taurus', 'Gemini', 'Cancer',
-  'Leo', 'Virgo', 'Libra', 'Scorpio',
-  'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'
+  'Aries',
+  'Taurus',
+  'Gemini',
+  'Cancer',
+  'Leo',
+  'Virgo',
+  'Libra',
+  'Scorpio',
+  'Sagittarius',
+  'Capricorn',
+  'Aquarius',
+  'Pisces',
 ]
 
 // Planet names
 export const PLANETS = [
-  'Sun', 'Moon', 'Mercury', 'Venus', 'Mars',
-  'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto'
+  'Sun',
+  'Moon',
+  'Mercury',
+  'Venus',
+  'Mars',
+  'Jupiter',
+  'Saturn',
+  'Uranus',
+  'Neptune',
+  'Pluto',
 ]
 
 // Aspect types with their angles and orbs
@@ -45,7 +62,15 @@ export function dateToJulianDay(year: number, month: number, day: number): numbe
   const a = Math.floor((14 - month) / 12)
   const y = year + 4800 - a
   const m = month + 12 * a - 3
-  return day + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045
+  return (
+    day +
+    Math.floor((153 * m + 2) / 5) +
+    365 * y +
+    Math.floor(y / 4) -
+    Math.floor(y / 100) +
+    Math.floor(y / 400) -
+    32045
+  )
 }
 
 /**
@@ -138,7 +163,9 @@ export function calculateAscendant(
 
   // Calculate Local Sidereal Time (simplified)
   const UT = hours + minutes / 60
-  const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000)
+  const dayOfYear = Math.floor(
+    (date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000
+  )
 
   // Approximate GST at 0h UT
   let GST = 6.6563298 + 0.0657098242 * dayOfYear + UT
@@ -155,11 +182,12 @@ export function calculateAscendant(
   const epsilon = 23.44 // Obliquity of ecliptic
 
   // Ascendant formula (simplified)
-  const tanASC = -Math.cos(Math.PI * RAMC / 180) /
-    (Math.sin(Math.PI * RAMC / 180) * Math.cos(Math.PI * latitude / 180) +
-     Math.tan(Math.PI * epsilon / 180) * Math.sin(Math.PI * latitude / 180))
+  const tanASC =
+    -Math.cos((Math.PI * RAMC) / 180) /
+    (Math.sin((Math.PI * RAMC) / 180) * Math.cos((Math.PI * latitude) / 180) +
+      Math.tan((Math.PI * epsilon) / 180) * Math.sin((Math.PI * latitude) / 180))
 
-  let ascendant = Math.atan(tanASC) * 180 / Math.PI
+  let ascendant = (Math.atan(tanASC) * 180) / Math.PI
 
   // Adjust quadrant
   if (RAMC >= 0 && RAMC < 180) {
@@ -186,7 +214,9 @@ export function calculateMidheaven(
   const [hours, minutes] = time.split(':').map(Number)
 
   const UT = hours + minutes / 60
-  const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000)
+  const dayOfYear = Math.floor(
+    (date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000
+  )
 
   let GST = 6.6563298 + 0.0657098242 * dayOfYear + UT
   GST = GST % 24
@@ -195,9 +225,9 @@ export function calculateMidheaven(
   const LSTDegrees = LST * 15
 
   const epsilon = 23.44
-  const tanMC = Math.tan(Math.PI * LSTDegrees / 180) / Math.cos(Math.PI * epsilon / 180)
+  const tanMC = Math.tan((Math.PI * LSTDegrees) / 180) / Math.cos((Math.PI * epsilon) / 180)
 
-  let mc = Math.atan(tanMC) * 180 / Math.PI
+  let mc = (Math.atan(tanMC) * 180) / Math.PI
 
   if (LSTDegrees >= 0 && LSTDegrees < 180) {
     // Keep as is
@@ -221,7 +251,9 @@ export function calculateMidheaven(
 /**
  * Calculate house cusps using Equal House system (simplified)
  */
-export function calculateHouses(ascendant: number): { house: number; longitude: number; sign: string; degree: number }[] {
+export function calculateHouses(
+  ascendant: number
+): { house: number; longitude: number; sign: string; degree: number }[] {
   const houses: { house: number; longitude: number; sign: string; degree: number }[] = []
 
   for (let i = 0; i < 12; i++) {
@@ -242,7 +274,8 @@ export function calculateHouses(ascendant: number): { house: number; longitude: 
 export function calculateAspects(
   planets: { name: string; longitude: number }[]
 ): { planet1: string; planet2: string; type: string; angle: number; orb: number }[] {
-  const aspects: { planet1: string; planet2: string; type: string; angle: number; orb: number }[] = []
+  const aspects: { planet1: string; planet2: string; type: string; angle: number; orb: number }[] =
+    []
 
   for (let i = 0; i < planets.length; i++) {
     for (let j = i + 1; j < planets.length; j++) {
@@ -282,9 +315,17 @@ export function generateBirthChart(
   birthPlace: string,
   latitude: number,
   longitude: number,
-  timezone: string
+  _timezone: string
 ): {
-  planets: { name: string; longitude: number; latitude: number; speed: number; sign: string; degree: number; house?: number }[]
+  planets: {
+    name: string
+    longitude: number
+    latitude: number
+    speed: number
+    sign: string
+    degree: number
+    house?: number
+  }[]
   houses: { house: number; longitude: number; sign: string; degree: number }[]
   aspects: { planet1: string; planet2: string; type: string; angle: number; orb: number }[]
   ascendant: { sign: string; degree: number }
@@ -297,7 +338,7 @@ export function generateBirthChart(
   const julianDay = dateToJulianDay(year, month, day)
 
   // Calculate planetary positions
-  const planets = PLANETS.map((planet) => {
+  const planets = PLANETS.map(planet => {
     const longitude = calculatePlanetLongitude(planet, julianDay, birthTime)
     const signData = degreesToSign(longitude)
     return {
@@ -317,22 +358,22 @@ export function generateBirthChart(
   const houses = calculateHouses(ascendant.longitude)
 
   // Assign houses to planets
-  planets.forEach((planet) => {
+  planets.forEach(planet => {
     for (let i = 0; i < houses.length; i++) {
       const currentHouse = houses[i]
       const nextHouse = houses[(i + 1) % 12]
 
-      let houseStart = currentHouse.longitude
-      let houseEnd = nextHouse.longitude
+      const houseStart = currentHouse.longitude
+      const houseEnd = nextHouse.longitude
 
       if (houseEnd < houseStart) {
         if (planet.longitude >= houseStart || planet.longitude < houseEnd) {
-          (planet as any).house = i + 1
+          ;(planet as any).house = i + 1
           break
         }
       } else {
         if (planet.longitude >= houseStart && planet.longitude < houseEnd) {
-          (planet as any).house = i + 1
+          ;(planet as any).house = i + 1
           break
         }
       }

@@ -1,10 +1,10 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { Sparkles, Loader2, Save, User, Mail, MapPin } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { useState } from 'react'
-import { Sparkles, Loader2, Save, User, Mail, MapPin, Calendar } from 'lucide-react'
 import { logger } from '@/lib/logger'
 
 export default function ProfilePage() {
@@ -38,7 +38,7 @@ export default function ProfilePage() {
 
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
-    } catch (err) {
+    } catch (_err) {
       logger.warn('Failed to update profile')
     } finally {
       setLoading(false)
@@ -87,21 +87,17 @@ export default function ProfilePage() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-purple-200 mb-2">
-                  Full Name
-                </label>
+                <label className="block text-sm font-medium text-purple-200 mb-2">Full Name</label>
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={e => setFormData({ ...formData, name: e.target.value })}
                   className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-purple-200 mb-2">
-                  Email
-                </label>
+                <label className="block text-sm font-medium text-purple-200 mb-2">Email</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-purple-400" />
                   <input
@@ -146,8 +142,8 @@ export default function ProfilePage() {
               Birth Details
             </h2>
             <p className="text-purple-200 mb-6">
-              Your birth details are stored in your birth chart. To update them, create a new
-              birth chart with updated information.
+              Your birth details are stored in your birth chart. To update them, create a new birth
+              chart with updated information.
             </p>
             <Link
               href="/chart"
@@ -161,8 +157,8 @@ export default function ProfilePage() {
           <div className="glass rounded-3xl p-8 mt-8 border border-red-500/30">
             <h2 className="text-xl font-semibold mb-4 text-red-400">Danger Zone</h2>
             <p className="text-purple-200 mb-4">
-              Once you delete your account, there is no going back. All your data, including
-              birth charts and readings, will be permanently removed.
+              Once you delete your account, there is no going back. All your data, including birth
+              charts and readings, will be permanently removed.
             </p>
             <button className="bg-red-600 hover:bg-red-500 text-white px-6 py-3 rounded-xl font-semibold transition">
               Delete Account

@@ -1,8 +1,8 @@
-import type { BirthChartData } from '@/types'
 import { getAIProvider } from './provider'
-import { cache, DEFAULT_TTLS } from '@/lib/cache'
+import { get as cacheGet, set as cacheSet, DEFAULT_TTLS } from '@/lib/cache'
 import { cacheKeys, generateInputHash } from '@/lib/cache-keys'
 import { logger } from '@/lib/logger'
+import type { BirthChartData } from '@/types'
 
 /**
  * System prompt for astrology AI - Conversational flow
@@ -77,15 +77,15 @@ export async function generateDailyHoroscope(
   const cacheKey = cacheKeys.aiResponse('daily-horoscope', inputHash)
 
   // Check cache first
-  const cached = await cache.get<{ title: string; content: string }>(cacheKey)
+  const cached = await cacheGet<{ title: string; content: string }>(cacheKey)
   if (cached) {
     logger.debug({ cacheKey, type: 'daily-horoscope' }, 'AI response cache hit')
     return cached
   }
 
-  const sunSign = birthChart.planets.find((p) => p.name === 'Sun')?.sign || 'Unknown'
+  const sunSign = birthChart.planets.find(p => p.name === 'Sun')?.sign || 'Unknown'
   const ascendant = (birthChart as any).ascendant?.sign || birthChart.houses[0]?.sign || 'Unknown'
-  const moonSign = birthChart.planets.find((p) => p.name === 'Moon')?.sign || 'Unknown'
+  const moonSign = birthChart.planets.find(p => p.name === 'Moon')?.sign || 'Unknown'
 
   const prompt = `You are an expert astrologer. Generate a daily horoscope reading for ${userName || 'this person'}.
 
@@ -96,10 +96,10 @@ Birth Chart Details:
 - Date: ${today}
 
 Key Planetary Positions:
-${birthChart.planets.map((p) => `- ${p.name} in ${p.sign}${p.house ? ` (House ${p.house})` : ''}`).join('\n')}
+${birthChart.planets.map(p => `- ${p.name} in ${p.sign}${p.house ? ` (House ${p.house})` : ''}`).join('\n')}
 
 Major Aspects:
-${birthChart.aspects.map((a) => `- ${a.planet1} ${a.type} ${a.planet2} (orb: ${a.orb.toFixed(1)}°)`).join('\n') || 'No major aspects'}
+${birthChart.aspects.map(a => `- ${a.planet1} ${a.type} ${a.planet2} (orb: ${a.orb.toFixed(1)}°)`).join('\n') || 'No major aspects'}
 
 Provide:
 1. An engaging opening that addresses the person by their Sun sign
@@ -113,7 +113,8 @@ Keep it uplifting, practical, and around 400 words.`
   const provider = await getAIProvider()
   const content = await provider.complete({
     messages: [{ role: 'user', content: prompt }],
-    system: 'You are an expert astrologer providing daily horoscope readings based on birth charts.',
+    system:
+      'You are an expert astrologer providing daily horoscope readings based on birth charts.',
     maxTokens: 1024,
   })
 
@@ -123,7 +124,7 @@ Keep it uplifting, practical, and around 400 words.`
   }
 
   // Cache for 24 hours
-  await cache.set(cacheKey, result, DEFAULT_TTLS.AI_RESPONSE)
+  await cacheSet(cacheKey, result, DEFAULT_TTLS.AI_RESPONSE)
   logger.debug({ cacheKey, type: 'daily-horoscope' }, 'AI response cached')
 
   return result
@@ -137,10 +138,10 @@ export async function generateLoveHoroscope(
   birthChart: BirthChartData,
   userName: string | null
 ): Promise<{ title: string; content: string }> {
-  const venus = birthChart.planets.find((p) => p.name === 'Venus')
-  const mars = birthChart.planets.find((p) => p.name === 'Mars')
-  const moon = birthChart.planets.find((p) => p.name === 'Moon')
-  const seventhHouse = birthChart.houses.find((h) => h.house === 7)
+  const venus = birthChart.planets.find(p => p.name === 'Venus')
+  const mars = birthChart.planets.find(p => p.name === 'Mars')
+  const moon = birthChart.planets.find(p => p.name === 'Moon')
+  const seventhHouse = birthChart.houses.find(h => h.house === 7)
 
   // Create cache key
   const inputHash = hashInput({
@@ -154,7 +155,7 @@ export async function generateLoveHoroscope(
   const cacheKey = cacheKeys.aiResponse('love-horoscope', inputHash)
 
   // Check cache first
-  const cached = await cache.get<{ title: string; content: string }>(cacheKey)
+  const cached = await cacheGet<{ title: string; content: string }>(cacheKey)
   if (cached) {
     logger.debug({ cacheKey, type: 'love-horoscope' }, 'AI response cache hit')
     return cached
@@ -169,10 +170,12 @@ Birth Chart Love Indicators:
 - 7th House (partnerships): ${seventhHouse?.sign || 'Unknown'}
 
 Venus Aspects:
-${birthChart.aspects
-  .filter((a) => a.planet1 === 'Venus' || a.planet2 === 'Venus')
-  .map((a) => `- ${a.planet1} ${a.type} ${a.planet2}`)
-  .join('\n') || 'No major Venus aspects'}
+${
+  birthChart.aspects
+    .filter(a => a.planet1 === 'Venus' || a.planet2 === 'Venus')
+    .map(a => `- ${a.planet1} ${a.type} ${a.planet2}`)
+    .join('\n') || 'No major Venus aspects'
+}
 
 Provide:
 1. Their love nature and what they seek in relationships
@@ -186,7 +189,8 @@ Make it insightful and around 450 words.`
   const provider = await getAIProvider()
   const content = await provider.complete({
     messages: [{ role: 'user', content: prompt }],
-    system: 'You are an expert astrologer providing love and relationship horoscope readings based on birth charts.',
+    system:
+      'You are an expert astrologer providing love and relationship horoscope readings based on birth charts.',
     maxTokens: 1024,
   })
 
@@ -196,7 +200,7 @@ Make it insightful and around 450 words.`
   }
 
   // Cache for 24 hours
-  await cache.set(cacheKey, result, DEFAULT_TTLS.AI_RESPONSE)
+  await cacheSet(cacheKey, result, DEFAULT_TTLS.AI_RESPONSE)
   logger.debug({ cacheKey, type: 'love-horoscope' }, 'AI response cached')
 
   return result
@@ -210,10 +214,10 @@ export async function generateCareerHoroscope(
   birthChart: BirthChartData,
   userName: string | null
 ): Promise<{ title: string; content: string }> {
-  const sun = birthChart.planets.find((p) => p.name === 'Sun')
-  const saturn = birthChart.planets.find((p) => p.name === 'Saturn')
-  const tenthHouse = birthChart.houses.find((h) => h.house === 10)
-  const sixthHouse = birthChart.houses.find((h) => h.house === 6)
+  const sun = birthChart.planets.find(p => p.name === 'Sun')
+  const saturn = birthChart.planets.find(p => p.name === 'Saturn')
+  const tenthHouse = birthChart.houses.find(h => h.house === 10)
+  const sixthHouse = birthChart.houses.find(h => h.house === 6)
 
   // Create cache key
   const inputHash = hashInput({
@@ -228,7 +232,7 @@ export async function generateCareerHoroscope(
   const cacheKey = cacheKeys.aiResponse('career-horoscope', inputHash)
 
   // Check cache first
-  const cached = await cache.get<{ title: string; content: string }>(cacheKey)
+  const cached = await cacheGet<{ title: string; content: string }>(cacheKey)
   if (cached) {
     logger.debug({ cacheKey, type: 'career-horoscope' }, 'AI response cache hit')
     return cached
@@ -243,10 +247,16 @@ Birth Chart Career Indicators:
 - 6th House (daily work): ${sixthHouse?.sign || 'Unknown'}
 
 Relevant Aspects:
-${birthChart.aspects
-  .filter((a) => ['Sun', 'Saturn', 'Mars', 'Jupiter'].includes(a.planet1) || ['Sun', 'Saturn', 'Mars', 'Jupiter'].includes(a.planet2))
-  .map((a) => `- ${a.planet1} ${a.type} ${a.planet2}`)
-  .join('\n') || 'No major career aspects'}
+${
+  birthChart.aspects
+    .filter(
+      a =>
+        ['Sun', 'Saturn', 'Mars', 'Jupiter'].includes(a.planet1) ||
+        ['Sun', 'Saturn', 'Mars', 'Jupiter'].includes(a.planet2)
+    )
+    .map(a => `- ${a.planet1} ${a.type} ${a.planet2}`)
+    .join('\n') || 'No major career aspects'
+}
 
 Provide a detailed career reading with:
 1. Natural career strengths and suitable professions
@@ -270,7 +280,7 @@ Write in a warm, insightful tone. Around 450 words.`
   }
 
   // Cache for 24 hours
-  await cache.set(cacheKey, result, DEFAULT_TTLS.AI_RESPONSE)
+  await cacheSet(cacheKey, result, DEFAULT_TTLS.AI_RESPONSE)
   logger.debug({ cacheKey, type: 'career-horoscope' }, 'AI response cached')
 
   return result
@@ -297,22 +307,22 @@ export async function generateCompatibilityReading(
   const cacheKey = cacheKeys.aiResponse('compatibility', inputHash)
 
   // Check cache first
-  const cached = await cache.get<{ title: string; content: string }>(cacheKey)
+  const cached = await cacheGet<{ title: string; content: string }>(cacheKey)
   if (cached) {
     logger.debug({ cacheKey, type: 'compatibility' }, 'AI response cache hit')
     return cached
   }
 
-  const person1Sun = chart1.planets.find((p) => p.name === 'Sun')?.sign
-  const person1Moon = chart1.planets.find((p) => p.name === 'Moon')?.sign
-  const person1Venus = chart1.planets.find((p) => p.name === 'Venus')?.sign
-  const person1Mars = chart1.planets.find((p) => p.name === 'Mars')?.sign
+  const person1Sun = chart1.planets.find(p => p.name === 'Sun')?.sign
+  const person1Moon = chart1.planets.find(p => p.name === 'Moon')?.sign
+  const person1Venus = chart1.planets.find(p => p.name === 'Venus')?.sign
+  const person1Mars = chart1.planets.find(p => p.name === 'Mars')?.sign
   const person1Ascendant = (chart1 as any).ascendant?.sign || chart1.houses[0]?.sign || 'Unknown'
 
-  const person2Sun = chart2.planets.find((p) => p.name === 'Sun')?.sign
-  const person2Moon = chart2.planets.find((p) => p.name === 'Moon')?.sign
-  const person2Venus = chart2.planets.find((p) => p.name === 'Venus')?.sign
-  const person2Mars = chart2.planets.find((p) => p.name === 'Mars')?.sign
+  const person2Sun = chart2.planets.find(p => p.name === 'Sun')?.sign
+  const person2Moon = chart2.planets.find(p => p.name === 'Moon')?.sign
+  const person2Venus = chart2.planets.find(p => p.name === 'Venus')?.sign
+  const person2Mars = chart2.planets.find(p => p.name === 'Mars')?.sign
   const person2Ascendant = (chart2 as any).ascendant?.sign || chart2.houses[0]?.sign || 'Unknown'
 
   const prompt = `Generate a detailed compatibility (synastry) reading between ${person1Name} and ${person2Name}.
@@ -346,7 +356,7 @@ Be honest but constructive. Highlight both strengths and challenges. Around 500 
   }
 
   // Cache for 24 hours
-  await cache.set(cacheKey, result, DEFAULT_TTLS.AI_RESPONSE)
+  await cacheSet(cacheKey, result, DEFAULT_TTLS.AI_RESPONSE)
   logger.debug({ cacheKey, type: 'compatibility' }, 'AI response cached')
 
   return result
@@ -385,7 +395,10 @@ export async function chatWithAstrologer(
     const provider = await getAIProvider()
     return await provider.complete({
       messages: [
-        ...conversationHistory.slice(-10) as { role: 'user' | 'assistant' | 'system'; content: string }[],
+        ...(conversationHistory.slice(-10) as {
+          role: 'user' | 'assistant' | 'system'
+          content: string
+        }[]),
         { role: 'user', content: userMessage },
       ],
       system: `${ASTROLOGY_SYSTEM_PROMPT}\n\nYou have the user's name: ${userData.name}\n\nYou still need: ${missingInfo.join(', ')}\n\nPolitely ask for the missing information in a friendly, conversational way. Once you have all details, you can provide the full reading.`,
@@ -395,8 +408,8 @@ export async function chatWithAstrologer(
 
   // We have all info and birth chart - provide full reading
   if (birthChart && userData?.name) {
-    const sunSign = birthChart.planets.find((p) => p.name === 'Sun')?.sign || 'Unknown'
-    const moonSign = birthChart.planets.find((p) => p.name === 'Moon')?.sign || 'Unknown'
+    const sunSign = birthChart.planets.find(p => p.name === 'Sun')?.sign || 'Unknown'
+    const moonSign = birthChart.planets.find(p => p.name === 'Moon')?.sign || 'Unknown'
     const ascendant = (birthChart as any).ascendant?.sign || birthChart.houses[0]?.sign || 'Unknown'
 
     // Check for cached response for this specific question
@@ -409,7 +422,7 @@ export async function chatWithAstrologer(
     })
     const cacheKey = cacheKeys.aiResponse('chat', inputHash)
 
-    const cached = await cache.get<string>(cacheKey)
+    const cached = await cacheGet<string>(cacheKey)
     if (cached) {
       logger.debug({ cacheKey, type: 'chat' }, 'AI chat response cache hit')
       return cached
@@ -422,7 +435,12 @@ export async function chatWithAstrologer(
 - Birth Date: ${userData.birthDate}
 - Birth Time: ${userData.birthTime}
 - Birth Place: ${userData.birthPlace}
-- Key aspects: ${birthChart.aspects.slice(0, 5).map((a) => `${a.planet1} ${a.type} ${a.planet2}`).join(', ') || 'None calculated'}`
+- Key aspects: ${
+      birthChart.aspects
+        .slice(0, 5)
+        .map(a => `${a.planet1} ${a.type} ${a.planet2}`)
+        .join(', ') || 'None calculated'
+    }`
 
     const readingPrompt = `Provide a comprehensive, personalized astrology reading for ${userData.name}.
 
@@ -442,7 +460,10 @@ Make it feel like a real conversation - warm, insightful, and personally tailore
     const provider = await getAIProvider()
     const response = await provider.complete({
       messages: [
-        ...conversationHistory.slice(-10) as { role: 'user' | 'assistant' | 'system'; content: string }[],
+        ...(conversationHistory.slice(-10) as {
+          role: 'user' | 'assistant' | 'system'
+          content: string
+        }[]),
         { role: 'user', content: userMessage },
       ],
       system: `${ASTROLOGY_SYSTEM_PROMPT}\n\n${readingPrompt}`,
@@ -452,7 +473,7 @@ Make it feel like a real conversation - warm, insightful, and personally tailore
     const result = response || 'I apologize, but I am unable to provide a reading at this time.'
 
     // Cache chat responses (shorter TTL for conversational responses)
-    await cache.set(cacheKey, result, DEFAULT_TTLS.SHORT)
+    await cacheSet(cacheKey, result, DEFAULT_TTLS.SHORT)
     logger.debug({ cacheKey, type: 'chat' }, 'AI chat response cached')
 
     return result
@@ -462,7 +483,10 @@ Make it feel like a real conversation - warm, insightful, and personally tailore
   const provider = await getAIProvider()
   return await provider.complete({
     messages: [
-      ...conversationHistory.slice(-10) as { role: 'user' | 'assistant' | 'system'; content: string }[],
+      ...(conversationHistory.slice(-10) as {
+        role: 'user' | 'assistant' | 'system'
+        content: string
+      }[]),
       { role: 'user', content: userMessage },
     ],
     system: ASTROLOGY_SYSTEM_PROMPT,

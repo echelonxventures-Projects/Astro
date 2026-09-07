@@ -3,10 +3,17 @@
  * Multiple astrological profiles under one account (family members, etc.)
  */
 
-import { prisma } from '@/lib/db'
 import { generateBirthChart } from '@/lib/astrology/calculations'
+import { prisma } from '@/lib/db'
 
-export type RelationshipType = 'self' | 'spouse' | 'child' | 'parent' | 'friend' | 'partner' | 'other'
+export type RelationshipType =
+  | 'self'
+  | 'spouse'
+  | 'child'
+  | 'parent'
+  | 'friend'
+  | 'partner'
+  | 'other'
 
 export interface AstroProfileInput {
   userId: string
@@ -103,17 +110,17 @@ export async function createAstroProfile(input: AstroProfileInput): Promise<Astr
 export async function getUserProfiles(userId: string): Promise<AstroProfileData[]> {
   return prisma.astroProfile.findMany({
     where: { userId },
-    orderBy: [
-      { isDefault: 'desc' },
-      { createdAt: 'asc' },
-    ],
+    orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
   })
 }
 
 /**
  * Get a specific profile
  */
-export async function getAstroProfile(profileId: string, userId: string): Promise<AstroProfileData | null> {
+export async function getAstroProfile(
+  profileId: string,
+  userId: string
+): Promise<AstroProfileData | null> {
   return prisma.astroProfile.findFirst({
     where: { id: profileId, userId },
   })
@@ -245,7 +252,10 @@ export async function deleteAstroProfile(profileId: string, userId: string): Pro
 /**
  * Get profile with birth chart
  */
-export async function getProfileWithChart(profileId: string, userId: string): Promise<{
+export async function getProfileWithChart(
+  profileId: string,
+  userId: string
+): Promise<{
   profile: AstroProfileData
   chart: any
 } | null> {
@@ -263,33 +273,37 @@ export async function getProfileWithChart(profileId: string, userId: string): Pr
 /**
  * Get profiles formatted for selection dropdown
  */
-export async function getProfileOptions(userId: string): Promise<{
-  id: string
-  name: string
-  relationship: string | null
-  isDefault: boolean
-  zodiacSign: string
-}[]> {
+export async function getProfileOptions(userId: string): Promise<
+  {
+    id: string
+    name: string
+    relationship: string | null
+    isDefault: boolean
+    zodiacSign: string
+  }[]
+> {
   const profiles = await getUserProfiles(userId)
 
-  const options = await Promise.all(profiles.map(async (p) => {
-    // Get sun sign from birth chart
-    const chart = await prisma.birthChart.findFirst({
-      where: { profileId: p.id },
+  const options = await Promise.all(
+    profiles.map(async p => {
+      // Get sun sign from birth chart
+      const chart = await prisma.birthChart.findFirst({
+        where: { profileId: p.id },
+      })
+
+      const sunSign = chart?.planets
+        ? (chart.planets as any[]).find((planet: any) => planet.name === 'Sun')?.sign
+        : 'Unknown'
+
+      return {
+        id: p.id,
+        name: p.name,
+        relationship: p.relationship,
+        isDefault: p.isDefault,
+        zodiacSign: sunSign || 'Unknown',
+      }
     })
-
-    const sunSign = chart?.planets
-      ? (chart.planets as any[]).find((planet: any) => planet.name === 'Sun')?.sign
-      : 'Unknown'
-
-    return {
-      id: p.id,
-      name: p.name,
-      relationship: p.relationship,
-      isDefault: p.isDefault,
-      zodiacSign: sunSign || 'Unknown',
-    }
-  }))
+  )
 
   return options
 }

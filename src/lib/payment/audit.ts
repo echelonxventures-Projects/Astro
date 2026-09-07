@@ -3,8 +3,8 @@
  * Comprehensive audit trail for all payment operations
  */
 
-import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/db'
+import { logger } from '@/lib/logger'
 
 export interface AuditEntry {
   action: AuditAction
@@ -146,18 +146,15 @@ export async function logTransaction(
 /**
  * Log fraud detection event
  */
-export async function logFraudCheck(
-  params: {
-    userId: string
-    transactionId?: string
-    riskScore: number
-    action: 'allow' | 'review' | 'block'
-    flags: string[]
-    ipAddress?: string
-  }
-): Promise<void> {
-  const auditAction: AuditAction =
-    params.action === 'block' ? 'fraud_blocked' : 'fraud_review'
+export async function logFraudCheck(params: {
+  userId: string
+  transactionId?: string
+  riskScore: number
+  action: 'allow' | 'review' | 'block'
+  flags: string[]
+  ipAddress?: string
+}): Promise<void> {
+  const auditAction: AuditAction = params.action === 'block' ? 'fraud_blocked' : 'fraud_review'
 
   await logPaymentAudit({
     action: params.action === 'allow' ? 'fraud_check' : auditAction,
@@ -176,18 +173,16 @@ export async function logFraudCheck(
 /**
  * Log refund event
  */
-export async function logRefund(
-  params: {
-    userId?: string
-    transactionId: string
-    gateway: string
-    amount: number
-    currency: string
-    reason?: string
-    status: AuditStatus
-    ipAddress?: string
-  }
-): Promise<void> {
+export async function logRefund(params: {
+  userId?: string
+  transactionId: string
+  gateway: string
+  amount: number
+  currency: string
+  reason?: string
+  status: AuditStatus
+  ipAddress?: string
+}): Promise<void> {
   await logPaymentAudit({
     action: 'refund_processed',
     userId: params.userId,
@@ -234,15 +229,13 @@ export async function logSubscription(
 /**
  * Log security alert
  */
-export async function logSecurityAlert(
-  params: {
-    alertType: string
-    severity: 'low' | 'medium' | 'high' | 'critical'
-    userId?: string
-    ipAddress?: string
-    details: Record<string, unknown>
-  }
-): Promise<void> {
+export async function logSecurityAlert(params: {
+  alertType: string
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  userId?: string
+  ipAddress?: string
+  details: Record<string, unknown>
+}): Promise<void> {
   await logPaymentAudit({
     action: 'security_alert',
     userId: params.userId,
@@ -270,16 +263,14 @@ export async function logSecurityAlert(
 /**
  * Log admin action
  */
-export async function logAdminAction(
-  params: {
-    adminUserId: string
-    action: string
-    targetUserId?: string
-    targetTransactionId?: string
-    details: Record<string, unknown>
-    ipAddress?: string
-  }
-): Promise<void> {
+export async function logAdminAction(params: {
+  adminUserId: string
+  action: string
+  targetUserId?: string
+  targetTransactionId?: string
+  details: Record<string, unknown>
+  ipAddress?: string
+}): Promise<void> {
   await logPaymentAudit({
     action: 'admin_action',
     userId: params.adminUserId,
@@ -307,13 +298,7 @@ export async function getUserAuditTrail(
     actions?: AuditAction[]
   }
 ): Promise<AuditEntry[]> {
-  const {
-    limit = 100,
-    offset = 0,
-    startDate,
-    endDate,
-    actions,
-  } = options || {}
+  const { limit = 100, offset = 0, startDate, endDate, actions } = options || {}
 
   const logs = await prisma.paymentAuditLog.findMany({
     where: {
@@ -327,56 +312,52 @@ export async function getUserAuditTrail(
     take: limit,
   })
 
-  return logs.map((log) => ({
+  return logs.map(log => ({
     action: log.action as AuditAction,
-    userId: log.userId,
-    transactionId: log.transactionId,
-    gateway: log.gateway,
-    amount: log.amount,
-    currency: log.currency,
+    userId: log.userId ?? undefined,
+    transactionId: log.transactionId ?? undefined,
+    gateway: log.gateway ?? undefined,
+    amount: log.amount ?? undefined,
+    currency: log.currency ?? undefined,
     status: log.status as AuditStatus,
-    ipAddress: log.ipAddress,
-    userAgent: log.userAgent,
+    ipAddress: log.ipAddress ?? undefined,
+    userAgent: log.userAgent ?? undefined,
     metadata: log.metadata ? JSON.parse(log.metadata) : undefined,
-    error: log.error,
+    error: log.error ?? undefined,
   }))
 }
 
 /**
  * Get audit trail for a transaction
  */
-export async function getTransactionAuditTrail(
-  transactionId: string
-): Promise<AuditEntry[]> {
+export async function getTransactionAuditTrail(transactionId: string): Promise<AuditEntry[]> {
   const logs = await prisma.paymentAuditLog.findMany({
     where: { transactionId },
     orderBy: { createdAt: 'asc' },
   })
 
-  return logs.map((log) => ({
+  return logs.map(log => ({
     action: log.action as AuditAction,
-    userId: log.userId,
-    transactionId: log.transactionId,
-    gateway: log.gateway,
-    amount: log.amount,
-    currency: log.currency,
+    userId: log.userId ?? undefined,
+    transactionId: log.transactionId ?? undefined,
+    gateway: log.gateway ?? undefined,
+    amount: log.amount ?? undefined,
+    currency: log.currency ?? undefined,
     status: log.status as AuditStatus,
-    ipAddress: log.ipAddress,
-    userAgent: log.userAgent,
+    ipAddress: log.ipAddress ?? undefined,
+    userAgent: log.userAgent ?? undefined,
     metadata: log.metadata ? JSON.parse(log.metadata) : undefined,
-    error: log.error,
+    error: log.error ?? undefined,
   }))
 }
 
 /**
  * Get recent suspicious activity
  */
-export async function getRecentSuspiciousActivity(
-  options?: {
-    limit?: number
-    hours?: number
-  }
-): Promise<AuditEntry[]> {
+export async function getRecentSuspiciousActivity(options?: {
+  limit?: number
+  hours?: number
+}): Promise<AuditEntry[]> {
   const { limit = 100, hours = 24 } = options || {}
 
   const since = new Date(Date.now() - hours * 60 * 60 * 1000)
@@ -395,17 +376,17 @@ export async function getRecentSuspiciousActivity(
     take: limit,
   })
 
-  return logs.map((log) => ({
+  return logs.map(log => ({
     action: log.action as AuditAction,
-    userId: log.userId,
-    transactionId: log.transactionId,
-    gateway: log.gateway,
-    amount: log.amount,
-    currency: log.currency,
+    userId: log.userId ?? undefined,
+    transactionId: log.transactionId ?? undefined,
+    gateway: log.gateway ?? undefined,
+    amount: log.amount ?? undefined,
+    currency: log.currency ?? undefined,
     status: log.status as AuditStatus,
-    ipAddress: log.ipAddress,
-    userAgent: log.userAgent,
+    ipAddress: log.ipAddress ?? undefined,
+    userAgent: log.userAgent ?? undefined,
     metadata: log.metadata ? JSON.parse(log.metadata) : undefined,
-    error: log.error,
+    error: log.error ?? undefined,
   }))
 }

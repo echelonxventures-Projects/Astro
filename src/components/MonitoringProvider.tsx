@@ -1,9 +1,13 @@
 'use client'
 
-import { createContext, useContext, useEffect, useCallback, ReactNode } from 'react'
-import { initPerformanceTracking, reportWebVitals, cleanupPerformanceTracking } from '@/lib/monitoring/performance'
-import { logger } from '@/lib/logger'
 import * as Sentry from '@sentry/nextjs'
+import { createContext, useContext, useEffect, useCallback, ReactNode, ReactElement } from 'react'
+import { logger } from '@/lib/logger'
+import {
+  initPerformanceTracking,
+  reportWebVitals,
+  cleanupPerformanceTracking,
+} from '@/lib/monitoring/performance'
 
 interface MonitoringContextType {
   trackEvent: (eventName: string, properties?: Record<string, unknown>) => void
@@ -28,7 +32,7 @@ export function MonitoringProvider({
   children,
   userId,
   userProperties,
-}: MonitoringProviderProps): JSX.Element {
+}: MonitoringProviderProps): ReactElement {
   // Initialize performance tracking on mount
   useEffect(() => {
     initPerformanceTracking()
@@ -51,7 +55,8 @@ export function MonitoringProvider({
 
     // Make handler available globally for Next.js
     if (typeof window !== 'undefined') {
-      (window as unknown as { webVitals: typeof reportWebVitalsHandler }).webVitals = reportWebVitalsHandler
+      ;(window as unknown as { webVitals: typeof reportWebVitalsHandler }).webVitals =
+        reportWebVitalsHandler
     }
 
     return () => {
@@ -81,8 +86,15 @@ export function MonitoringProvider({
     })
 
     // Send to analytics if configured
-    if (typeof window !== 'undefined' && (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag) {
-      (window as unknown as { gtag: (...args: unknown[]) => void }).gtag('event', eventName, properties)
+    if (
+      typeof window !== 'undefined' &&
+      (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag
+    ) {
+      ;(window as unknown as { gtag: (...args: unknown[]) => void }).gtag(
+        'event',
+        eventName,
+        properties
+      )
     }
 
     // Log in development
@@ -113,12 +125,19 @@ export function MonitoringProvider({
     })
 
     // Send to analytics if configured
-    if (typeof window !== 'undefined' && (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag) {
-      (window as unknown as { gtag: (...args: unknown[]) => void }).gtag('config', process.env.NEXT_PUBLIC_GA_ID, {
-        page_title: pageName,
-        page_location: typeof window !== 'undefined' ? window.location.href : '',
-        ...properties,
-      })
+    if (
+      typeof window !== 'undefined' &&
+      (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag
+    ) {
+      ;(window as unknown as { gtag: (...args: unknown[]) => void }).gtag(
+        'config',
+        process.env.NEXT_PUBLIC_GA_ID,
+        {
+          page_title: pageName,
+          page_location: typeof window !== 'undefined' ? window.location.href : '',
+          ...properties,
+        }
+      )
     }
 
     // Log in development
@@ -127,12 +146,15 @@ export function MonitoringProvider({
     }
   }, [])
 
-  const setUserProps = useCallback((properties: Record<string, unknown>) => {
-    Sentry.setUser({
-      id: userId,
-      ...properties,
-    })
-  }, [userId])
+  const setUserProps = useCallback(
+    (properties: Record<string, unknown>) => {
+      Sentry.setUser({
+        id: userId,
+        ...properties,
+      })
+    },
+    [userId]
+  )
 
   const value: MonitoringContextType = {
     trackEvent,
@@ -141,11 +163,7 @@ export function MonitoringProvider({
     setUserProperties: setUserProps,
   }
 
-  return (
-    <MonitoringContext.Provider value={value}>
-      {children}
-    </MonitoringContext.Provider>
-  )
+  return <MonitoringContext.Provider value={value}>{children}</MonitoringContext.Provider>
 }
 
 /**

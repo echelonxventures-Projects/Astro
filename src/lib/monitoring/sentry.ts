@@ -68,9 +68,9 @@ function sanitizeEvent(event: Sentry.Event): Sentry.Event {
 
   // Sanitize exception values
   if (event.exception?.values) {
-    event.exception.values.forEach((exception) => {
+    event.exception.values.forEach(exception => {
       if (exception.stacktrace?.frames) {
-        exception.stacktrace.frames.forEach((frame) => {
+        exception.stacktrace.frames.forEach(frame => {
           if (frame.vars) {
             frame.vars = Object.fromEntries(
               Object.entries(frame.vars).map(([key, value]) => {
@@ -88,7 +88,7 @@ function sanitizeEvent(event: Sentry.Event): Sentry.Event {
 
   // Sanitize breadcrumbs
   if (event.breadcrumbs) {
-    event.breadcrumbs = event.breadcrumbs.map((breadcrumb) => {
+    event.breadcrumbs = event.breadcrumbs.map(breadcrumb => {
       if (breadcrumb.data) {
         breadcrumb.data = Object.fromEntries(
           Object.entries(breadcrumb.data).map(([key, value]) => {
@@ -149,17 +149,20 @@ export function initSentry() {
     ],
 
     // Before send hook for sanitization
-    beforeSend: (event) => {
+    beforeSend: (event, _hint) => {
       // Filter out specific errors
-      if (event.exception?.values?.some(e =>
-        e.value?.includes('ResizeObserver loop') ||
-        e.value?.includes('Network request failed') ||
-        e.value?.includes('AbortError')
-      )) {
+      if (
+        event.exception?.values?.some(
+          e =>
+            e.value?.includes('ResizeObserver loop') ||
+            e.value?.includes('Network request failed') ||
+            e.value?.includes('AbortError')
+        )
+      ) {
         return null
       }
 
-      return sanitizeEvent(event)
+      return sanitizeEvent(event) as Sentry.ErrorEvent
     },
 
     // Ignore certain errors
@@ -173,12 +176,7 @@ export function initSentry() {
     ],
 
     // Deny URLs for specific errors
-    denyUrls: [
-      /extensions\//i,
-      /^chrome:\/\//i,
-      /^chrome-extension:\/\//i,
-      /^moz-extension:\/\//i,
-    ],
+    denyUrls: [/extensions\//i, /^chrome:\/\//i, /^chrome-extension:\/\//i, /^moz-extension:\/\//i],
 
     // Max breadcrumbs
     maxBreadcrumbs: 50,
@@ -240,7 +238,7 @@ export function captureMessage(message: string, level?: Sentry.SeverityLevel) {
  */
 export function captureException(error: Error, context?: Record<string, unknown>) {
   if (context) {
-    Sentry.withScope((scope) => {
+    Sentry.withScope(scope => {
       scope.setContext('additional', context)
       Sentry.captureException(error)
     })

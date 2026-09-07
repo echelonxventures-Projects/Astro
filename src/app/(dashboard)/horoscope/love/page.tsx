@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { Heart, Loader2, Sparkles, Users } from 'lucide-react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import { useState, useEffect } from 'react'
 
 export default function LoveHoroscopePage() {
-  const { data: session, status } = useSession()
+  const { data: _session, status } = useSession()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [reading, setReading] = useState<any>(null)
@@ -93,8 +93,8 @@ export default function LoveHoroscopePage() {
                 <Heart className="w-12 h-12 text-pink-400" />
               </div>
               <p className="text-purple-200 mb-6 max-w-md mx-auto">
-                Explore your romantic nature, compatibility patterns, and what the cosmos
-                has aligned for your love life.
+                Explore your romantic nature, compatibility patterns, and what the cosmos has
+                aligned for your love life.
               </p>
               <button
                 onClick={generateReading}
@@ -102,10 +102,7 @@ export default function LoveHoroscopePage() {
               >
                 Generate Love Reading
               </button>
-              <Link
-                href="/compatibility"
-                className="block mt-4 text-pink-400 hover:text-pink-300"
-              >
+              <Link href="/compatibility" className="block mt-4 text-pink-400 hover:text-pink-300">
                 Or check compatibility with a partner →
               </Link>
             </div>
@@ -158,7 +155,9 @@ export default function LoveHoroscopePage() {
                     <Users className="w-6 h-6 text-purple-400" />
                     <div>
                       <span className="font-medium block">Compatibility Reading</span>
-                      <span className="text-sm text-purple-300">Compare charts with your partner</span>
+                      <span className="text-sm text-purple-300">
+                        Compare charts with your partner
+                      </span>
                     </div>
                   </Link>
                 </div>

@@ -3,6 +3,7 @@ export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { logError } from '@/lib/logger'
 import {
   storeMemory,
   getMemory,
@@ -12,7 +13,6 @@ import {
   getMemoryStats,
   getMemoryContext,
 } from '@/lib/memory'
-import { logError } from '@/lib/logger'
 
 /**
  * GET /api/memory
@@ -49,16 +49,13 @@ export async function GET(req: NextRequest) {
     }
 
     // Get all memories (optionally filtered by category)
-    const categories = category ? [category] as any : undefined
+    const categories = category ? ([category] as any) : undefined
     const memories = await getUserMemories(session.user.id, categories)
 
     return NextResponse.json({ memories })
   } catch (error) {
     logError('Error fetching memories', error, { userId: session.user.id })
-    return NextResponse.json(
-      { error: 'Failed to fetch memories' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch memories' }, { status: 500 })
   }
 }
 
@@ -99,10 +96,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (error) {
     logError('Error storing memory', error, { userId: session.user.id })
-    return NextResponse.json(
-      { error: 'Failed to store memory' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to store memory' }, { status: 500 })
   }
 }
 
@@ -145,9 +139,6 @@ export async function DELETE(req: NextRequest) {
     })
   } catch (error) {
     logError('Error deleting memory', error, { userId: session.user.id })
-    return NextResponse.json(
-      { error: 'Failed to delete memory' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to delete memory' }, { status: 500 })
   }
 }

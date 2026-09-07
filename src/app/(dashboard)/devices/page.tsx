@@ -1,14 +1,22 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import {
-  Sparkles, Loader2, Monitor, Smartphone, Tablet, Trash2,
-  MapPin, Clock, AlertTriangle, Check
+  Sparkles,
+  Loader2,
+  Monitor,
+  Smartphone,
+  Tablet,
+  Trash2,
+  MapPin,
+  Clock,
+  AlertTriangle,
+  Check,
 } from 'lucide-react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import { useState, useEffect } from 'react'
 import { logger } from '@/lib/logger'
 
 interface Device {
@@ -51,7 +59,8 @@ export default function DevicesPage() {
   }
 
   const handleRevoke = async (deviceId: string) => {
-    if (!confirm('Are you sure you want to revoke this device? You will be logged out from it.')) return
+    if (!confirm('Are you sure you want to revoke this device? You will be logged out from it.'))
+      return
 
     setRevoking(deviceId)
     try {
@@ -134,9 +143,7 @@ export default function DevicesPage() {
               <Monitor className="w-10 h-10 text-purple-400" />
               Active Devices
             </h1>
-            <p className="text-purple-200 mt-2">
-              Manage devices that have access to your account
-            </p>
+            <p className="text-purple-200 mt-2">Manage devices that have access to your account</p>
           </motion.div>
 
           {/* Security Notice */}
@@ -148,16 +155,13 @@ export default function DevicesPage() {
           >
             <AlertTriangle className="w-5 h-5 text-yellow-400 mb-2" />
             <p className="text-yellow-200 text-sm">
-              If you notice any unfamiliar devices, revoke them immediately and change your password.
+              If you notice any unfamiliar devices, revoke them immediately and change your
+              password.
             </p>
           </motion.div>
 
           {/* Revoke All Button */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mb-4"
-          >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-4">
             <button
               onClick={handleRevokeOthers}
               disabled={revoking === 'all'}
@@ -189,18 +193,20 @@ export default function DevicesPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className={`glass rounded-2xl p-6 ${
-                      isCurrent ? 'border-green-500/30' : ''
-                    }`}
+                    className={`glass rounded-2xl p-6 ${isCurrent ? 'border-green-500/30' : ''}`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                          isCurrent ? 'bg-green-600/30' : 'bg-purple-600/30'
-                        }`}>
-                          <DeviceIcon className={`w-6 h-6 ${
-                            isCurrent ? 'text-green-400' : 'text-purple-400'
-                          }`} />
+                        <div
+                          className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                            isCurrent ? 'bg-green-600/30' : 'bg-purple-600/30'
+                          }`}
+                        >
+                          <DeviceIcon
+                            className={`w-6 h-6 ${
+                              isCurrent ? 'text-green-400' : 'text-purple-400'
+                            }`}
+                          />
                         </div>
                         <div>
                           <h3 className="text-xl font-semibold text-white flex items-center gap-2">
@@ -256,9 +262,7 @@ export default function DevicesPage() {
                 >
                   <Monitor className="w-16 h-16 text-purple-400 mx-auto mb-4" />
                   <h3 className="text-xl font-semibold text-white mb-2">No Devices Found</h3>
-                  <p className="text-purple-200">
-                    You have no active sessions on other devices
-                  </p>
+                  <p className="text-purple-200">You have no active sessions on other devices</p>
                 </motion.div>
               )}
             </div>

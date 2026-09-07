@@ -1,5 +1,5 @@
-import Link from 'next/link'
 import { Sparkles } from 'lucide-react'
+import Link from 'next/link'
 
 export default function TermsPage() {
   return (
@@ -27,13 +27,15 @@ export default function TermsPage() {
             <section>
               <h2 className="text-xl font-semibold mb-3 text-[#A78BFA]">1. Acceptance of Terms</h2>
               <p className="text-gray-300">
-                By accessing and using StarPath Astrology, you accept and agree to be bound by
-                these Terms of Service.
+                By accessing and using StarPath Astrology, you accept and agree to be bound by these
+                Terms of Service.
               </p>
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold mb-3 text-[#A78BFA]">2. No Professional Advice</h2>
+              <h2 className="text-xl font-semibold mb-3 text-[#A78BFA]">
+                2. No Professional Advice
+              </h2>
               <p className="text-gray-300">
                 StarPath Astrology provides AI-powered astrology readings, birth chart
                 interpretations, and cosmic guidance for entertainment and self-reflection purposes
@@ -43,7 +45,9 @@ export default function TermsPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold mb-3 text-[#A78BFA]">3. Accuracy of Information</h2>
+              <h2 className="text-xl font-semibold mb-3 text-[#A78BFA]">
+                3. Accuracy of Information
+              </h2>
               <p className="text-gray-300">
                 While we strive to provide accurate astrological calculations and insightful
                 interpretations, astrology is not a science. The readings and guidance provided
@@ -52,7 +56,9 @@ export default function TermsPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold mb-3 text-[#A78BFA]">4. User Responsibilities</h2>
+              <h2 className="text-xl font-semibold mb-3 text-[#A78BFA]">
+                4. User Responsibilities
+              </h2>
               <p className="text-gray-300">
                 You agree to use StarPath Astrology responsibly and not to rely solely on
                 astrological readings for important life decisions. Always seek professional advice
@@ -61,7 +67,9 @@ export default function TermsPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold mb-3 text-[#A78BFA]">5. Intellectual Property</h2>
+              <h2 className="text-xl font-semibold mb-3 text-[#A78BFA]">
+                5. Intellectual Property
+              </h2>
               <p className="text-gray-300">
                 All content, features, and functionality of StarPath Astrology are owned by us and
                 protected by copyright, trademark, and other intellectual property laws.
@@ -69,11 +77,13 @@ export default function TermsPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold mb-3 text-[#A78BFA]">6. Limitation of Liability</h2>
+              <h2 className="text-xl font-semibold mb-3 text-[#A78BFA]">
+                6. Limitation of Liability
+              </h2>
               <p className="text-gray-300">
-                StarPath Astrology is provided "as is" and "as available" without warranties of any
-                kind. To the maximum extent permitted by law, StarPath Astrology shall not be liable
-                for any damages arising from the use of our services.
+                StarPath Astrology is provided &quot;as is&quot; and &quot;as available&quot;
+                without warranties of any kind. To the maximum extent permitted by law, StarPath
+                Astrology shall not be liable for any damages arising from the use of our services.
               </p>
             </section>
 
@@ -96,10 +106,7 @@ export default function TermsPage() {
           </div>
 
           <div className="mt-8 text-center">
-            <Link
-              href="/privacy"
-              className="text-[#A78BFA] hover:text-[#C4B5FD] transition"
-            >
+            <Link href="/privacy" className="text-[#A78BFA] hover:text-[#C4B5FD] transition">
               Privacy Policy
             </Link>
           </div>

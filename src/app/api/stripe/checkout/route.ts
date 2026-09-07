@@ -4,20 +4,17 @@ export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { createCheckoutSession, createPortalSession } from '@/lib/stripe'
 import { logError } from '@/lib/logger'
+import { createCheckoutSession, createPortalSession } from '@/lib/stripe'
 
 /**
  * POST /api/stripe/checkout
  * Create a Stripe checkout session for subscription
  */
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
   // Check if Stripe is configured
   if (!process.env.STRIPE_SECRET_KEY) {
-    return NextResponse.json(
-      { error: 'Stripe not configured' },
-      { status: 503 }
-    )
+    return NextResponse.json({ error: 'Stripe not configured' }, { status: 503 })
   }
 
   const session = await auth()
@@ -26,14 +23,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const body = await req.json()
+    const body = await _req.json()
     const { plan } = body
 
     if (!plan || !['monthly', 'yearly'].includes(plan)) {
-      return NextResponse.json(
-        { error: 'Invalid plan selected' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid plan selected' }, { status: 400 })
     }
 
     const user = await prisma.user.findUnique({
@@ -72,10 +66,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: checkoutSession.url })
   } catch (error) {
     logError('Error creating checkout session', error, { userId: session.user.id })
-    return NextResponse.json(
-      { error: 'Failed to create checkout session' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to create checkout session' }, { status: 500 })
   }
 }
 
@@ -83,13 +74,10 @@ export async function POST(req: NextRequest) {
  * GET /api/stripe/portal
  * Create a Stripe portal session for subscription management
  */
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   // Check if Stripe is configured
   if (!process.env.STRIPE_SECRET_KEY) {
-    return NextResponse.json(
-      { error: 'Stripe not configured' },
-      { status: 503 }
-    )
+    return NextResponse.json({ error: 'Stripe not configured' }, { status: 503 })
   }
 
   const session = await auth()
@@ -103,10 +91,7 @@ export async function GET(req: NextRequest) {
     })
 
     if (!user || !user.stripeCustomerId) {
-      return NextResponse.json(
-        { error: 'No subscription found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'No subscription found' }, { status: 404 })
     }
 
     const returnUrl = `${process.env.NEXTAUTH_URL}/subscription`
@@ -119,9 +104,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ url: portalSession.url })
   } catch (error) {
     logError('Error creating portal session', error, { userId: session.user.id })
-    return NextResponse.json(
-      { error: 'Failed to create portal session' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to create portal session' }, { status: 500 })
   }
 }

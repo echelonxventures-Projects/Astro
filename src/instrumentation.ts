@@ -31,7 +31,7 @@ export async function register() {
 
       logger.info('Instrumentation: Monitoring initialization complete')
     } catch (error) {
-      logger.error('Instrumentation: Failed to initialize monitoring', { error })
+      logger.error({ error }, 'Instrumentation: Failed to initialize monitoring')
     }
   }
 }
@@ -41,11 +41,14 @@ export async function register() {
  */
 function setupErrorHandlers() {
   // Handle uncaught exceptions
-  process.on('uncaughtException', (error) => {
-    logger.error('Uncaught exception', {
-      error,
-      stack: error.stack,
-    })
+  process.on('uncaughtException', error => {
+    logger.error(
+      {
+        error,
+        stack: error.stack,
+      },
+      'Uncaught exception'
+    )
 
     // Give time for logs to flush before exiting
     setTimeout(() => {
@@ -55,19 +58,25 @@ function setupErrorHandlers() {
 
   // Handle unhandled promise rejections
   process.on('unhandledRejection', (reason, promise) => {
-    logger.error('Unhandled promise rejection', {
-      reason,
-      promise,
-    })
+    logger.error(
+      {
+        reason,
+        promise,
+      },
+      'Unhandled promise rejection'
+    )
   })
 
   // Handle warnings
-  process.on('warning', (warning) => {
-    logger.warn('Process warning', {
-      name: warning.name,
-      message: warning.message,
-      stack: warning.stack,
-    })
+  process.on('warning', warning => {
+    logger.warn(
+      {
+        name: warning.name,
+        message: warning.message,
+        stack: warning.stack,
+      },
+      'Process warning'
+    )
   })
 
   // Graceful shutdown

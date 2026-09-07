@@ -15,7 +15,7 @@ import { logError } from '@/lib/logger'
  * GET /api/devices
  * Get all active devices for current user
  */
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   const session = await auth()
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -31,10 +31,7 @@ export async function GET(req: NextRequest) {
     })
   } catch (error) {
     logError('Error fetching devices', error, { userId: session.user.id })
-    return NextResponse.json(
-      { error: 'Failed to fetch devices' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch devices' }, { status: 500 })
   }
 }
 
@@ -42,14 +39,14 @@ export async function GET(req: NextRequest) {
  * POST /api/devices
  * Revoke a device or revoke all other devices
  */
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
   const session = await auth()
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
-    const body = await req.json()
+    const body = await _req.json()
     const { action, deviceId, currentSessionId } = body
 
     if (action === 'revoke' && deviceId) {
@@ -71,9 +68,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
   } catch (error) {
     logError('Error managing devices', error, { userId: session.user.id })
-    return NextResponse.json(
-      { error: 'Failed to manage devices' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to manage devices' }, { status: 500 })
   }
 }

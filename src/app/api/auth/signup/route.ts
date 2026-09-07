@@ -1,10 +1,9 @@
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import { prisma } from '@/lib/db'
 import bcrypt from 'bcryptjs'
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/db'
 import { logError } from '@/lib/logger'
 
 /**
@@ -18,10 +17,7 @@ export async function POST(req: NextRequest) {
 
     // Validate input
     if (!email || !password) {
-      return NextResponse.json(
-        { error: 'Email and password are required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 })
     }
 
     // Check if user already exists
@@ -56,9 +52,6 @@ export async function POST(req: NextRequest) {
     })
   } catch (error) {
     logError('Signup error', error)
-    return NextResponse.json(
-      { error: 'Failed to create account' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to create account' }, { status: 500 })
   }
 }

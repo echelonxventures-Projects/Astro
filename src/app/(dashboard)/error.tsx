@@ -1,5 +1,7 @@
 'use client'
 
+import { AlertCircle, RefreshCw, LayoutDashboard, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
 import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,8 +12,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { AlertCircle, RefreshCw, LayoutDashboard, ArrowLeft } from 'lucide-react'
-import Link from 'next/link'
 import { logError, getUserErrorMessage, reportError } from '@/lib/error-handling'
 
 interface DashboardErrorProps {
@@ -49,9 +49,7 @@ export default function DashboardError({ error, reset }: DashboardErrorProps) {
           <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#5B21B6] flex items-center justify-center pulse-glow">
             <AlertCircle className="w-8 h-8 text-white" />
           </div>
-          <CardTitle className="text-2xl font-bold gradient-text">
-            Dashboard Error
-          </CardTitle>
+          <CardTitle className="text-2xl font-bold gradient-text">Dashboard Error</CardTitle>
           <CardDescription className="text-gray-400 mt-2">
             Something went wrong in your dashboard
           </CardDescription>
@@ -70,9 +68,7 @@ export default function DashboardError({ error, reset }: DashboardErrorProps) {
 
           <div className="flex items-center justify-center gap-2 p-3 rounded-lg bg-purple-500/5 border border-purple-500/10">
             <LayoutDashboard className="w-4 h-4 text-[#A78BFA]" />
-            <span className="text-sm text-gray-400">
-              Your data is safe and secure
-            </span>
+            <span className="text-sm text-gray-400">Your data is safe and secure</span>
           </div>
         </CardContent>
 

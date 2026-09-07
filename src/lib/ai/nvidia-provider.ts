@@ -4,10 +4,15 @@
  * Supports free tier with rate limits
  */
 
-import type { AIProvider, TextCompletionRequest, VisionCompletionRequest, AIProviderConfig } from './provider'
+import type {
+  AIProvider,
+  TextCompletionRequest,
+  VisionCompletionRequest,
+  AIProviderConfig,
+} from './provider'
 
 // Popular models available on NVIDIA NIM
-const NVIDIA_MODELS = [
+const _NVIDIA_MODELS = [
   'meta/llama-3.1-8b-instruct',
   'meta/llama-3.2-3b-instruct',
   'meta/llama-3.2-1b-instruct',
@@ -38,14 +43,11 @@ export class NvidiaProvider implements AIProvider {
 
     const systemMessage = system || 'You are a helpful assistant.'
 
-    const formattedMessages = [
-      { role: 'system' as const, content: systemMessage },
-      ...messages
-    ]
+    const formattedMessages = [{ role: 'system' as const, content: systemMessage }, ...messages]
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${this.apiKey}`,
+      Authorization: `Bearer ${this.apiKey}`,
     }
 
     try {
@@ -96,12 +98,12 @@ export class NvidiaProvider implements AIProvider {
             role: 'user' as const,
             content: [
               { type: 'text', text: msg.content },
-              { type: 'image_url', image_url: { url: imageUrl } }
-            ]
+              { type: 'image_url', image_url: { url: imageUrl } },
+            ],
           }
         }
         return msg
-      })
+      }),
     ]
 
     // Use vision-capable model
@@ -109,7 +111,7 @@ export class NvidiaProvider implements AIProvider {
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${this.apiKey}`,
+      Authorization: `Bearer ${this.apiKey}`,
     }
 
     try {

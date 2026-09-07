@@ -12,7 +12,7 @@ async function globalSetup(_config: FullConfig): Promise<void> {
   process.env.NEXTAUTH_SECRET = 'test-secret-for-playwright-minimum-32-chars'
 
   // Verify server is running or start it
-  const baseURL = config.projects[0]?.use?.baseURL
+  const baseURL = _config.projects[0]?.use?.baseURL
   if (baseURL) {
     try {
       const response = await fetch(baseURL)

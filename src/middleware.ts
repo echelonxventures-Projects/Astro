@@ -3,8 +3,7 @@
  * Handles security headers, rate limiting, and request logging
  */
 
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { NextResponse, NextRequest } from 'next/server'
 import { logger, logSecurity } from './lib/logger'
 import {
   checkRateLimitForPath,

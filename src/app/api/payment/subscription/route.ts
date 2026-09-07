@@ -4,21 +4,21 @@ export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { getGateway } from '@/lib/payment'
 import { logError } from '@/lib/logger'
+import { getGateway } from '@/lib/payment'
 
 /**
  * POST /api/payment/subscription
  * Manage subscription (cancel, update, etc.)
  */
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
   const session = await auth()
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
-    const body = await req.json()
+    const body = await _req.json()
     const { action, subscriptionId, gateway } = body
 
     const user = await prisma.user.findUnique({
@@ -40,10 +40,7 @@ export async function POST(req: NextRequest) {
 
         const gw = await getGateway(gateway)
         if (!gw) {
-          return NextResponse.json(
-            { error: 'Invalid gateway' },
-            { status: 400 }
-          )
+          return NextResponse.json({ error: 'Invalid gateway' }, { status: 400 })
         }
 
         // Cancel at period end (default) or immediately
@@ -54,10 +51,7 @@ export async function POST(req: NextRequest) {
         // Update local subscription record
         await prisma.subscription.updateMany({
           where: {
-            OR: [
-              { id: subscriptionId },
-              { stripeSubscriptionId: subscriptionId },
-            ]
+            OR: [{ id: subscriptionId }, { stripeSubscriptionId: subscriptionId }],
           },
           data: {
             cancelAtPeriodEnd: atPeriodEnd,
@@ -93,10 +87,7 @@ export async function POST(req: NextRequest) {
 
         const gw = await getGateway(gateway)
         if (!gw) {
-          return NextResponse.json(
-            { error: 'Invalid gateway' },
-            { status: 400 }
-          )
+          return NextResponse.json({ error: 'Invalid gateway' }, { status: 400 })
         }
 
         // Get new plan's gateway plan ID
@@ -108,10 +99,7 @@ export async function POST(req: NextRequest) {
         })
 
         if (!newPlan) {
-          return NextResponse.json(
-            { error: 'Invalid plan' },
-            { status: 400 }
-          )
+          return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
         }
 
         // Update subscription (proration handled by gateway)
@@ -136,19 +124,13 @@ export async function POST(req: NextRequest) {
         // Reactivate subscription
         const gw = await getGateway(gateway)
         if (!gw) {
-          return NextResponse.json(
-            { error: 'Invalid gateway' },
-            { status: 400 }
-          )
+          return NextResponse.json({ error: 'Invalid gateway' }, { status: 400 })
         }
 
         // Resume by updating subscription (gateway-specific)
         await prisma.subscription.updateMany({
           where: {
-            OR: [
-              { id: subscriptionId },
-              { stripeSubscriptionId: subscriptionId },
-            ]
+            OR: [{ id: subscriptionId }, { stripeSubscriptionId: subscriptionId }],
           },
           data: {
             cancelAtPeriodEnd: false,
@@ -170,15 +152,15 @@ export async function POST(req: NextRequest) {
       }
 
       default:
-        return NextResponse.json(
-          { error: 'Invalid action' },
-          { status: 400 }
-        )
+        return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
   } catch (error) {
     logError('Error managing subscription', error, { userId: session.user.id })
     return NextResponse.json(
-      { error: 'Failed to manage subscription', details: error instanceof Error ? error.message : 'Unknown error' },
+      {
+        error: 'Failed to manage subscription',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     )
   }
@@ -188,7 +170,7 @@ export async function POST(req: NextRequest) {
  * GET /api/payment/subscription
  * Get user's current subscription status
  */
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   const session = await auth()
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -232,7 +214,7 @@ export async function GET(req: NextRequest) {
         gateway: gatewayInfo,
         subscriptionId: subscription?.stripeSubscriptionId || subscription?.id,
       },
-      recentTransactions: user.transactions.map((t) => ({
+      recentTransactions: user.transactions.map(t => ({
         id: t.id,
         amount: t.amount,
         currency: t.currency,
@@ -243,9 +225,6 @@ export async function GET(req: NextRequest) {
     })
   } catch (error) {
     logError('Error fetching subscription', error, { userId: session.user.id })
-    return NextResponse.json(
-      { error: 'Failed to fetch subscription' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch subscription' }, { status: 500 })
   }
 }

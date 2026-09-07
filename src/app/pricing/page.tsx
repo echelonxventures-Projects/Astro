@@ -1,11 +1,11 @@
 'use client'
 
+import { Check, Sparkles, Star } from 'lucide-react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
-import { Check, Sparkles, Star } from 'lucide-react'
-import { CURRENCY_CONFIG, formatPrice } from '@/lib/plans'
 import { logger } from '@/lib/logger'
+import { CURRENCY_CONFIG, formatPrice } from '@/lib/plans'
 
 interface Plan {
   id: string
@@ -48,12 +48,14 @@ interface Region {
 }
 
 export default function PricingPage() {
-  const { data: session, status } = useSession()
+  const { data: _session, status } = useSession()
   const [plans, setPlans] = useState<Plan[]>([])
   const [features, setFeatures] = useState<Feature[]>([])
   const [regions, setRegions] = useState<Region[]>([])
   const [selectedRegion, setSelectedRegion] = useState<string>('us')
-  const [accessMatrix, setAccessMatrix] = useState<Record<string, Record<string, { enabled: boolean; value: string | null }>>>({})
+  const [_accessMatrix, setAccessMatrix] = useState<
+    Record<string, Record<string, { enabled: boolean; value: string | null }>>
+  >({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -101,7 +103,7 @@ export default function PricingPage() {
   }
 
   const getPlanPrice = (plan: Plan) => {
-    const region = regions.find((r) => r.key === selectedRegion)
+    const region = regions.find(r => r.key === selectedRegion)
     if (!region) {
       return { price: plan.price, currency: plan.currency }
     }
@@ -181,9 +183,7 @@ export default function PricingPage() {
               <Star className="w-5 h-5 text-purple-400" />
               <span className="text-sm font-medium">Pricing Plans</span>
             </div>
-            <h1 className="text-5xl font-bold mb-4 gradient-text">
-              Choose Your Cosmic Path
-            </h1>
+            <h1 className="text-5xl font-bold mb-4 gradient-text">Choose Your Cosmic Path</h1>
             <p className="text-xl text-purple-200 max-w-2xl mx-auto mb-6">
               Start with free readings, or unlock unlimited access to all astrology features
             </p>
@@ -194,12 +194,13 @@ export default function PricingPage() {
                 <span className="text-purple-200 text-sm">Region:</span>
                 <select
                   value={selectedRegion}
-                  onChange={(e) => setSelectedRegion(e.target.value)}
+                  onChange={e => setSelectedRegion(e.target.value)}
                   className="bg-purple-600/30 border border-purple-500/30 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
-                  {regions.map((region) => (
+                  {regions.map(region => (
                     <option key={region.id} value={region.key}>
-                      {region.name} ({CURRENCY_CONFIG[region.currency]?.symbol || region.currency.toUpperCase()})
+                      {region.name} (
+                      {CURRENCY_CONFIG[region.currency]?.symbol || region.currency.toUpperCase()})
                     </option>
                   ))}
                 </select>
@@ -209,7 +210,7 @@ export default function PricingPage() {
 
           {/* Pricing Cards */}
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {plans.map((plan) => {
+            {plans.map(plan => {
               const { price, currency } = getPlanPrice(plan)
               const formattedPrice = formatPrice(price, currency)
               const isPopular = plan.isPopular
@@ -219,7 +220,9 @@ export default function PricingPage() {
                 <div
                   key={plan.id}
                   className={`glass rounded-3xl p-8 ${
-                    isPopular ? 'border-2 border-purple-500 relative' : 'border border-purple-500/20'
+                    isPopular
+                      ? 'border-2 border-purple-500 relative'
+                      : 'border border-purple-500/20'
                   }`}
                 >
                   {isPopular && (
@@ -241,7 +244,7 @@ export default function PricingPage() {
                   </div>
 
                   <ul className="space-y-4 mb-8">
-                    {plan.features.map((feature) => (
+                    {plan.features.map(feature => (
                       <li key={feature} className="flex items-center gap-3">
                         <Check className="w-5 h-5 text-purple-400 flex-shrink-0" />
                         <span>{feature}</span>
@@ -268,7 +271,12 @@ export default function PricingPage() {
                               : 'bg-white/10 hover:bg-white/20 text-white'
                           }`}
                         >
-                          Subscribe {plan.interval === 'monthly' ? 'Monthly' : plan.interval === 'yearly' ? 'Yearly' : ''}
+                          Subscribe{' '}
+                          {plan.interval === 'monthly'
+                            ? 'Monthly'
+                            : plan.interval === 'yearly'
+                              ? 'Yearly'
+                              : ''}
                         </button>
                       </form>
                     )
@@ -291,15 +299,13 @@ export default function PricingPage() {
 
           {/* Features Comparison */}
           <div className="mt-16 glass rounded-3xl p-8">
-            <h2 className="text-3xl font-bold text-center mb-8 gradient-text">
-              Compare Features
-            </h2>
+            <h2 className="text-3xl font-bold text-center mb-8 gradient-text">Compare Features</h2>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-purple-500/20">
                     <th className="text-left py-4 px-4">Feature</th>
-                    {plans.map((plan) => (
+                    {plans.map(plan => (
                       <th
                         key={plan.id}
                         className={`text-center py-4 px-4 ${
@@ -312,11 +318,13 @@ export default function PricingPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {features.map((feature) => (
+                  {features.map(feature => (
                     <tr key={feature.id} className="border-b border-purple-500/10">
                       <td className="py-4 px-4">{feature.name}</td>
-                      {plans.map((plan) => {
-                        const access = plan.featureAccess?.find((fa) => fa.feature.key === feature.key)
+                      {plans.map(plan => {
+                        const access = plan.featureAccess?.find(
+                          fa => fa.feature.key === feature.key
+                        )
                         const hasAccess = access?.enabled
                         const value = access?.value
 

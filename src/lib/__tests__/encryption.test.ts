@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import {
   encrypt,
   decrypt,
@@ -9,7 +9,7 @@ import {
   encryptCredentials,
   decryptCredentials,
   generateEncryptionKey,
-  validateEncryptionKey
+  validateEncryptionKey,
 } from '../encryption'
 
 describe('Encryption', () => {
@@ -115,7 +115,7 @@ describe('Encryption', () => {
         apiKey: 'sk_test_12345',
         apiSecret: 'secret123',
         webhookSecret: 'whsec_12345',
-        publicKey: 'pk_test_12345'
+        publicKey: 'pk_test_12345',
       }
 
       const encrypted = encryptCredentials(credentials)
@@ -132,7 +132,7 @@ describe('Encryption', () => {
 
     it('should handle partial credentials', () => {
       const credentials = {
-        apiKey: 'sk_test_12345'
+        apiKey: 'sk_test_12345',
       }
 
       const encrypted = encryptCredentials(credentials)
@@ -145,7 +145,7 @@ describe('Encryption', () => {
         apiKey: 'sk_test_12345',
         apiSecret: 'secret123',
         webhookSecret: 'whsec_12345',
-        publicKey: 'pk_test_12345'
+        publicKey: 'pk_test_12345',
       }
 
       const encrypted = encryptCredentials(credentials)
@@ -193,7 +193,7 @@ describe('Encryption', () => {
         'development-encryption-key-that-is-long-enough',
         'test-key-that-is-very-long-and-should-be-rejected',
         'default-encryption-key-minimum-32-characters',
-        'change-in-production-please-update-this-key'
+        'change-in-production-please-update-this-key',
       ]
 
       for (const key of weakKeys) {

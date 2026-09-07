@@ -2,8 +2,8 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
 import { getAIProvider } from '@/lib/ai/provider'
+import { auth } from '@/lib/auth'
 import { logError } from '@/lib/logger'
 
 /**
@@ -21,17 +21,17 @@ export async function POST(req: NextRequest) {
     const { image } = body
 
     if (!image) {
-      return NextResponse.json(
-        { error: 'Image required for face analysis' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Image required for face analysis' }, { status: 400 })
     }
 
     const provider = await getAIProvider()
 
     if (!provider.supportsVision || !provider.completeWithVision) {
       return NextResponse.json(
-        { error: 'Current AI provider does not support vision. Please use Anthropic or Gemini, or configure Ollama with a vision model like llava.' },
+        {
+          error:
+            'Current AI provider does not support vision. Please use Anthropic or Gemini, or configure Ollama with a vision model like llava.',
+        },
         { status: 501 }
       )
     }
@@ -84,9 +84,6 @@ If the face image is unclear or features cannot be distinguished, politely expla
     return NextResponse.json({ reading })
   } catch (error) {
     logError('Error analyzing face', error, { userId: session.user.id })
-    return NextResponse.json(
-      { error: 'Failed to analyze face' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to analyze face' }, { status: 500 })
   }
 }

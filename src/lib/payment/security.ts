@@ -51,10 +51,7 @@ export function validateWebhookSignature(
   secret: string
 ): boolean {
   try {
-    const expected = crypto
-      .createHmac('sha256', secret)
-      .update(payload, 'utf8')
-      .digest('hex')
+    const expected = crypto.createHmac('sha256', secret).update(payload, 'utf8').digest('hex')
 
     // Handle different signature formats (hex vs base64)
     let expectedBuf: Buffer
@@ -89,7 +86,7 @@ export function verifyPayPalWebhookSignature(
   payload: string,
   headers: Record<string, string>,
   webhookId: string,
-  clientId: string
+  _clientId: string
 ): boolean {
   try {
     // PayPal webhook signature components
@@ -105,7 +102,7 @@ export function verifyPayPalWebhookSignature(
     }
 
     // Construct expected signature string
-    const expectedSignature = `${transmissionId}|${transmissionTime}|${webhookId}|${crypto.createHash('sha256').update(payload).digest('hex')}`
+    const _expectedSignature = `${transmissionId}|${transmissionTime}|${webhookId}|${crypto.createHash('sha256').update(payload).digest('hex')}`
 
     // In production, fetch the certificate from certUrl and verify
     // For now, we'll do a simplified verification
@@ -125,7 +122,11 @@ export function verifyPayPalWebhookSignature(
  * - First transaction from merchant
  * - High-risk transaction flagged
  */
-export function requires3DSecure(amount: number, currency: string, isFirstTransaction = false): boolean {
+export function requires3DSecure(
+  amount: number,
+  currency: string,
+  isFirstTransaction = false
+): boolean {
   // Convert to EUR equivalent (simplified rates)
   const rates: Record<string, number> = {
     EUR: 1,

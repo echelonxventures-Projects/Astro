@@ -1,5 +1,7 @@
 'use client'
 
+import { AlertCircle, RefreshCw, Home, MessageSquare } from 'lucide-react'
+import Link from 'next/link'
 import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,8 +12,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { AlertCircle, RefreshCw, Home, MessageSquare } from 'lucide-react'
-import Link from 'next/link'
 import { logError, getUserErrorMessage, reportError } from '@/lib/error-handling'
 
 interface ErrorBoundaryProps {
@@ -32,10 +32,7 @@ export default function ErrorBoundary({ error, reset }: ErrorBoundaryProps) {
   const userMessage = getUserErrorMessage(error)
 
   const handleReportError = async () => {
-    const { success, reportId } = await reportError(
-      error,
-      'User reported from error boundary'
-    )
+    const { success, reportId } = await reportError(error, 'User reported from error boundary')
     if (success && reportId) {
       alert(`Error reported successfully. Report ID: ${reportId}`)
     }
@@ -48,9 +45,7 @@ export default function ErrorBoundary({ error, reset }: ErrorBoundaryProps) {
           <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#5B21B6] flex items-center justify-center pulse-glow">
             <AlertCircle className="w-8 h-8 text-white" />
           </div>
-          <CardTitle className="text-2xl font-bold gradient-text">
-            Something Went Wrong
-          </CardTitle>
+          <CardTitle className="text-2xl font-bold gradient-text">Something Went Wrong</CardTitle>
           <CardDescription className="text-gray-400 mt-2">
             We encountered an unexpected issue
           </CardDescription>

@@ -1,10 +1,19 @@
 export const dynamic = 'force-dynamic'
 
-import { auth } from '@/lib/auth'
-import { redirect } from 'next/navigation'
-import { prisma } from '@/lib/db'
+import {
+  Star,
+  Heart,
+  Briefcase,
+  MessageCircle,
+  Sparkles,
+  Calendar,
+  Clock,
+  MapPin,
+} from 'lucide-react'
 import Link from 'next/link'
-import { Star, Heart, Briefcase, MessageCircle, Sparkles, Calendar, Clock, MapPin } from 'lucide-react'
+import { redirect } from 'next/navigation'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -38,13 +47,27 @@ export default async function DashboardPage() {
               <span className="text-xl font-bold gradient-text">StarPath Astrology</span>
             </Link>
             <div className="hidden md:flex items-center gap-6">
-              <Link href="/dashboard" className="text-purple-200 hover:text-white transition">Dashboard</Link>
-              <Link href="/chart" className="text-purple-200 hover:text-white transition">Birth Chart</Link>
-              <Link href="/horoscope/daily" className="text-purple-200 hover:text-white transition">Horoscopes</Link>
-              <Link href="/compatibility" className="text-purple-200 hover:text-white transition">Compatibility</Link>
-              <Link href="/chat/horoscope" className="text-purple-200 hover:text-white transition">AI Chat</Link>
-              <Link href="/palmistry" className="text-purple-200 hover:text-white transition">Palmistry</Link>
-              <Link href="/face-reading" className="text-purple-200 hover:text-white transition">Face Reading</Link>
+              <Link href="/dashboard" className="text-purple-200 hover:text-white transition">
+                Dashboard
+              </Link>
+              <Link href="/chart" className="text-purple-200 hover:text-white transition">
+                Birth Chart
+              </Link>
+              <Link href="/horoscope/daily" className="text-purple-200 hover:text-white transition">
+                Horoscopes
+              </Link>
+              <Link href="/compatibility" className="text-purple-200 hover:text-white transition">
+                Compatibility
+              </Link>
+              <Link href="/chat/horoscope" className="text-purple-200 hover:text-white transition">
+                AI Chat
+              </Link>
+              <Link href="/palmistry" className="text-purple-200 hover:text-white transition">
+                Palmistry
+              </Link>
+              <Link href="/face-reading" className="text-purple-200 hover:text-white transition">
+                Face Reading
+              </Link>
             </div>
             <div className="flex items-center gap-4">
               {user.role === 'admin' && (
@@ -77,9 +100,7 @@ export default async function DashboardPage() {
             <h1 className="text-4xl font-bold mb-2 gradient-text">
               Welcome back, {user.name || 'Seeker'}
             </h1>
-            <p className="text-purple-200">
-              The stars have insights for you today
-            </p>
+            <p className="text-purple-200">The stars have insights for you today</p>
           </div>
 
           {/* Quick Actions */}
@@ -91,10 +112,7 @@ export default async function DashboardPage() {
               <Sparkles className="w-8 h-8 text-purple-400 mx-auto mb-2" />
               <span className="text-sm font-medium group-hover:text-purple-300">Daily Reading</span>
             </Link>
-            <Link
-              href="/chart"
-              className="glass p-4 rounded-xl text-center card-hover group"
-            >
+            <Link href="/chart" className="glass p-4 rounded-xl text-center card-hover group">
               <Star className="w-8 h-8 text-indigo-400 mx-auto mb-2" />
               <span className="text-sm font-medium group-hover:text-purple-300">Birth Chart</span>
             </Link>
@@ -112,12 +130,19 @@ export default async function DashboardPage() {
               <MessageCircle className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
               <span className="text-sm font-medium group-hover:text-purple-300">AI Chat</span>
             </Link>
-            <Link
-              href="/palmistry"
-              className="glass p-4 rounded-xl text-center card-hover group"
-            >
-              <svg className="w-8 h-8 text-amber-400 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />
+            <Link href="/palmistry" className="glass p-4 rounded-xl text-center card-hover group">
+              <svg
+                className="w-8 h-8 text-amber-400 mx-auto mb-2"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"
+                />
               </svg>
               <span className="text-sm font-medium group-hover:text-purple-300">Palmistry</span>
             </Link>
@@ -125,9 +150,24 @@ export default async function DashboardPage() {
               href="/face-reading"
               className="glass p-4 rounded-xl text-center card-hover group"
             >
-              <svg className="w-8 h-8 text-violet-400 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              <svg
+                className="w-8 h-8 text-violet-400 mx-auto mb-2"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                />
               </svg>
               <span className="text-sm font-medium group-hover:text-purple-300">Face Reading</span>
             </Link>
@@ -144,7 +184,7 @@ export default async function DashboardPage() {
               </div>
               {hasChart ? (
                 <div className="space-y-3">
-                  {user.birthCharts.map((chart) => (
+                  {user.birthCharts.map(chart => (
                     <Link
                       key={chart.id}
                       href={`/chart/${chart.id}`}
@@ -180,7 +220,9 @@ export default async function DashboardPage() {
               ) : (
                 <div className="text-center py-8">
                   <Star className="w-12 h-12 text-purple-400 mx-auto mb-4" />
-                  <p className="text-purple-300 mb-4">Create your birth chart to unlock personalized readings</p>
+                  <p className="text-purple-300 mb-4">
+                    Create your birth chart to unlock personalized readings
+                  </p>
                   <Link
                     href="/chart"
                     className="inline-block bg-purple-600 hover:bg-purple-500 text-white px-6 py-2 rounded-full transition"
@@ -195,21 +237,25 @@ export default async function DashboardPage() {
             <div className="glass rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold">Recent Readings</h2>
-                <Link href="/horoscope/daily" className="text-purple-400 hover:text-purple-300 text-sm">
+                <Link
+                  href="/horoscope/daily"
+                  className="text-purple-400 hover:text-purple-300 text-sm"
+                >
                   View All →
                 </Link>
               </div>
               {user.readings.length > 0 ? (
                 <div className="space-y-3">
-                  {user.readings.map((reading) => (
-                    <div
-                      key={reading.id}
-                      className="p-4 bg-white/5 rounded-xl"
-                    >
+                  {user.readings.map(reading => (
+                    <div key={reading.id} className="p-4 bg-white/5 rounded-xl">
                       <div className="flex items-center gap-2 mb-2">
-                        {reading.type === 'daily' && <Sparkles className="w-4 h-4 text-purple-400" />}
+                        {reading.type === 'daily' && (
+                          <Sparkles className="w-4 h-4 text-purple-400" />
+                        )}
                         {reading.type === 'love' && <Heart className="w-4 h-4 text-pink-400" />}
-                        {reading.type === 'career' && <Briefcase className="w-4 h-4 text-indigo-400" />}
+                        {reading.type === 'career' && (
+                          <Briefcase className="w-4 h-4 text-indigo-400" />
+                        )}
                         <span className="text-sm font-medium capitalize">{reading.type}</span>
                         <span className="text-xs text-purple-400">
                           {new Date(reading.createdAt).toLocaleDateString()}
@@ -240,7 +286,8 @@ export default async function DashboardPage() {
               <div className="text-center">
                 <h2 className="text-2xl font-bold mb-2 gradient-text">Unlock Premium Features</h2>
                 <p className="text-purple-200 mb-6 max-w-2xl mx-auto">
-                  Get unlimited AI readings, detailed compatibility reports, priority chat access, and more.
+                  Get unlimited AI readings, detailed compatibility reports, priority chat access,
+                  and more.
                 </p>
                 <Link
                   href="/pricing"

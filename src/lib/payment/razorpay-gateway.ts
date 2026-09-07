@@ -38,7 +38,7 @@ class RazorpayClient {
     const response = await fetch(url, {
       method,
       headers: {
-        'Authorization': `Basic ${auth}`,
+        Authorization: `Basic ${auth}`,
         'Content-Type': 'application/json',
       },
       body: data ? JSON.stringify(data) : undefined,
@@ -52,7 +52,12 @@ class RazorpayClient {
     return response.json()
   }
 
-  async createOrder(options: { amount: number; currency: string; customer_id?: string; notes?: Record<string, any> }) {
+  async createOrder(options: {
+    amount: number
+    currency: string
+    customer_id?: string
+    notes?: Record<string, any>
+  }) {
     return this.request('POST', '/orders', options)
   }
 
@@ -60,19 +65,32 @@ class RazorpayClient {
     return this.request('GET', `/orders/${orderId}`)
   }
 
-  async createCustomer(options: { name?: string; email: string; contact?: string; notes?: Record<string, any> }) {
+  async createCustomer(options: {
+    name?: string
+    email: string
+    contact?: string
+    notes?: Record<string, any>
+  }) {
     return this.request('POST', '/customers', options)
   }
 
-  async fetchCustomer(customerId: string) {
-    return this.request('GET', `/customers/${customerId}`)
+  async fetchCustomer(_customerId: string) {
+    return this.request('GET', `/customers/${_customerId}`)
   }
 
-  async editCustomer(customerId: string, options: { name?: string; email?: string; contact?: string; notes?: Record<string, any> }) {
-    return this.request('PUT', `/customers/${customerId}`, options)
+  async editCustomer(
+    _customerId: string,
+    options: { name?: string; email?: string; contact?: string; notes?: Record<string, any> }
+  ) {
+    return this.request('PUT', `/customers/${_customerId}`, options)
   }
 
-  async createSubscription(options: { plan_id: string; customer_notify_with?: number; total_count?: number; notes?: Record<string, any> }) {
+  async createSubscription(options: {
+    plan_id: string
+    customer_notify_with?: number
+    total_count?: number
+    notes?: Record<string, any>
+  }) {
     return this.request('POST', '/subscriptions', options)
   }
 
@@ -84,7 +102,12 @@ class RazorpayClient {
     return this.request('POST', `/subscriptions/${subscriptionId}/cancel`, options)
   }
 
-  async createRefund(options: { payment_id: string; amount?: number; speed?: string; notes?: Record<string, any> }) {
+  async createRefund(options: {
+    payment_id: string
+    amount?: number
+    speed?: string
+    notes?: Record<string, any>
+  }) {
     return this.request('POST', '/refunds', options)
   }
 
@@ -96,7 +119,12 @@ class RazorpayClient {
     return this.request('GET', `/payments/${paymentId}`)
   }
 
-  async createPlan(options: { period: string; interval: number; item: { name: string; amount: number; currency: string }; notes?: Record<string, any> }) {
+  async createPlan(options: {
+    period: string
+    interval: number
+    item: { name: string; amount: number; currency: string }
+    notes?: Record<string, any>
+  }) {
     return this.request('POST', '/plans', options)
   }
 }
@@ -105,7 +133,19 @@ export class RazorpayGateway implements IPaymentGateway {
   name = 'Razorpay'
   key = 'razorpay'
   testMode = false
-  supportedCurrencies = ['INR', 'USD', 'EUR', 'GBP', 'SGD', 'AED', 'MYR', 'PHP', 'BHD', 'KWD', 'OMR']
+  supportedCurrencies = [
+    'INR',
+    'USD',
+    'EUR',
+    'GBP',
+    'SGD',
+    'AED',
+    'MYR',
+    'PHP',
+    'BHD',
+    'KWD',
+    'OMR',
+  ]
   supportedCountries = ['IN', 'US', 'GB', 'SG', 'AE', 'MY', 'PH', 'BH', 'KW', 'OM', 'QA', 'SA']
 
   private razorpay: RazorpayClient | null = null
@@ -164,7 +204,11 @@ export class RazorpayGateway implements IPaymentGateway {
     }
   }
 
-  async createCustomer(email: string, name?: string, metadata?: Record<string, any>): Promise<CustomerResult> {
+  async createCustomer(
+    email: string,
+    name?: string,
+    metadata?: Record<string, any>
+  ): Promise<CustomerResult> {
     const razorpay = this.getRazorpay()
 
     const customer = await razorpay.createCustomer({
@@ -181,10 +225,10 @@ export class RazorpayGateway implements IPaymentGateway {
     }
   }
 
-  async getCustomer(customerId: string): Promise<CustomerResult> {
+  async getCustomer(_customerId: string): Promise<CustomerResult> {
     const razorpay = this.getRazorpay()
 
-    const customer = await razorpay.fetchCustomer(customerId)
+    const customer = await razorpay.fetchCustomer(_customerId)
 
     return {
       id: customer.id,
@@ -194,7 +238,7 @@ export class RazorpayGateway implements IPaymentGateway {
     }
   }
 
-  async deleteCustomer(customerId: string): Promise<void> {
+  async deleteCustomer(_customerId: string): Promise<void> {
     // Razorpay doesn't support customer deletion via API
     // Mark as inactive in your database instead
     logger.warn('Razorpay does not support customer deletion. Mark as inactive in your database.')
@@ -204,12 +248,12 @@ export class RazorpayGateway implements IPaymentGateway {
     const razorpay = this.getRazorpay()
 
     // First create or get customer
-    let customerId = options.metadata?.razorpayCustomerId
-    if (!customerId) {
+    let _customerId = options.metadata?.razorpayCustomerId
+    if (!_customerId) {
       const customer = await this.createCustomer(options.email, undefined, {
         userId: options.userId,
       })
-      customerId = customer.id
+      _customerId = customer.id
     }
 
     // Create subscription plan if gatewayPlanId is not a plan ID
@@ -230,7 +274,7 @@ export class RazorpayGateway implements IPaymentGateway {
     return {
       id: subscription.id,
       status: this.mapSubscriptionStatus(subscription.status),
-      customerId,
+      customerId: _customerId,
       currentPeriodEnd: subscription.end_at ? new Date(subscription.end_at * 1000) : new Date(),
       cancelAtPeriodEnd: false,
     }
@@ -258,16 +302,16 @@ export class RazorpayGateway implements IPaymentGateway {
 
   private mapSubscriptionStatus(status: string): SubscriptionResult['status'] {
     const statusMap: Record<string, SubscriptionResult['status']> = {
-      'created': 'active',
-      'authenticating': 'incomplete',
-      'active': 'active',
-      'invoiced': 'active',
-      'awaiting_payment': 'active',
-      'fulfilled': 'active',
-      'cancelled': 'canceled',
-      'suspended': 'past_due',
-      'failed': 'canceled',
-      'expired': 'canceled',
+      created: 'active',
+      authenticating: 'incomplete',
+      active: 'active',
+      invoiced: 'active',
+      awaiting_payment: 'active',
+      fulfilled: 'active',
+      cancelled: 'canceled',
+      suspended: 'past_due',
+      failed: 'canceled',
+      expired: 'canceled',
     }
     return statusMap[status] || 'active'
   }
@@ -280,7 +324,10 @@ export class RazorpayGateway implements IPaymentGateway {
     })
   }
 
-  async updateSubscription(subscriptionId: string, options: Partial<SubscriptionOptions>): Promise<SubscriptionResult> {
+  async updateSubscription(
+    subscriptionId: string,
+    options: Partial<SubscriptionOptions>
+  ): Promise<SubscriptionResult> {
     // Razorpay doesn't have a direct update subscription API
     // Need to cancel old and create new subscription
     // This is a simplified implementation
@@ -321,7 +368,7 @@ export class RazorpayGateway implements IPaymentGateway {
     }
   }
 
-  async getPaymentMethods(customerId: string): Promise<PaymentMethodResult[]> {
+  async getPaymentMethods(_customerId: string): Promise<PaymentMethodResult[]> {
     // Razorpay doesn't have a saved payment methods API like Stripe
     // Return empty array - Razorpay handles payment methods in the checkout UI
     return []
@@ -337,10 +384,7 @@ export class RazorpayGateway implements IPaymentGateway {
 
     const body = typeof payload === 'string' ? payload : JSON.stringify(payload)
 
-    const expectedSignature = crypto
-      .createHmac('sha256', webhookSecret)
-      .update(body)
-      .digest('hex')
+    const expectedSignature = crypto.createHmac('sha256', webhookSecret).update(body).digest('hex')
 
     return expectedSignature === signature
   }

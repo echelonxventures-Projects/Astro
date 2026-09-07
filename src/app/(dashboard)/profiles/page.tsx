@@ -1,14 +1,26 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import {
-  Sparkles, Loader2, User, Users, Plus, Star, MapPin, Calendar,
-  Clock, Trash2, Edit2, Check, Heart, Briefcase, PersonStanding
+  Sparkles,
+  Loader2,
+  User,
+  Users,
+  Plus,
+  Star,
+  MapPin,
+  Calendar,
+  Clock,
+  Trash2,
+  Edit2,
+  Check,
+  Heart,
+  PersonStanding,
 } from 'lucide-react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import { useState, useEffect } from 'react'
 import { logger } from '@/lib/logger'
 
 interface Profile {
@@ -38,7 +50,7 @@ export default function ProfilesPage() {
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [editingProfile, setEditingProfile] = useState<Profile | null>(null)
+  const [_editingProfile, _setEditingProfile] = useState<Profile | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     relationship: 'self',
@@ -201,11 +213,14 @@ export default function ProfilesPage() {
                         <h3 className="text-xl font-semibold text-white flex items-center gap-2">
                           {profile.name}
                           {profile.isDefault && (
-                            <span className="text-xs bg-purple-600 px-2 py-1 rounded-full">Default</span>
+                            <span className="text-xs bg-purple-600 px-2 py-1 rounded-full">
+                              Default
+                            </span>
                           )}
                         </h3>
                         <p className="text-purple-300 text-sm">
-                          {RELATIONSHIP_OPTIONS.find(r => r.value === profile.relationship)?.label || 'Other'}
+                          {RELATIONSHIP_OPTIONS.find(r => r.value === profile.relationship)
+                            ?.label || 'Other'}
                           {profile.zodiacSign && ` • ${profile.zodiacSign}`}
                         </p>
                       </div>
@@ -304,51 +319,61 @@ export default function ProfilesPage() {
                   <input
                     type="text"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={e => setFormData({ ...formData, name: e.target.value })}
                     placeholder="e.g., My Chart, Spouse, Child"
                     className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-purple-200 mb-2">Relationship</label>
+                  <label className="block text-sm font-medium text-purple-200 mb-2">
+                    Relationship
+                  </label>
                   <select
                     value={formData.relationship}
-                    onChange={(e) => setFormData({ ...formData, relationship: e.target.value })}
+                    onChange={e => setFormData({ ...formData, relationship: e.target.value })}
                     className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                   >
-                    {RELATIONSHIP_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    {RELATIONSHIP_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-purple-200 mb-2">Birth Date</label>
+                  <label className="block text-sm font-medium text-purple-200 mb-2">
+                    Birth Date
+                  </label>
                   <input
                     type="date"
                     value={formData.birthDate}
-                    onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+                    onChange={e => setFormData({ ...formData, birthDate: e.target.value })}
                     className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-purple-200 mb-2">Birth Time</label>
+                  <label className="block text-sm font-medium text-purple-200 mb-2">
+                    Birth Time
+                  </label>
                   <input
                     type="time"
                     value={formData.birthTime}
-                    onChange={(e) => setFormData({ ...formData, birthTime: e.target.value })}
+                    onChange={e => setFormData({ ...formData, birthTime: e.target.value })}
                     className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-purple-200 mb-2">Birth Place</label>
+                  <label className="block text-sm font-medium text-purple-200 mb-2">
+                    Birth Place
+                  </label>
                   <input
                     type="text"
                     value={formData.birthPlace}
-                    onChange={(e) => setFormData({ ...formData, birthPlace: e.target.value })}
+                    onChange={e => setFormData({ ...formData, birthPlace: e.target.value })}
                     placeholder="e.g., New York, USA"
                     className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />

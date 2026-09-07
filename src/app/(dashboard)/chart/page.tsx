@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Sparkles, Star, Calendar, Clock, MapPin, Save, Loader2 } from 'lucide-react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import Link from 'next/link'
-import { Sparkles, Star, Calendar, Clock, MapPin, Save, Loader2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { logger } from '@/lib/logger'
 
 interface BirthChartResult {
@@ -32,13 +32,15 @@ export default function BirthChartPage() {
     longitude: '',
     timezone: 'UTC',
   })
-  const [searchResults, setSearchResults] = useState<Array<{
-    name: string
-    latitude: string
-    longitude: string
-    country: string
-    state?: string
-  }>>([])
+  const [searchResults, setSearchResults] = useState<
+    Array<{
+      name: string
+      latitude: string
+      longitude: string
+      country: string
+      state?: string
+    }>
+  >([])
   const [showDropdown, setShowDropdown] = useState(false)
   const [searchingLocation, setSearchingLocation] = useState(false)
 
@@ -51,7 +53,7 @@ export default function BirthChartPage() {
 
     // Handle February for leap years
     if (monthNum === 2) {
-      const isLeapYear = (yearNum % 4 === 0 && yearNum % 100 !== 0) || (yearNum % 400 === 0)
+      const isLeapYear = (yearNum % 4 === 0 && yearNum % 100 !== 0) || yearNum % 400 === 0
       return isLeapYear ? 29 : 28
     }
 
@@ -75,7 +77,7 @@ export default function BirthChartPage() {
       const maxDays = getMaxDaysInMonth(formData.birthMonth, formData.birthYear)
       const currentDay = parseInt(formData.birthDay, 10)
       if (currentDay > maxDays) {
-        setFormData((prev) => ({ ...prev, birthDay: maxDays.toString().padStart(2, '0') }))
+        setFormData(prev => ({ ...prev, birthDay: maxDays.toString().padStart(2, '0') }))
       }
     }
   }, [formData.birthMonth, formData.birthYear, formData.birthDay])
@@ -88,9 +90,9 @@ export default function BirthChartPage() {
 
     setLoading(true)
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
+      async position => {
         const { latitude, longitude } = position.coords
-        setFormData((prev) => ({
+        setFormData(prev => ({
           ...prev,
           latitude: latitude.toString(),
           longitude: longitude.toString(),
@@ -98,7 +100,7 @@ export default function BirthChartPage() {
         setLoading(false)
 
         // Try to get location name (reverse geocoding would need an API)
-        setFormData((prev) => ({
+        setFormData(prev => ({
           ...prev,
           birthPlace: `Latitude: ${latitude.toFixed(4)}, Longitude: ${longitude.toFixed(4)}`,
         }))
@@ -135,7 +137,7 @@ export default function BirthChartPage() {
 
       setSearchResults(results)
       setShowDropdown(true)
-    } catch (err) {
+    } catch (_err) {
       logger.warn('Failed to search location')
       setSearchResults([])
     } finally {
@@ -144,8 +146,8 @@ export default function BirthChartPage() {
   }
 
   // Handle location selection from dropdown
-  const selectLocation = (location: typeof searchResults[0]) => {
-    setFormData((prev) => ({
+  const selectLocation = (location: (typeof searchResults)[0]) => {
+    setFormData(prev => ({
       ...prev,
       birthPlace: location.name,
       latitude: location.latitude,
@@ -162,21 +164,37 @@ export default function BirthChartPage() {
     // Rough timezone estimation based on longitude
     const timezoneOffset = Math.round(lon / 15)
     const timezoneMap: Record<string, string> = {
-      '-11': 'Pacific/Midway', '-10': 'Pacific/Honolulu', '-9': 'America/Anchorage',
-      '-8': 'America/Los_Angeles', '-7': 'America/Denver', '-6': 'America/Chicago',
-      '-5': 'America/New_York', '-4': 'America/Halifax', '-3': 'America/Sao_Paulo',
-      '-2': 'Atlantic/South_Georgia', '-1': 'Atlantic/Azores', '0': 'UTC',
-      '1': 'Europe/Paris', '2': 'Europe/Athens', '3': 'Europe/Moscow',
-      '4': 'Asia/Dubai', '5': 'Asia/Karachi', '5.5': 'Asia/Kolkata',
-      '6': 'Asia/Dhaka', '7': 'Asia/Bangkok', '8': 'Asia/Shanghai',
-      '9': 'Asia/Tokyo', '10': 'Australia/Sydney', '11': 'Pacific/Noumea',
+      '-11': 'Pacific/Midway',
+      '-10': 'Pacific/Honolulu',
+      '-9': 'America/Anchorage',
+      '-8': 'America/Los_Angeles',
+      '-7': 'America/Denver',
+      '-6': 'America/Chicago',
+      '-5': 'America/New_York',
+      '-4': 'America/Halifax',
+      '-3': 'America/Sao_Paulo',
+      '-2': 'Atlantic/South_Georgia',
+      '-1': 'Atlantic/Azores',
+      '0': 'UTC',
+      '1': 'Europe/Paris',
+      '2': 'Europe/Athens',
+      '3': 'Europe/Moscow',
+      '4': 'Asia/Dubai',
+      '5': 'Asia/Karachi',
+      '5.5': 'Asia/Kolkata',
+      '6': 'Asia/Dhaka',
+      '7': 'Asia/Bangkok',
+      '8': 'Asia/Shanghai',
+      '9': 'Asia/Tokyo',
+      '10': 'Australia/Sydney',
+      '11': 'Pacific/Noumea',
       '12': 'Pacific/Auckland',
     }
 
     const timezone = timezoneMap[timezoneOffset.toString()] || 'UTC'
-    const istTimezones = ['Asia/Kolkata', 'Asia/Calcutta']
+    const _istTimezones = ['Asia/Kolkata', 'Asia/Calcutta']
     const indiaLike = Math.abs(lon - 82) < 15 && lat < 40 && lat > 5
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       timezone: indiaLike ? 'Asia/Kolkata' : timezone,
     }))
@@ -211,8 +229,8 @@ export default function BirthChartPage() {
 
       const data = await response.json()
       setResult(data)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (_err: any) {
+      setError(_err.message)
     } finally {
       setSaving(false)
     }
@@ -266,7 +284,7 @@ export default function BirthChartPage() {
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={e => setFormData({ ...formData, name: e.target.value })}
                   className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white placeholder-purple-400"
                   placeholder="My Birth Chart"
                 />
@@ -283,7 +301,7 @@ export default function BirthChartPage() {
                   <div className="flex-1">
                     <select
                       value={formData.birthDay}
-                      onChange={(e) => setFormData({ ...formData, birthDay: e.target.value })}
+                      onChange={e => setFormData({ ...formData, birthDay: e.target.value })}
                       className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white appearance-none"
                       required
                     >
@@ -291,7 +309,7 @@ export default function BirthChartPage() {
                       {Array.from(
                         { length: getMaxDaysInMonth(formData.birthMonth, formData.birthYear) },
                         (_, i) => i + 1
-                      ).map((day) => (
+                      ).map(day => (
                         <option key={day} value={day.toString().padStart(2, '0')}>
                           {day.toString().padStart(2, '0')}
                         </option>
@@ -304,7 +322,7 @@ export default function BirthChartPage() {
                   <div className="flex-1">
                     <select
                       value={formData.birthMonth}
-                      onChange={(e) => setFormData({ ...formData, birthMonth: e.target.value })}
+                      onChange={e => setFormData({ ...formData, birthMonth: e.target.value })}
                       className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white appearance-none"
                       required
                     >
@@ -329,16 +347,18 @@ export default function BirthChartPage() {
                   <div className="flex-1">
                     <select
                       value={formData.birthYear}
-                      onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
+                      onChange={e => setFormData({ ...formData, birthYear: e.target.value })}
                       className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white appearance-none"
                       required
                     >
                       <option value="">Year</option>
-                      {Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i).map((year) => (
-                        <option key={year} value={year}>
-                          {year}
-                        </option>
-                      ))}
+                      {Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i).map(
+                        year => (
+                          <option key={year} value={year}>
+                            {year}
+                          </option>
+                        )
+                      )}
                     </select>
                     <span className="text-xs text-purple-300 mt-1 block">YYYY</span>
                   </div>
@@ -355,7 +375,7 @@ export default function BirthChartPage() {
                 <input
                   type="time"
                   value={formData.birthTime}
-                  onChange={(e) => setFormData({ ...formData, birthTime: e.target.value })}
+                  onChange={e => setFormData({ ...formData, birthTime: e.target.value })}
                   className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                   required
                 />
@@ -371,7 +391,7 @@ export default function BirthChartPage() {
                   <input
                     type="text"
                     value={formData.birthPlace}
-                    onChange={(e) => {
+                    onChange={e => {
                       setFormData({ ...formData, birthPlace: e.target.value })
                       searchLocation(e.target.value)
                     }}
@@ -423,7 +443,8 @@ export default function BirthChartPage() {
                               </div>
                             )}
                             <div className="text-xs text-purple-400 mt-1">
-                              Lat: {parseFloat(location.latitude).toFixed(4)}, Lon: {parseFloat(location.longitude).toFixed(4)}
+                              Lat: {parseFloat(location.latitude).toFixed(4)}, Lon:{' '}
+                              {parseFloat(location.longitude).toFixed(4)}
                             </div>
                           </div>
                         </button>
@@ -443,7 +464,7 @@ export default function BirthChartPage() {
                     type="number"
                     step="any"
                     value={formData.latitude}
-                    onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
+                    onChange={e => setFormData({ ...formData, latitude: e.target.value })}
                     className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white placeholder-purple-400"
                     placeholder="0.0000"
                     required
@@ -457,7 +478,7 @@ export default function BirthChartPage() {
                     type="number"
                     step="any"
                     value={formData.longitude}
-                    onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
+                    onChange={e => setFormData({ ...formData, longitude: e.target.value })}
                     className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white placeholder-purple-400"
                     placeholder="0.0000"
                     required
@@ -467,12 +488,10 @@ export default function BirthChartPage() {
 
               {/* Timezone */}
               <div>
-                <label className="block text-sm font-medium text-purple-200 mb-2">
-                  Timezone
-                </label>
+                <label className="block text-sm font-medium text-purple-200 mb-2">Timezone</label>
                 <select
                   value={formData.timezone}
-                  onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
+                  onChange={e => setFormData({ ...formData, timezone: e.target.value })}
                   className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                 >
                   <option value="">Select Timezone</option>
@@ -495,7 +514,9 @@ export default function BirthChartPage() {
                     <option value="America/Vancouver">Vancouver (PT) - Canada -8:00</option>
                     <option value="America/Mexico_City">Mexico City (CST) -6:00</option>
                     <option value="America/Sao_Paulo">São Paulo (BRT) - Brazil -3:00</option>
-                    <option value="America/Buenos_Aires">Buenos Aires (ART) - Argentina -3:00</option>
+                    <option value="America/Buenos_Aires">
+                      Buenos Aires (ART) - Argentina -3:00
+                    </option>
                     <option value="America/Bogota">Bogotá (COT) - Colombia -5:00</option>
                     <option value="America/Lima">Lima (PET) - Peru -5:00</option>
                     <option value="America/Santiago">Santiago (CLT) - Chile -4:00</option>
@@ -534,7 +555,9 @@ export default function BirthChartPage() {
                   <optgroup label="Africa">
                     <option value="Africa/Cairo">Cairo (EET) - Egypt +2:00</option>
                     <option value="Africa/Lagos">Lagos (WAT) - Nigeria +1:00</option>
-                    <option value="Africa/Johannesburg">Johannesburg (SAST) - South Africa +2:00</option>
+                    <option value="Africa/Johannesburg">
+                      Johannesburg (SAST) - South Africa +2:00
+                    </option>
                     <option value="Africa/Nairobi">Nairobi (EAT) - Kenya +3:00</option>
                     <option value="Africa/Addis_Ababa">Addis Ababa (EAT) - Ethiopia +3:00</option>
                     <option value="Africa/Casablanca">Casablanca (WET) - Morocco +0:00</option>
@@ -594,9 +617,13 @@ export default function BirthChartPage() {
                     <option value="Australia/Hobart">Hobart (AEST) - Australia +10:00</option>
                     <option value="Australia/Canberra">Canberra (AEST) - Australia +10:00</option>
                     <option value="Pacific/Auckland">Auckland (NZST) - New Zealand +12:00</option>
-                    <option value="Pacific/Wellington">Wellington (NZST) - New Zealand +12:00</option>
+                    <option value="Pacific/Wellington">
+                      Wellington (NZST) - New Zealand +12:00
+                    </option>
                     <option value="Pacific/Fiji">Fiji (FJT) +12:00</option>
-                    <option value="Pacific/Papua">Port Moresby (PGT) - Papua New Guinea +10:00</option>
+                    <option value="Pacific/Papua">
+                      Port Moresby (PGT) - Papua New Guinea +10:00
+                    </option>
                     <option value="Pacific/Port_Moresby">Port Moresby (PGT) +10:00</option>
                     <option value="Pacific/Guam">Guam (ChST) +10:00</option>
                     <option value="Pacific/Honolulu">Honolulu (HST) - Hawaii -10:00</option>
@@ -626,7 +653,9 @@ export default function BirthChartPage() {
                     <option value="Indian/Mauritius">Mauritius (MUT) +4:00</option>
                     <option value="Indian/Reunion">Réunion (RET) +4:00</option>
                     <option value="Indian/Comoro">Comoro (EAT) +3:00</option>
-                    <option value="Indian/Antananarivo">Antananarivo (EAT) - Madagascar +3:00</option>
+                    <option value="Indian/Antananarivo">
+                      Antananarivo (EAT) - Madagascar +3:00
+                    </option>
                     <option value="Indian/Mayotte">Mayotte (EAT) +3:00</option>
                     <option value="Indian/Chagos">Chagos (IOT) +6:00</option>
                     <option value="Indian/Christmas">Christmas Island (CXT) +7:00</option>
@@ -682,12 +711,16 @@ export default function BirthChartPage() {
                 <div className="text-center p-4 bg-white/5 rounded-xl">
                   <div className="text-3xl mb-2">☀️</div>
                   <div className="text-sm text-purple-300">Sun</div>
-                  <div className="font-semibold">{result.planets.find((p) => p.name === 'Sun')?.sign}</div>
+                  <div className="font-semibold">
+                    {result.planets.find(p => p.name === 'Sun')?.sign}
+                  </div>
                 </div>
                 <div className="text-center p-4 bg-white/5 rounded-xl">
                   <div className="text-3xl mb-2">🌙</div>
                   <div className="text-sm text-purple-300">Moon</div>
-                  <div className="font-semibold">{result.planets.find((p: any) => p.name === 'Moon')?.sign}</div>
+                  <div className="font-semibold">
+                    {result.planets.find((p: any) => p.name === 'Moon')?.sign}
+                  </div>
                 </div>
                 <div className="text-center p-4 bg-white/5 rounded-xl">
                   <div className="text-3xl mb-2">⬆️</div>
@@ -719,10 +752,7 @@ export default function BirthChartPage() {
                   <h3 className="text-lg font-semibold mb-4">Major Aspects</h3>
                   <div className="flex flex-wrap gap-2">
                     {result.aspects.slice(0, 10).map((aspect: any, i: number) => (
-                      <span
-                        key={i}
-                        className="px-3 py-1 bg-purple-600/30 rounded-full text-sm"
-                      >
+                      <span key={i} className="px-3 py-1 bg-purple-600/30 rounded-full text-sm">
                         {aspect.planet1} {aspect.type} {aspect.planet2}
                       </span>
                     ))}

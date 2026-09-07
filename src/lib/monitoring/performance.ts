@@ -49,18 +49,21 @@ function sendToAnalytics(metric: Metric) {
 
   // Log locally in development
   if (process.env.NODE_ENV === 'development') {
-    logger.debug('Web Vital:', {
-      name: metric.name,
-      value: metric.value,
-      rating,
-      id: metric.id,
-    })
+    logger.debug(
+      {
+        name: metric.name,
+        value: metric.value,
+        rating,
+        id: metric.id,
+      },
+      'Web Vital:'
+    )
   }
 
   // Send to your analytics service
   // Example: Google Analytics, Vercel Analytics, custom endpoint
   if (typeof window !== 'undefined' && (window as any).gtag) {
-    (window as any).gtag('event', 'web_vitals', {
+    ;(window as any).gtag('event', 'web_vitals', {
       event_category: 'Web Vitals',
       event_label: metric.id,
       value: Math.round(metric.value),
@@ -107,11 +110,11 @@ export function initPerformanceTracking() {
   // CLS - Cumulative Layout Shift
   if ('PerformanceObserver' in window) {
     try {
-      const clsObserver = new PerformanceObserver((list) => {
+      const clsObserver = new PerformanceObserver(list => {
         const entries = list.getEntries()
         let clsValue = 0
 
-        entries.forEach((entry) => {
+        entries.forEach(entry => {
           if (!(entry as any).hadRecentInput) {
             clsValue += (entry as any).value
           }
@@ -128,7 +131,7 @@ export function initPerformanceTracking() {
 
       clsObserver.observe({ type: 'layout-shift', buffered: true })
       observers.push(clsObserver)
-    } catch (e) {
+    } catch (_e) {
       logger.warn('CLS observation not supported')
     }
   }
@@ -136,7 +139,7 @@ export function initPerformanceTracking() {
   // LCP - Largest Contentful Paint
   if ('PerformanceObserver' in window) {
     try {
-      const lcpObserver = new PerformanceObserver((list) => {
+      const lcpObserver = new PerformanceObserver(list => {
         const entries = list.getEntries()
         const lastEntry = entries[entries.length - 1] as PerformanceEntry
 
@@ -151,7 +154,7 @@ export function initPerformanceTracking() {
 
       lcpObserver.observe({ type: 'largest-contentful-paint', buffered: true })
       observers.push(lcpObserver)
-    } catch (e) {
+    } catch (_e) {
       logger.warn('LCP observation not supported')
     }
   }
@@ -159,7 +162,7 @@ export function initPerformanceTracking() {
   // FID - First Input Delay
   if ('PerformanceObserver' in window) {
     try {
-      const fidObserver = new PerformanceObserver((list) => {
+      const fidObserver = new PerformanceObserver(list => {
         const entries = list.getEntries()
         const firstEntry = entries[0] as PerformanceEntry & { processingStart: number }
 
@@ -174,7 +177,7 @@ export function initPerformanceTracking() {
 
       fidObserver.observe({ type: 'first-input', buffered: true })
       observers.push(fidObserver)
-    } catch (e) {
+    } catch (_e) {
       logger.warn('FID observation not supported')
     }
   }
@@ -182,7 +185,7 @@ export function initPerformanceTracking() {
   // FCP - First Contentful Paint
   if ('PerformanceObserver' in window) {
     try {
-      const fcpObserver = new PerformanceObserver((list) => {
+      const fcpObserver = new PerformanceObserver(list => {
         const entries = list.getEntries()
         const firstEntry = entries[0] as PerformanceEntry
 
@@ -197,7 +200,7 @@ export function initPerformanceTracking() {
 
       fcpObserver.observe({ type: 'paint', buffered: true })
       observers.push(fcpObserver)
-    } catch (e) {
+    } catch (_e) {
       logger.warn('FCP observation not supported')
     }
   }
@@ -219,10 +222,10 @@ export function initPerformanceTracking() {
   // INP - Interaction to Next Paint (newer metric)
   if ('PerformanceObserver' in window) {
     try {
-      const inpObserver = new PerformanceObserver((list) => {
+      const inpObserver = new PerformanceObserver(list => {
         const entries = list.getEntries()
         // Calculate INP from interaction entries
-        const interactions = entries.filter(e => (e as any).interactionId)
+        const interactions = entries.filter(_e => (_e as any).interactionId)
         if (interactions.length > 0) {
           const longest = interactions.reduce((max, entry) => {
             const duration = (entry as any).duration
@@ -239,9 +242,9 @@ export function initPerformanceTracking() {
         }
       })
 
-      inpObserver.observe({ type: 'event', buffered: true, durationThreshold: 0 })
+      inpObserver.observe({ type: 'event', buffered: true })
       observers.push(inpObserver)
-    } catch (e) {
+    } catch (_e) {
       logger.warn('INP observation not supported')
     }
   }
@@ -249,19 +252,22 @@ export function initPerformanceTracking() {
   // Long Task tracking
   if ('PerformanceObserver' in window) {
     try {
-      const longTaskObserver = new PerformanceObserver((list) => {
+      const longTaskObserver = new PerformanceObserver(list => {
         const entries = list.getEntries()
-        entries.forEach((entry) => {
-          logger.warn('Long task detected:', {
-            duration: (entry as any).duration,
-            startTime: entry.startTime,
-          })
+        entries.forEach(entry => {
+          logger.warn(
+            {
+              duration: (entry as any).duration,
+              startTime: entry.startTime,
+            },
+            'Long task detected:'
+          )
         })
       })
 
       longTaskObserver.observe({ type: 'longtask', buffered: true })
       observers.push(longTaskObserver)
-    } catch (e) {
+    } catch (_e) {
       logger.warn('Long task observation not supported')
     }
   }
@@ -290,8 +296,11 @@ export function measureMark(name: string, startMark?: string, endMark?: string) 
     } else {
       performance.mark(name)
     }
-  } catch (e) {
-    logger.warn('Performance mark failed:', e)
+  } catch (_e) {
+    logger.warn(
+      { error: _e instanceof Error ? _e.message : String(_e) },
+      'Performance mark failed:'
+    )
   }
 }
 
@@ -302,7 +311,9 @@ export function getNavigationTiming(): Record<string, number> | null {
   if (typeof performance === 'undefined' || !performance.timing) return null
 
   const timing = performance.timing
-  const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined
+  const navigation = performance.getEntriesByType('navigation')[0] as
+    | PerformanceNavigationTiming
+    | undefined
 
   return {
     // Navigation timing
@@ -327,7 +338,7 @@ export function getResourceTiming(): Array<Record<string, unknown>> {
   if (typeof performance === 'undefined') return []
 
   const resources = performance.getEntriesByType('resource')
-  return resources.map((resource) => ({
+  return resources.map(resource => ({
     name: resource.name,
     type: (resource as PerformanceResourceTiming).initiatorType,
     duration: resource.duration,

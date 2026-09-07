@@ -1,3 +1,4 @@
+import { Search, Home, Star, Sparkles, Compass, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import {
@@ -8,14 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import {
-  Search,
-  Home,
-  Star,
-  Sparkles,
-  Compass,
-  ArrowRight,
-} from 'lucide-react'
 
 export const metadata = {
   title: '404 - Page Not Found | StarPath Astrology',
@@ -30,7 +23,10 @@ export default function NotFound() {
           {/* Cosmic 404 Illustration */}
           <div className="relative mx-auto mb-6 w-32 h-32">
             {/* Outer ring */}
-            <div className="absolute inset-0 rounded-full border-2 border-dashed border-purple-500/30 animate-spin" style={{ animationDuration: '20s' }} />
+            <div
+              className="absolute inset-0 rounded-full border-2 border-dashed border-purple-500/30 animate-spin"
+              style={{ animationDuration: '20s' }}
+            />
             {/* Middle ring */}
             <div className="absolute inset-4 rounded-full border border-[#A78BFA]/40" />
             {/* Inner content */}
@@ -39,8 +35,14 @@ export default function NotFound() {
             </div>
             {/* Floating stars */}
             <Sparkles className="absolute -top-2 -right-2 w-6 h-6 text-yellow-400 twinkle" />
-            <Star className="absolute -bottom-1 -left-1 w-5 h-5 text-[#C4B5FD] twinkle" style={{ animationDelay: '0.5s' }} />
-            <Compass className="absolute top-1/2 -right-4 w-5 h-5 text-[#A78BFA] twinkle" style={{ animationDelay: '1s' }} />
+            <Star
+              className="absolute -bottom-1 -left-1 w-5 h-5 text-[#C4B5FD] twinkle"
+              style={{ animationDelay: '0.5s' }}
+            />
+            <Compass
+              className="absolute top-1/2 -right-4 w-5 h-5 text-[#A78BFA] twinkle"
+              style={{ animationDelay: '1s' }}
+            />
           </div>
 
           <CardTitle className="text-3xl font-bold gradient-text-purple">
@@ -53,8 +55,8 @@ export default function NotFound() {
 
         <CardContent className="text-center space-y-6">
           <p className="text-gray-300 max-w-md mx-auto">
-            It seems this page has drifted into another dimension.
-            Don&apos;t worry - we can help you navigate back to familiar territory.
+            It seems this page has drifted into another dimension. Don&apos;t worry - we can help
+            you navigate back to familiar territory.
           </p>
 
           {/* Quick Links Grid */}
@@ -93,7 +95,9 @@ export default function NotFound() {
           <div className="p-4 rounded-lg bg-purple-500/5 border border-purple-500/20">
             <div className="flex items-center gap-2 mb-2">
               <Search className="w-4 h-4 text-[#A78BFA]" />
-              <span className="text-sm font-medium text-gray-300">Looking for something specific?</span>
+              <span className="text-sm font-medium text-gray-300">
+                Looking for something specific?
+              </span>
             </div>
             <p className="text-sm text-gray-400">
               Try exploring our{' '}
@@ -105,7 +109,10 @@ export default function NotFound() {
                 compatibility checker
               </Link>
               , or{' '}
-              <Link href="/chat/horoscope" className="text-[#A78BFA] hover:text-[#C4B5FD] underline">
+              <Link
+                href="/chat/horoscope"
+                className="text-[#A78BFA] hover:text-[#C4B5FD] underline"
+              >
                 AI astrology chat
               </Link>
               .
@@ -114,10 +121,7 @@ export default function NotFound() {
         </CardContent>
 
         <CardFooter className="flex flex-col gap-3">
-          <Button
-            asChild
-            className="w-full bg-[#7C3AED] hover:bg-[#5B21B6] text-white pulse-glow"
-          >
+          <Button asChild className="w-full bg-[#7C3AED] hover:bg-[#5B21B6] text-white pulse-glow">
             <Link href="/">
               <ArrowRight className="w-4 h-4 mr-2" />
               Return to StarPath Home

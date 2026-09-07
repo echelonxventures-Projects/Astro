@@ -1,19 +1,23 @@
-import { logger } from '../logger';
+import { logger } from '../logger'
 
 export class RetryExhaustedError extends Error {
-  constructor(message = 'Max retries exceeded', public readonly attempts: number, public readonly lastError: Error) {
-    super(message);
-    this.name = 'RetryExhaustedError';
+  constructor(
+    message = 'Max retries exceeded',
+    public readonly attempts: number,
+    public readonly lastError: Error
+  ) {
+    super(message)
+    this.name = 'RetryExhaustedError'
   }
 }
 
 export interface RetryOptions {
-  maxAttempts: number;
-  backoff: 'fixed' | 'exponential';
-  initialDelay: number;
-  maxDelay: number;
-  retryableErrors?: string[];
-  onRetry?: (attempt: number, error: Error, delay: number) => void;
+  maxAttempts: number
+  backoff: 'fixed' | 'exponential'
+  initialDelay: number
+  maxDelay: number
+  retryableErrors?: string[]
+  onRetry?: (attempt: number, error: Error, delay: number) => void
 }
 
 const DEFAULT_RETRYABLE_ERRORS = [
@@ -23,82 +27,82 @@ const DEFAULT_RETRYABLE_ERRORS = [
   'ENOTFOUND',
   'EPIPE',
   'ERR_SOCKET_CLOSED',
-  'ERR_CONNECTION_RESET'
-];
+  'ERR_CONNECTION_RESET',
+]
 
 function isRetryable(error: Error, retryableErrors?: string[]): boolean {
-  const errorMessage = error.message || '';
-  const errorCode = (error as any).code || '';
+  const errorMessage = error.message || ''
+  const errorCode = (error as any).code || ''
 
-  const errorsToCheck = retryableErrors || DEFAULT_RETRYABLE_ERRORS;
+  const errorsToCheck = retryableErrors || DEFAULT_RETRYABLE_ERRORS
 
-  return errorsToCheck.some(pattern =>
-    errorMessage.includes(pattern) ||
-    errorCode === pattern
-  );
+  return errorsToCheck.some(pattern => errorMessage.includes(pattern) || errorCode === pattern)
 }
 
 function calculateDelay(attempt: number, options: RetryOptions): number {
   if (options.backoff === 'fixed') {
-    return options.initialDelay;
+    return options.initialDelay
   }
 
   // Exponential backoff with jitter to prevent thundering herd
-  const exponential = options.initialDelay * Math.pow(2, attempt - 1);
-  const jitter = Math.random() * 100; // Random jitter up to 100ms
-  return Math.min(exponential + jitter, options.maxDelay);
+  const exponential = options.initialDelay * Math.pow(2, attempt - 1)
+  const jitter = Math.random() * 100 // Random jitter up to 100ms
+  return Math.min(exponential + jitter, options.maxDelay)
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-export async function withRetry<T>(
-  fn: () => Promise<T>,
-  options: RetryOptions
-): Promise<T> {
-  let attempt = 0;
-  let lastError: Error | null = null;
+export async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions): Promise<T> {
+  let attempt = 0
+  let lastError: Error | null = null
 
   while (attempt < options.maxAttempts) {
     try {
-      return await fn();
+      return await fn()
     } catch (error) {
-      attempt++;
-      lastError = error as Error;
+      attempt++
+      lastError = error as Error
 
       if (attempt >= options.maxAttempts) {
-        logger.error(`All ${options.maxAttempts} retry attempts exhausted`, {
-          lastError: lastError.message
-        });
+        logger.error(
+          {
+            lastError: lastError.message,
+          },
+          `All ${options.maxAttempts} retry attempts exhausted`
+        )
         throw new RetryExhaustedError(
           `Max retries exceeded after ${options.maxAttempts} attempts`,
           attempt,
           lastError
-        );
+        )
       }
 
       if (!isRetryable(lastError, options.retryableErrors)) {
-        logger.debug(`Non-retryable error encountered, giving up: ${lastError.message}`);
-        throw lastError;
+        logger.debug(`Non-retryable error encountered, giving up: ${lastError.message}`)
+        throw lastError
       }
 
-      const delay = calculateDelay(attempt, options);
+      const delay = calculateDelay(attempt, options)
 
-      logger.info(`Retry attempt ${attempt}/${options.maxAttempts} after ${delay}ms delay`, {
-        error: lastError.message
-      });
+      logger.info(
+        {
+          error: lastError.message,
+        },
+        `Retry attempt ${attempt}/${options.maxAttempts} after ${delay}ms delay`
+      )
 
       if (options.onRetry) {
-        options.onRetry(attempt, lastError, delay);
+        options.onRetry(attempt, lastError, delay)
       }
 
-      await sleep(delay);
+      await sleep(delay)
     }
   }
 
   // This should never be reached, but TypeScript needs it
-  throw new RetryExhaustedError('Max retries exceeded', attempt, lastError!);
+  throw new RetryExhaustedError('Max retries exceeded', attempt, lastError!)
 }
 
 // Convenience function for quick retries
@@ -107,8 +111,8 @@ export function withDefaultRetry<T>(fn: () => Promise<T>, maxAttempts = 3): Prom
     maxAttempts,
     backoff: 'exponential',
     initialDelay: 1000,
-    maxDelay: 10000
-  });
+    maxDelay: 10000,
+  })
 }
 
 // Retry with immediate execution for critical operations
@@ -117,8 +121,8 @@ export function withImmediateRetry<T>(fn: () => Promise<T>, maxAttempts = 3): Pr
     maxAttempts,
     backoff: 'fixed',
     initialDelay: 500,
-    maxDelay: 500
-  });
+    maxDelay: 500,
+  })
 }
 
 // Retry configuration presets
@@ -128,7 +132,7 @@ export const RetryPresets = {
     maxAttempts: 3,
     backoff: 'exponential',
     initialDelay: 1000,
-    maxDelay: 10000
+    maxDelay: 10000,
   },
 
   // For database operations
@@ -136,7 +140,7 @@ export const RetryPresets = {
     maxAttempts: 5,
     backoff: 'exponential',
     initialDelay: 500,
-    maxDelay: 30000
+    maxDelay: 30000,
   },
 
   // For AI service calls
@@ -144,7 +148,7 @@ export const RetryPresets = {
     maxAttempts: 3,
     backoff: 'exponential',
     initialDelay: 2000,
-    maxDelay: 15000
+    maxDelay: 15000,
   },
 
   // For payment operations
@@ -153,6 +157,6 @@ export const RetryPresets = {
     backoff: 'exponential',
     initialDelay: 500,
     maxDelay: 5000,
-    retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'rate_limit', 'gateway_timeout']
-  }
-} as const;
+    retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'rate_limit', 'gateway_timeout'] as string[],
+  },
+} satisfies { [K: string]: RetryOptions }

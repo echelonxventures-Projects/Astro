@@ -1,10 +1,17 @@
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-import type { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
 import { generateBirthChart } from '@/lib/astrology/calculations'
 import { auth } from '@/lib/auth'
-import { cache, DEFAULT_TTLS } from '@/lib/cache'
+import {
+  get as cacheGet,
+  set as cacheSet,
+  del as cacheDel,
+  cacheFirst,
+  DEFAULT_TTLS,
+} from '@/lib/cache'
 import { cacheKeys } from '@/lib/cache-keys'
 import { generateInputHash } from '@/lib/cache-keys'
 import { prisma } from '@/lib/db'
@@ -49,7 +56,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const cacheKey = cacheKeys.chartCalculation(calculationKey)
 
     // Try to get cached calculation
-    const cachedCalculation = await cache.get<ReturnType<typeof generateBirthChart>>(cacheKey)
+    const cachedCalculation = await cacheGet<ReturnType<typeof generateBirthChart>>(cacheKey)
 
     let chartData: ReturnType<typeof generateBirthChart>
 
@@ -68,7 +75,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       )
 
       // Cache the calculation for 1 hour
-      await cache.set(cacheKey, chartData, DEFAULT_TTLS.CHART_CALCULATION)
+      await cacheSet(cacheKey, chartData, DEFAULT_TTLS.CHART_CALCULATION)
       logger.debug({ userId: session.user.id, cacheKey }, 'Cached chart calculation')
     }
 
@@ -83,14 +90,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         latitude,
         longitude,
         timezone: timezone || 'UTC',
-        planets: chartData.planets as unknown,
-        houses: chartData.houses as unknown,
-        aspects: chartData.aspects as unknown,
+        planets: chartData.planets as object,
+        houses: chartData.houses as object,
+        aspects: chartData.aspects as object,
       },
     })
 
     // Invalidate user's chart list cache
-    await cache.delete(cacheKeys.userCharts(session.user.id))
+    await cacheDel(cacheKeys.userCharts(session.user.id))
 
     return NextResponse.json({
       id: chart.id,
@@ -116,7 +123,7 @@ export async function GET(): Promise<NextResponse> {
     const cacheKey = cacheKeys.userCharts(session.user.id)
 
     // Try cache first using cacheFirst strategy
-    const charts = await cache.cacheFirst(
+    const charts = await cacheFirst(
       cacheKey,
       async () => {
         logger.debug({ userId: session.user.id }, 'Fetching charts from database')

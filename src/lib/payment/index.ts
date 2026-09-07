@@ -83,9 +83,9 @@ export {
 
 // Initialize default gateways
 import { registerGateway } from './gateway-registry'
-import { StripeGateway } from './stripe-gateway'
-import { RazorpayGateway } from './razorpay-gateway'
 import { PaypalGateway } from './paypal-gateway'
+import { RazorpayGateway } from './razorpay-gateway'
+import { StripeGateway } from './stripe-gateway'
 
 // Register all available gateways
 registerGateway('stripe', StripeGateway)

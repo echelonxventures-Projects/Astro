@@ -3,6 +3,8 @@
  * Complete PayPal Orders API v2 and Subscriptions API integration
  */
 
+import { logWebhookEvent, logTransaction, logSubscription } from './audit'
+import { checkTransaction } from './fraud-detection'
 import {
   IPaymentGateway,
   PaymentGatewayConfig,
@@ -15,15 +17,8 @@ import {
   CustomerResult,
   PaymentMethodResult,
 } from './gateway-interface'
-import { logger } from '@/lib/logger'
 import { validateWebhookSignature } from './security'
-import { checkTransaction, FraudCheck } from './fraud-detection'
-import {
-  logPaymentAudit,
-  logWebhookEvent,
-  logTransaction,
-  logSubscription,
-} from './audit'
+import { logger } from '@/lib/logger'
 
 // PayPal API types
 interface PayPalOrder {
@@ -73,9 +68,7 @@ export class PaypalGateway implements IPaymentGateway {
   }
 
   private getBaseUrl(): string {
-    return this.testMode
-      ? 'https://api-m.sandbox.paypal.com'
-      : 'https://api-m.paypal.com'
+    return this.testMode ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com'
   }
 
   private async getAccessToken(): Promise<string> {
@@ -94,7 +87,7 @@ export class PaypalGateway implements IPaymentGateway {
     const response = await fetch(`${this.getBaseUrl()}/v1/oauth2/token`, {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
+        Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: 'grant_type=client_credentials',
@@ -106,24 +99,25 @@ export class PaypalGateway implements IPaymentGateway {
       throw new Error(`Failed to get PayPal access token: ${response.status}`)
     }
 
-    const data = await response.json()
-    this.accessToken = data.access_token
+    const data: { access_token?: string; expires_in?: number } = await response.json()
+    this.accessToken = data.access_token ?? null
     // Set expiry 5 minutes before actual expiry for safety
-    this.tokenExpiry = new Date(Date.now() + (data.expires_in - 300) * 1000)
+    this.tokenExpiry = new Date(Date.now() + ((data.expires_in ?? 3600) - 300) * 1000)
+
+    if (!this.accessToken) {
+      throw new Error('PayPal access token missing in response')
+    }
 
     return this.accessToken
   }
 
-  private async makeApiRequest<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
+  private async makeApiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const token = await this.getAccessToken()
 
     const response = await fetch(`${this.getBaseUrl()}${endpoint}`, {
       ...options,
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
         'PayPal-Request-Id': crypto.randomUUID(),
         ...options.headers,
@@ -141,7 +135,10 @@ export class PaypalGateway implements IPaymentGateway {
 
   async createCheckoutSession(options: CheckoutSessionOptions): Promise<CheckoutSessionResult> {
     try {
-      logger.debug({ userId: options.userId, amount: options.amount }, 'Creating PayPal checkout session')
+      logger.debug(
+        { userId: options.userId, amount: options.amount },
+        'Creating PayPal checkout session'
+      )
 
       // Run fraud check
       const fraudCheck = await checkTransaction({
@@ -160,15 +157,17 @@ export class PaypalGateway implements IPaymentGateway {
         method: 'POST',
         body: JSON.stringify({
           intent: 'CAPTURE',
-          purchase_units: [{
-            amount: {
-              currency_code: options.currency,
-              value: (options.amount / 100).toFixed(2),
+          purchase_units: [
+            {
+              amount: {
+                currency_code: options.currency,
+                value: (options.amount / 100).toFixed(2),
+              },
+              description: options.metadata?.description || 'Astrology Reading',
+              custom_id: options.userId,
+              invoice_id: `inv-${Date.now()}-${options.userId.slice(0, 8)}`,
             },
-            description: options.metadata?.description || 'Astrology Reading',
-            custom_id: options.userId,
-            invoice_id: `inv-${Date.now()}-${options.userId.slice(0, 8)}`,
-          }],
+          ],
           application_context: {
             brand_name: 'StarPath Astrology',
             landing_page: 'LOGIN',
@@ -180,7 +179,7 @@ export class PaypalGateway implements IPaymentGateway {
         }),
       })
 
-      const approveLink = order.links?.find((l) => l.rel === 'approve')
+      const approveLink = order.links?.find(l => l.rel === 'approve')
 
       if (!approveLink) {
         throw new Error('PayPal approval URL not found in response')
@@ -220,7 +219,11 @@ export class PaypalGateway implements IPaymentGateway {
     }
   }
 
-  async createCustomer(email: string, name?: string, metadata?: Record<string, any>): Promise<CustomerResult> {
+  async createCustomer(
+    email: string,
+    name?: string,
+    metadata?: Record<string, any>
+  ): Promise<CustomerResult> {
     try {
       // PayPal doesn't have a traditional customer API like Stripe
       // We create a "vault" customer for saved payment methods
@@ -296,7 +299,10 @@ export class PaypalGateway implements IPaymentGateway {
 
   async createSubscription(options: SubscriptionOptions): Promise<SubscriptionResult> {
     try {
-      logger.debug({ userId: options.userId, planId: options.planId }, 'Creating PayPal subscription')
+      logger.debug(
+        { userId: options.userId, planId: options.planId },
+        'Creating PayPal subscription'
+      )
 
       // First, ensure we have a product
       const product = await this.ensureProduct(options.planId, 'Astrology Subscription')
@@ -305,31 +311,34 @@ export class PaypalGateway implements IPaymentGateway {
       const plan = await this.createOrGetPlan(product.id, options)
 
       // Create subscription
-      const subscription = await this.makeApiRequest<PayPalSubscription>('/v1/billing/subscriptions', {
-        method: 'POST',
-        body: JSON.stringify({
-          plan_id: plan.id,
-          subscriber: {
-            email_address: options.email,
-            name: {
-              given_name: options.metadata?.firstName || 'User',
-              surname: options.metadata?.lastName || '',
+      const subscription = await this.makeApiRequest<PayPalSubscription>(
+        '/v1/billing/subscriptions',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            plan_id: plan.id,
+            subscriber: {
+              email_address: options.email,
+              name: {
+                given_name: options.metadata?.firstName || 'User',
+                surname: options.metadata?.lastName || '',
+              },
             },
-          },
-          application_context: {
-            brand_name: 'StarPath Astrology',
-            shipping_preference: 'NO_SHIPPING',
-            user_action: 'SUBSCRIBE_NOW',
-            payment_method: {
-              payer_selected: 'PAYPAL',
-              payee_preferred: 'IMMEDIATE_PAYMENT_REQUIRED',
+            application_context: {
+              brand_name: 'StarPath Astrology',
+              shipping_preference: 'NO_SHIPPING',
+              user_action: 'SUBSCRIBE_NOW',
+              payment_method: {
+                payer_selected: 'PAYPAL',
+                payee_preferred: 'IMMEDIATE_PAYMENT_REQUIRED',
+              },
+              return_url: options.metadata?.successUrl,
+              cancel_url: options.metadata?.cancelUrl,
             },
-            return_url: options.metadata?.successUrl,
-            cancel_url: options.metadata?.cancelUrl,
-          },
-          custom_id: options.userId,
-        }),
-      })
+            custom_id: options.userId,
+          }),
+        }
+      )
 
       await logSubscription('subscription_created', {
         userId: options.userId,
@@ -366,7 +375,9 @@ export class PaypalGateway implements IPaymentGateway {
   private async ensureProduct(productId: string, name: string): Promise<{ id: string }> {
     try {
       // Try to get existing product
-      const product = await this.makeApiRequest<{ id: string }>(`/v1/catalogs/products/${productId}`)
+      const product = await this.makeApiRequest<{ id: string }>(
+        `/v1/catalogs/products/${productId}`
+      )
       return product
     } catch {
       // Create new product if not found
@@ -450,12 +461,12 @@ export class PaypalGateway implements IPaymentGateway {
 
   private mapSubscriptionStatus(status: string): SubscriptionResult['status'] {
     const statusMap: Record<string, SubscriptionResult['status']> = {
-      'ACTIVE': 'active',
-      'APPROVAL_PENDING': 'incomplete',
-      'APPROVED': 'active',
-      'SUSPENDED': 'past_due',
-      'CANCELLED': 'canceled',
-      'EXPIRED': 'canceled',
+      ACTIVE: 'active',
+      APPROVAL_PENDING: 'incomplete',
+      APPROVED: 'active',
+      SUSPENDED: 'past_due',
+      CANCELLED: 'canceled',
+      EXPIRED: 'canceled',
     }
     return statusMap[status] || 'incomplete'
   }
@@ -465,7 +476,10 @@ export class PaypalGateway implements IPaymentGateway {
       if (atPeriodEnd) {
         // PayPal doesn't support cancel at period end natively
         // We need to track this ourselves and cancel when the period ends
-        logger.debug({ subscriptionId }, 'PayPal subscription scheduled for cancellation at period end')
+        logger.debug(
+          { subscriptionId },
+          'PayPal subscription scheduled for cancellation at period end'
+        )
       } else {
         await this.makeApiRequest<void>(`/v1/billing/subscriptions/${subscriptionId}/cancel`, {
           method: 'POST',
@@ -633,7 +647,7 @@ export class PaypalGateway implements IPaymentGateway {
         }>
       }>(`/v2/vault/customers/${customerId}/payment-tokens`)
 
-      return tokens.tokens.map((token) => ({
+      return tokens.tokens.map(token => ({
         id: token.id,
         type: token.type,
         isDefault: token.is_default || false,
@@ -673,9 +687,12 @@ export class PaypalGateway implements IPaymentGateway {
     currency: string
   }> {
     try {
-      const capture = await this.makeApiRequest<PayPalCapture>(`/v2/checkout/orders/${orderId}/capture`, {
-        method: 'POST',
-      })
+      const capture = await this.makeApiRequest<PayPalCapture>(
+        `/v2/checkout/orders/${orderId}/capture`,
+        {
+          method: 'POST',
+        }
+      )
 
       await logTransaction('payment_captured', {
         gateway: this.key,

@@ -2,10 +2,10 @@
  * Server-side wrapper for Payments Admin Page
  */
 
-import { auth } from '@/lib/auth'
-import { prisma } from '@/lib/db'
 import { redirect } from 'next/navigation'
 import PaymentsClient from './page.client'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 
 export default async function PaymentsPage() {
   const session = await auth()
@@ -40,22 +40,33 @@ export default async function PaymentsPage() {
     orderBy: { sortOrder: 'asc' },
   })
 
-  const transactions = await prisma.paymentTransaction.findMany({
-    include: {
-      user: {
-        select: {
-          email: true,
-          name: true,
+  const transactions = await prisma.paymentTransaction
+    .findMany({
+      include: {
+        user: {
+          select: {
+            email: true,
+            name: true,
+          },
         },
+        gateway: true,
       },
-      gateway: true,
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 50,
-  }).then(tx => tx.map(t => ({
-    ...t,
-    createdAt: t.createdAt.toISOString(),
-  })))
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    })
+    .then(tx =>
+      tx.map(t => ({
+        ...t,
+        createdAt: t.createdAt.toISOString(),
+      }))
+    )
 
-  return <PaymentsClient user={user} initialGateways={gateways} initialPlans={plans} initialTransactions={transactions} />
+  return (
+    <PaymentsClient
+      user={user}
+      initialGateways={gateways}
+      initialPlans={plans}
+      initialTransactions={transactions}
+    />
+  )
 }

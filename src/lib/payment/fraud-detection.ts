@@ -29,8 +29,8 @@ export interface FraudCheckParams {
     postalCode?: string
     city?: string
   }
-  cardFingerprint?: string
-  deviceFingerprint?: string
+  _cardFingerprint?: string
+  _deviceFingerprint?: string
   isFirstTransaction?: boolean
   transactionCount24h?: number
   transactionAmount24h?: number
@@ -51,8 +51,24 @@ const BAD_EMAIL_DOMAINS = [
 ]
 
 const HIGH_RISK_COUNTRIES = [
-  'AF', 'BY', 'CF', 'CU', 'IR', 'IQ', 'KP', 'LY', 'ML', 'MM',
-  'RU', 'SO', 'SS', 'SD', 'SY', 'VE', 'YE', 'ZW',
+  'AF',
+  'BY',
+  'CF',
+  'CU',
+  'IR',
+  'IQ',
+  'KP',
+  'LY',
+  'ML',
+  'MM',
+  'RU',
+  'SO',
+  'SS',
+  'SD',
+  'SY',
+  'VE',
+  'YE',
+  'ZW',
 ]
 
 const VELOCITY_LIMITS = {
@@ -74,7 +90,7 @@ export async function checkTransaction(params: FraudCheckParams): Promise<FraudC
     userId,
     email,
     amount,
-    currency,
+    currency: _currency,
     ipAddress,
     billingAddress,
     shippingAddress,
@@ -139,7 +155,8 @@ export async function checkTransaction(params: FraudCheckParams): Promise<FraudC
   }
 
   // 7. First transaction check
-  if (isFirstTransaction && amount > 5000) { // > $50
+  if (isFirstTransaction && amount > 5000) {
+    // > $50
     score += 15
     flags.push('high_amount_first_transaction')
     recommendations.push('Require additional verification for first-time large transactions')
@@ -198,7 +215,7 @@ export async function checkTransaction(params: FraudCheckParams): Promise<FraudC
 /**
  * Check if a card fingerprint has been flagged
  */
-export async function isCardFlagged(cardFingerprint: string): Promise<boolean> {
+export async function isCardFlagged(_cardFingerprint: string): Promise<boolean> {
   // In production, check against a database of flagged cards
   // This could be integrated with a third-party fraud service
   return false
@@ -207,7 +224,7 @@ export async function isCardFlagged(cardFingerprint: string): Promise<boolean> {
 /**
  * Check if an email has been flagged
  */
-export async function isEmailFlagged(email: string): Promise<boolean> {
+export async function isEmailFlagged(_email: string): Promise<boolean> {
   // In production, check against a database of flagged emails
   return false
 }
@@ -258,7 +275,7 @@ export async function reportToFraudService(
  * Get velocity data for a user
  * Returns transaction counts and amounts for time windows
  */
-export async function getVelocityData(userId: string): Promise<{
+export async function getVelocityData(_userId: string): Promise<{
   count1h: number
   count24h: number
   amount1h: number
@@ -277,7 +294,7 @@ export async function getVelocityData(userId: string): Promise<{
 /**
  * Check device fingerprint reputation
  */
-export async function checkDeviceReputation(deviceFingerprint: string): Promise<{
+export async function checkDeviceReputation(_deviceFingerprint: string): Promise<{
   riskScore: number
   isKnownGood: boolean
   isKnownBad: boolean

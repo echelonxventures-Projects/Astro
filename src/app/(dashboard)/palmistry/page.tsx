@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { Upload, Sparkles, Loader2, Image as ImageIcon, Check, AlertCircle } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { Upload, Sparkles, Loader2, Image as ImageIcon, Check, AlertCircle } from 'lucide-react'
+import { useState, useRef } from 'react'
 
 export default function PalmistryPage() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
@@ -32,7 +32,7 @@ export default function PalmistryPage() {
       }
       setError(null)
       const reader = new FileReader()
-      reader.onload = (e) => {
+      reader.onload = e => {
         setSelectedImage(e.target?.result as string)
         setReading(null)
       }
@@ -46,7 +46,7 @@ export default function PalmistryPage() {
     if (file && file.type.startsWith('image/')) {
       setError(null)
       const reader = new FileReader()
-      reader.onload = (e) => {
+      reader.onload = e => {
         setSelectedImage(e.target?.result as string)
         setReading(null)
       }
@@ -108,7 +108,7 @@ export default function PalmistryPage() {
           >
             <div
               onClick={() => fileInputRef.current?.click()}
-              onDragOver={(e) => e.preventDefault()}
+              onDragOver={e => e.preventDefault()}
               onDrop={handleDrop}
               className="border-2 border-dashed border-slate-700 hover:border-amber-500/50 rounded-xl p-12 text-center cursor-pointer transition-colors"
             >
@@ -117,15 +117,9 @@ export default function PalmistryPage() {
                   <Upload className="w-10 h-10 text-amber-400" />
                 </div>
                 <div className="space-y-2">
-                  <p className="text-lg font-medium text-slate-200">
-                    Upload Your Palm Photo
-                  </p>
-                  <p className="text-slate-400">
-                    Drag and drop or click to browse
-                  </p>
-                  <p className="text-sm text-slate-500">
-                    PNG, JPG up to 10MB
-                  </p>
+                  <p className="text-lg font-medium text-slate-200">Upload Your Palm Photo</p>
+                  <p className="text-slate-400">Drag and drop or click to browse</p>
+                  <p className="text-sm text-slate-500">PNG, JPG up to 10MB</p>
                 </div>
               </div>
             </div>
@@ -153,9 +147,7 @@ export default function PalmistryPage() {
                   <Check className="w-4 h-4" />
                   <span className="font-medium text-sm">Clear Focus</span>
                 </div>
-                <p className="text-xs text-slate-400">
-                  Keep your hand steady for a sharp image
-                </p>
+                <p className="text-xs text-slate-400">Keep your hand steady for a sharp image</p>
               </div>
               <div className="bg-slate-800/50 rounded-lg p-4 space-y-2">
                 <div className="flex items-center gap-2 text-amber-400">
@@ -178,11 +170,7 @@ export default function PalmistryPage() {
               {/* Image Preview */}
               <div className="md:w-1/2">
                 <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-800">
-                  <img
-                    src={selectedImage}
-                    alt="Palm"
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={selectedImage} alt="Palm" className="w-full h-full object-cover" />
                 </div>
                 <button
                   onClick={() => {
@@ -216,9 +204,7 @@ export default function PalmistryPage() {
                   <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
                     <Loader2 className="w-12 h-12 text-amber-400 animate-spin" />
                     <p className="text-slate-300">Analyzing your palm lines...</p>
-                    <p className="text-sm text-slate-500">
-                      This may take up to 30 seconds
-                    </p>
+                    <p className="text-sm text-slate-500">This may take up to 30 seconds</p>
                   </div>
                 )}
 
@@ -244,35 +230,49 @@ export default function PalmistryPage() {
 
                     <div className="bg-slate-800/50 rounded-lg p-4 space-y-3">
                       <div>
-                        <span className="text-xs text-slate-500 uppercase tracking-wider">Hand Type</span>
+                        <span className="text-xs text-slate-500 uppercase tracking-wider">
+                          Hand Type
+                        </span>
                         <p className="text-slate-200 font-medium">{reading.handType}</p>
                       </div>
                       <div>
-                        <span className="text-xs text-slate-500 uppercase tracking-wider">Life Line</span>
+                        <span className="text-xs text-slate-500 uppercase tracking-wider">
+                          Life Line
+                        </span>
                         <p className="text-slate-300 text-sm">{reading.lifeLine}</p>
                       </div>
                       <div>
-                        <span className="text-xs text-slate-500 uppercase tracking-wider">Heart Line</span>
+                        <span className="text-xs text-slate-500 uppercase tracking-wider">
+                          Heart Line
+                        </span>
                         <p className="text-slate-300 text-sm">{reading.heartLine}</p>
                       </div>
                       <div>
-                        <span className="text-xs text-slate-500 uppercase tracking-wider">Head Line</span>
+                        <span className="text-xs text-slate-500 uppercase tracking-wider">
+                          Head Line
+                        </span>
                         <p className="text-slate-300 text-sm">{reading.headLine}</p>
                       </div>
                       <div>
-                        <span className="text-xs text-slate-500 uppercase tracking-wider">Fate Line</span>
+                        <span className="text-xs text-slate-500 uppercase tracking-wider">
+                          Fate Line
+                        </span>
                         <p className="text-slate-300 text-sm">{reading.fateLine}</p>
                       </div>
                     </div>
 
                     <div className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-lg p-4">
-                      <span className="text-xs text-amber-500 uppercase tracking-wider">Overall Reading</span>
+                      <span className="text-xs text-amber-500 uppercase tracking-wider">
+                        Overall Reading
+                      </span>
                       <p className="text-slate-200 mt-2">{reading.overallReading}</p>
                     </div>
 
                     {reading.recommendations.length > 0 && (
                       <div className="bg-slate-800/50 rounded-lg p-4">
-                        <span className="text-xs text-slate-500 uppercase tracking-wider mb-3 block">Recommendations</span>
+                        <span className="text-xs text-slate-500 uppercase tracking-wider mb-3 block">
+                          Recommendations
+                        </span>
                         <ul className="space-y-2">
                           {reading.recommendations.map((rec, i) => (
                             <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
@@ -302,19 +302,41 @@ export default function PalmistryPage() {
             <div>
               <h3 className="text-amber-400 font-medium mb-2">Major Lines Analyzed</h3>
               <ul className="space-y-1">
-                <li>• <strong className="text-slate-300">Life Line:</strong> Vitality, health, life changes</li>
-                <li>• <strong className="text-slate-300">Heart Line:</strong> Emotional life, relationships</li>
-                <li>• <strong className="text-slate-300">Head Line:</strong> Intellect, communication style</li>
-                <li>• <strong className="text-slate-300">Fate Line:</strong> Career path, life direction</li>
+                <li>
+                  • <strong className="text-slate-300">Life Line:</strong> Vitality, health, life
+                  changes
+                </li>
+                <li>
+                  • <strong className="text-slate-300">Heart Line:</strong> Emotional life,
+                  relationships
+                </li>
+                <li>
+                  • <strong className="text-slate-300">Head Line:</strong> Intellect, communication
+                  style
+                </li>
+                <li>
+                  • <strong className="text-slate-300">Fate Line:</strong> Career path, life
+                  direction
+                </li>
               </ul>
             </div>
             <div>
               <h3 className="text-amber-400 font-medium mb-2">Hand Types</h3>
               <ul className="space-y-1">
-                <li>• <strong className="text-slate-300">Earth:</strong> Practical, reliable, grounded</li>
-                <li>• <strong className="text-slate-300">Air:</strong> Intellectual, communicative</li>
-                <li>• <strong className="text-slate-300">Fire:</strong> Energetic, passionate, spontaneous</li>
-                <li>• <strong className="text-slate-300">Water:</strong> Emotional, intuitive, creative</li>
+                <li>
+                  • <strong className="text-slate-300">Earth:</strong> Practical, reliable, grounded
+                </li>
+                <li>
+                  • <strong className="text-slate-300">Air:</strong> Intellectual, communicative
+                </li>
+                <li>
+                  • <strong className="text-slate-300">Fire:</strong> Energetic, passionate,
+                  spontaneous
+                </li>
+                <li>
+                  • <strong className="text-slate-300">Water:</strong> Emotional, intuitive,
+                  creative
+                </li>
               </ul>
             </div>
           </div>

@@ -18,22 +18,26 @@ interface ReadinessStatus {
   }
 }
 
-async function checkMigrations(): Promise<{ success: boolean; lastMigration?: string; pending?: number }> {
+async function checkMigrations(): Promise<{
+  success: boolean
+  lastMigration?: string
+  pending?: number
+}> {
   try {
     // Check if _prisma_migrations table exists and has entries
-    const migrations = await prisma.$queryRaw`
+    const migrations = (await prisma.$queryRaw`
       SELECT migration_name, finished_at
       FROM _prisma_migrations
       WHERE finished_at IS NOT NULL
       ORDER BY finished_at DESC
       LIMIT 1
-    ` as Array<{ migration_name: string; finished_at: Date }>
+    `) as Array<{ migration_name: string; finished_at: Date }>
 
-    const pendingMigrations = await prisma.$queryRaw`
+    const pendingMigrations = (await prisma.$queryRaw`
       SELECT COUNT(*) as count
       FROM _prisma_migrations
       WHERE finished_at IS NULL
-    ` as Array<{ count: number }>
+    `) as Array<{ count: number }>
 
     const pending = Number(pendingMigrations[0]?.count || 0)
 
@@ -44,18 +48,18 @@ async function checkMigrations(): Promise<{ success: boolean; lastMigration?: st
     }
   } catch (error) {
     // Table might not exist yet (first run)
-    logger.warn('Readiness check: Could not query migrations', { error })
+    logger.warn({ error }, 'Readiness check: Could not query migrations')
     return { success: false }
   }
 }
 
 async function checkDatabaseTables(): Promise<number> {
   try {
-    const result = await prisma.$queryRaw`
+    const result = (await prisma.$queryRaw`
       SELECT COUNT(*) as count
       FROM sqlite_master
       WHERE type = 'table'
-    ` as Array<{ count: number }>
+    `) as Array<{ count: number }>
 
     return Number(result[0]?.count || 0)
   } catch {
@@ -85,11 +89,7 @@ async function checkDatabaseConnection(): Promise<boolean> {
 }
 
 export async function GET(): Promise<NextResponse> {
-  const checks = await Promise.all([
-    checkDatabaseConnection(),
-    checkMigrations(),
-    checkSeeding(),
-  ])
+  const checks = await Promise.all([checkDatabaseConnection(), checkMigrations(), checkSeeding()])
 
   const [databaseConnected, migrationStatus, seedingComplete] = checks
 
@@ -112,18 +112,21 @@ export async function GET(): Promise<NextResponse> {
   }
 
   if (!ready) {
-    logger.warn('Readiness check failed', {
-      checks: status.checks,
-      details: status.details,
-    })
+    logger.warn(
+      {
+        checks: status.checks,
+        details: status.details,
+      },
+      'Readiness check failed'
+    )
   }
 
   return NextResponse.json(status, {
     status: ready ? 200 : 503,
     headers: {
       'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
+      Pragma: 'no-cache',
+      Expires: '0',
     },
   })
 }

@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { MessageCircle, Send, Loader2, Sparkles, Plus, Trash2 } from 'lucide-react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import { useState, useEffect, useRef } from 'react'
 import { logger } from '@/lib/logger'
 
 interface Message {
@@ -20,7 +20,7 @@ interface ChatSession {
 }
 
 export default function ChatPage() {
-  const { data: session, status } = useSession()
+  const { data: _session, status } = useSession()
   const router = useRouter()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [loading, setLoading] = useState(false)
@@ -51,7 +51,7 @@ export default function ChatPage() {
         const data = await response.json()
         setSessions(data.chats || [])
       }
-    } catch (err) {
+    } catch (_err) {
       logger.warn('Failed to fetch sessions')
     }
   }
@@ -82,13 +82,13 @@ export default function ChatPage() {
     e.stopPropagation()
     try {
       // In production, call API to delete
-      setSessions(sessions.filter((s) => s.id !== sessionId))
+      setSessions(sessions.filter(s => s.id !== sessionId))
       if (currentSession === sessionId) {
         setCurrentSession(null)
         setMessages([])
       }
-    } catch (err) {
-      logger.warn('Failed to delete session')
+    } catch (_err) {
+      logger.warn('Failed to delete _session')
     }
   }
 
@@ -102,7 +102,7 @@ export default function ChatPage() {
       timestamp: new Date(),
     }
 
-    setMessages((prev) => [...prev, userMessage])
+    setMessages(prev => [...prev, userMessage])
     setInput('')
     setLoading(true)
 
@@ -129,19 +129,19 @@ export default function ChatPage() {
         timestamp: new Date(),
       }
 
-      setMessages((prev) => [...prev, assistantMessage])
+      setMessages(prev => [...prev, assistantMessage])
       setCurrentSession(data.sessionId)
 
-      // Update session list
-      if (!sessions.find((s) => s.id === data.sessionId)) {
+      // Update _session list
+      if (!sessions.find(s => s.id === data.sessionId)) {
         fetchSessions()
       }
-    } catch (err: any) {
-      setMessages((prev) => [
+    } catch (_err: any) {
+      setMessages(prev => [
         ...prev,
         {
           role: 'assistant',
-          content: `Error: ${err.message}`,
+          content: `Error: ${_err.message}`,
           timestamp: new Date(),
         },
       ])
@@ -204,22 +204,20 @@ export default function ChatPage() {
           </div>
 
           <div className="overflow-y-auto h-[calc(100%-80px)]">
-            {sessions.map((session) => (
+            {sessions.map(_session => (
               <div
-                key={session.id}
-                onClick={() => loadSession(session.id)}
+                key={_session.id}
+                onClick={() => loadSession(_session.id)}
                 className={`group flex items-center gap-2 mx-2 my-1 p-3 rounded-xl cursor-pointer transition ${
-                  currentSession === session.id
-                    ? 'bg-purple-600/30'
-                    : 'hover:bg-white/5'
+                  currentSession === _session.id ? 'bg-purple-600/30' : 'hover:bg-white/5'
                 }`}
               >
                 <MessageCircle className="w-4 h-4 text-purple-400 flex-shrink-0" />
                 <span className="flex-1 truncate text-sm">
-                  {session.title || 'New Conversation'}
+                  {_session.title || 'New Conversation'}
                 </span>
                 <button
-                  onClick={(e) => deleteSession(session.id, e)}
+                  onClick={e => deleteSession(_session.id, e)}
                   className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 rounded transition"
                 >
                   <Trash2 className="w-3 h-3 text-red-400" />
@@ -243,8 +241,8 @@ export default function ChatPage() {
                     Chat with Your AI Astrologer
                   </h2>
                   <p className="text-purple-200 mb-6">
-                    Ask anything about your birth chart, transits, compatibility,
-                    or get guidance on any life topic through an astrological lens.
+                    Ask anything about your birth chart, transits, compatibility, or get guidance on
+                    any life topic through an astrological lens.
                   </p>
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div className="p-3 bg-white/5 rounded-xl text-left">
@@ -271,13 +269,13 @@ export default function ChatPage() {
                   >
                     <div
                       className={`max-w-[80%] p-4 rounded-2xl ${
-                        message.role === 'user'
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-white/10'
+                        message.role === 'user' ? 'bg-purple-600 text-white' : 'bg-white/10'
                       }`}
                     >
                       {message.content.split('\n').map((line, j) => (
-                        <p key={j} className={j > 0 ? 'mt-2' : ''}>{line}</p>
+                        <p key={j} className={j > 0 ? 'mt-2' : ''}>
+                          {line}
+                        </p>
                       ))}
                     </div>
                   </div>
@@ -301,7 +299,7 @@ export default function ChatPage() {
               <input
                 type="text"
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={e => setInput(e.target.value)}
                 placeholder="Ask your AI astrologer anything..."
                 className="flex-1 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white placeholder-purple-400"
                 disabled={loading}

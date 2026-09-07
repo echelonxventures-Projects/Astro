@@ -3,45 +3,39 @@ export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { getGateway } from '@/lib/payment'
 import { logger } from '@/lib/logger'
-import { logWebhookEvent, logTransaction, logSubscription } from '@/lib/payment/audit'
+import { getGateway } from '@/lib/payment'
+import { logTransaction, logSubscription } from '@/lib/payment/audit'
 
-const isDev = process.env.NODE_ENV === 'development'
+const _isDev = process.env.NODE_ENV === 'development'
 
 /**
  * POST /api/payment/webhook/paypal
  * Handle PayPal webhook events
  */
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
   try {
-    const body = await req.text()
+    const body = await _req.text()
     const headers: Record<string, string> = {}
-    req.headers.forEach((value, key) => {
+    _req.headers.forEach((value, key) => {
       headers[key] = value
     })
 
     const transmissionSig = headers['paypal-transmission-sig']
     const transmissionId = headers['paypal-transmission-id']
-    const certUrl = headers['paypal-cert-url']
-    const authAlgo = headers['paypal-auth-algo']
-    const transmissionTime = headers['paypal-transmission-time']
+    const _certUrl = headers['paypal-cert-url']
+    const _authAlgo = headers['paypal-auth-algo']
+    const _transmissionTime = headers['paypal-transmission-time']
 
     if (!transmissionSig) {
       logger.warn('Missing PayPal webhook signature')
-      return NextResponse.json(
-        { error: 'Missing signature' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
     }
 
     const gateway = await getGateway('paypal')
     if (!gateway) {
       logger.warn('PayPal gateway not configured')
-      return NextResponse.json(
-        { error: 'PayPal gateway not configured' },
-        { status: 503 }
-      )
+      return NextResponse.json({ error: 'PayPal gateway not configured' }, { status: 503 })
     }
 
     let event
@@ -49,10 +43,7 @@ export async function POST(req: NextRequest) {
       event = await gateway.handleWebhook(body, transmissionSig)
     } catch (error) {
       logger.debug({ error }, 'PayPal webhook verification failed')
-      return NextResponse.json(
-        { error: 'Invalid signature' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
     }
 
     const eventData = event.data
@@ -64,7 +55,10 @@ export async function POST(req: NextRequest) {
       // Payment events
       case 'PAYMENT.CAPTURE.COMPLETED': {
         const capture = eventData
-        const orderId = capture.links?.find((l: any) => l.rel === 'up')?.href?.split('/').pop()
+        const orderId = capture.links
+          ?.find((l: any) => l.rel === 'up')
+          ?.href?.split('/')
+          .pop()
 
         // Update transaction status
         if (orderId) {
@@ -108,7 +102,10 @@ export async function POST(req: NextRequest) {
       case 'PAYMENT.CAPTURE.DENIED':
       case 'PAYMENT.CAPTURE.DECLINED': {
         const capture = eventData
-        const orderId = capture.links?.find((l: any) => l.rel === 'up')?.href?.split('/').pop()
+        const orderId = capture.links
+          ?.find((l: any) => l.rel === 'up')
+          ?.href?.split('/')
+          .pop()
 
         if (orderId) {
           await prisma.paymentTransaction.updateMany({
@@ -140,7 +137,10 @@ export async function POST(req: NextRequest) {
 
       case 'PAYMENT.CAPTURE.REFUNDED': {
         const refund = eventData
-        const captureId = refund.links?.find((l: any) => l.rel === 'up')?.href?.split('/').pop()
+        const captureId = refund.links
+          ?.find((l: any) => l.rel === 'up')
+          ?.href?.split('/')
+          .pop()
 
         if (captureId) {
           await prisma.paymentTransaction.updateMany({
@@ -189,7 +189,10 @@ export async function POST(req: NextRequest) {
             data: {
               subscriptionStatus: 'premium',
               subscriptionPlan: subscription.plan_id,
-              currentPeriodEnd: new Date(subscription.billing_info?.next_billing_time || Date.now() + 30 * 24 * 60 * 60 * 1000),
+              currentPeriodEnd: new Date(
+                subscription.billing_info?.next_billing_time ||
+                  Date.now() + 30 * 24 * 60 * 60 * 1000
+              ),
             },
           })
         }
@@ -293,7 +296,10 @@ export async function POST(req: NextRequest) {
           await prisma.user.update({
             where: { id: customId },
             data: {
-              currentPeriodEnd: new Date(subscription.billing_info?.next_billing_time || Date.now() + 30 * 24 * 60 * 60 * 1000),
+              currentPeriodEnd: new Date(
+                subscription.billing_info?.next_billing_time ||
+                  Date.now() + 30 * 24 * 60 * 60 * 1000
+              ),
             },
           })
         }
@@ -351,11 +357,14 @@ export async function POST(req: NextRequest) {
           },
         })
 
-        logger.warn({
-          disputeId: dispute.id,
-          reason: dispute.reason,
-          amount: dispute.dispute_amount?.value,
-        }, 'PayPal dispute created')
+        logger.warn(
+          {
+            disputeId: dispute.id,
+            reason: dispute.reason,
+            amount: dispute.dispute_amount?.value,
+          },
+          'PayPal dispute created'
+        )
 
         break
       }
@@ -378,10 +387,13 @@ export async function POST(req: NextRequest) {
       case 'PAYMENT.PAYOUTS-ITEM.SUCCEEDED': {
         const payout = eventData
 
-        logger.info({
-          payoutItemId: payout.payout_item_id,
-          amount: payout.payout_item?.amount?.value,
-        }, 'PayPal payout succeeded')
+        logger.info(
+          {
+            payoutItemId: payout.payout_item_id,
+            amount: payout.payout_item?.amount?.value,
+          },
+          'PayPal payout succeeded'
+        )
 
         break
       }
@@ -389,10 +401,13 @@ export async function POST(req: NextRequest) {
       case 'PAYMENT.PAYOUTS-ITEM.FAILED': {
         const payout = eventData
 
-        logger.error({
-          payoutItemId: payout.payout_item_id,
-          error: payout.errors?.message,
-        }, 'PayPal payout failed')
+        logger.error(
+          {
+            payoutItemId: payout.payout_item_id,
+            error: payout.errors?.message,
+          },
+          'PayPal payout failed'
+        )
 
         break
       }
@@ -405,10 +420,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true })
   } catch (error) {
     logger.error({ error }, 'Error processing PayPal webhook')
-    return NextResponse.json(
-      { error: 'Failed to process webhook' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to process webhook' }, { status: 500 })
   }
 }
 
@@ -416,7 +428,7 @@ export async function POST(req: NextRequest) {
  * GET /api/payment/webhook/paypal
  * Used for webhook verification
  */
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   // PayPal may send GET requests to verify the webhook endpoint
   return NextResponse.json({
     status: 'active',

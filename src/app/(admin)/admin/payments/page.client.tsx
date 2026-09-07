@@ -1,8 +1,22 @@
 'use client'
 
-import { useState } from 'react'
-import { Sparkles, CreditCard, Building2, DollarSign, Activity, Plus, Edit, Save, X, Eye, EyeOff, Copy, RefreshCw } from 'lucide-react'
+import {
+  Sparkles,
+  CreditCard,
+  Building2,
+  DollarSign,
+  Activity,
+  Plus,
+  Edit,
+  Save,
+  X,
+  Eye,
+  EyeOff,
+  Copy,
+  RefreshCw,
+} from 'lucide-react'
 import Link from 'next/link'
+import { useState } from 'react'
 
 interface User {
   email: string
@@ -82,8 +96,14 @@ interface PaymentsClientProps {
   initialTransactions: Transaction[]
 }
 
-export default function PaymentsClient({ initialGateways, initialPlans, initialTransactions }: PaymentsClientProps) {
-  const [activeTab, setActiveTab] = useState<'gateways' | 'methods' | 'plans' | 'transactions'>('gateways')
+export default function PaymentsClient({
+  initialGateways,
+  initialPlans,
+  initialTransactions,
+}: PaymentsClientProps) {
+  const [activeTab, setActiveTab] = useState<'gateways' | 'methods' | 'plans' | 'transactions'>(
+    'gateways'
+  )
   const [gateways, setGateways] = useState<PaymentGateway[]>(initialGateways)
   const [plans] = useState<GatewayPlan[]>(initialPlans)
   const [transactions] = useState<Transaction[]>(initialTransactions)
@@ -108,10 +128,16 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
 
       if (!response.ok) throw new Error('Failed to update gateway')
 
-      setGateways(gateways.map(g => g.id === gateway.id ? { ...g, isEnabled: !g.isEnabled } : g))
-      setMessage({ type: 'success', text: `Gateway ${!gateway.isEnabled ? 'enabled' : 'disabled'}` })
+      setGateways(gateways.map(g => (g.id === gateway.id ? { ...g, isEnabled: !g.isEnabled } : g)))
+      setMessage({
+        type: 'success',
+        text: `Gateway ${!gateway.isEnabled ? 'enabled' : 'disabled'}`,
+      })
     } catch (err) {
-      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to update gateway' })
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to update gateway',
+      })
     } finally {
       setSaving(false)
       setTimeout(() => setMessage(null), 3000)
@@ -135,7 +161,10 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
       setGateways(gateways.map(g => ({ ...g, isDefault: g.id === gateway.id })))
       setMessage({ type: 'success', text: 'Default gateway updated' })
     } catch (err) {
-      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to set default gateway' })
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to set default gateway',
+      })
     } finally {
       setSaving(false)
       setTimeout(() => setMessage(null), 3000)
@@ -164,7 +193,9 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
 
       setGateways(prev => {
         if (editingGateway.id) {
-          return prev.map(g => g.id === editingGateway.id ? { ...g, ...editingGateway } as PaymentGateway : g)
+          return prev.map(g =>
+            g.id === editingGateway.id ? ({ ...g, ...editingGateway } as PaymentGateway) : g
+          )
         }
         return [...prev, editingGateway as PaymentGateway]
       })
@@ -172,14 +203,21 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
       setEditingGateway(null)
       setMessage({ type: 'success', text: 'Gateway saved' })
     } catch (err) {
-      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save gateway' })
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to save gateway',
+      })
     } finally {
       setSaving(false)
       setTimeout(() => setMessage(null), 3000)
     }
   }
 
-  const togglePaymentMethod = async (gatewayId: string, methodId: string, currentStatus: boolean) => {
+  const togglePaymentMethod = async (
+    gatewayId: string,
+    methodId: string,
+    currentStatus: boolean
+  ) => {
     setSaving(true)
     try {
       const response = await fetch('/api/admin/payments', {
@@ -195,18 +233,26 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
 
       if (!response.ok) throw new Error('Failed to update payment method')
 
-      setGateways(gateways.map(g => {
-        if (g.id !== gatewayId) return g
-        return {
-          ...g,
-          paymentMethods: g.paymentMethods.map(m =>
-            m.id === methodId ? { ...m, isEnabled: !currentStatus } : m
-          ),
-        }
-      }))
-      setMessage({ type: 'success', text: `Payment method ${!currentStatus ? 'enabled' : 'disabled'}` })
+      setGateways(
+        gateways.map(g => {
+          if (g.id !== gatewayId) return g
+          return {
+            ...g,
+            paymentMethods: g.paymentMethods.map(m =>
+              m.id === methodId ? { ...m, isEnabled: !currentStatus } : m
+            ),
+          }
+        })
+      )
+      setMessage({
+        type: 'success',
+        text: `Payment method ${!currentStatus ? 'enabled' : 'disabled'}`,
+      })
     } catch (err) {
-      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to update payment method' })
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to update payment method',
+      })
     } finally {
       setSaving(false)
       setTimeout(() => setMessage(null), 3000)
@@ -265,16 +311,20 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-2 gradient-text">Payment Gateway Management</h1>
-            <p className="text-purple-200">Configure payment gateways, methods, and view transactions</p>
+            <p className="text-purple-200">
+              Configure payment gateways, methods, and view transactions
+            </p>
           </div>
 
           {/* Message */}
           {message && (
-            <div className={`mb-6 p-4 border rounded-xl flex items-center justify-between ${
-              message.type === 'success'
-                ? 'bg-green-500/20 border-green-500/50 text-green-200'
-                : 'bg-red-500/20 border-red-500/50 text-red-200'
-            }`}>
+            <div
+              className={`mb-6 p-4 border rounded-xl flex items-center justify-between ${
+                message.type === 'success'
+                  ? 'bg-green-500/20 border-green-500/50 text-green-200'
+                  : 'bg-red-500/20 border-red-500/50 text-red-200'
+              }`}
+            >
               <span>{message.text}</span>
               <button onClick={() => setMessage(null)} className="hover:text-white">
                 <X className="w-5 h-5" />
@@ -358,8 +408,11 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
               </div>
 
               <div className="grid gap-4">
-                {gateways.map((gateway) => (
-                  <div key={gateway.id} className="p-6 rounded-xl glass border border-purple-500/20">
+                {gateways.map(gateway => (
+                  <div
+                    key={gateway.id}
+                    className="p-6 rounded-xl glass border border-purple-500/20"
+                  >
                     <div className="flex justify-between items-start">
                       <div>
                         <div className="flex items-center gap-3 mb-2">
@@ -377,8 +430,16 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
                         </div>
                         <p className="text-purple-200 text-sm mb-2">{gateway.description}</p>
                         <div className="flex gap-4 text-sm text-purple-300">
-                          <span>Key: <code className="bg-purple-500/20 px-2 py-1 rounded">{gateway.key}</code></span>
-                          <span>Methods: {gateway.paymentMethods.filter(m => m.isEnabled).length} enabled</span>
+                          <span>
+                            Key:{' '}
+                            <code className="bg-purple-500/20 px-2 py-1 rounded">
+                              {gateway.key}
+                            </code>
+                          </span>
+                          <span>
+                            Methods: {gateway.paymentMethods.filter(m => m.isEnabled).length}{' '}
+                            enabled
+                          </span>
                         </div>
                       </div>
                       <div className="flex gap-2">
@@ -390,7 +451,11 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
                               : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
                           }`}
                         >
-                          {gateway.isEnabled ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                          {gateway.isEnabled ? (
+                            <Eye className="w-4 h-4" />
+                          ) : (
+                            <EyeOff className="w-4 h-4" />
+                          )}
                           {gateway.isEnabled ? 'Enabled' : 'Disabled'}
                         </button>
                         {!gateway.isDefault && (
@@ -418,12 +483,17 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
           {/* Payment Methods Tab */}
           {activeTab === 'methods' && (
             <div className="space-y-6">
-              {gateways.map((gateway) => (
+              {gateways.map(gateway => (
                 <div key={gateway.id} className="p-6 rounded-xl glass border border-purple-500/20">
-                  <h3 className="text-xl font-bold text-white mb-4">{gateway.name} - Payment Methods</h3>
+                  <h3 className="text-xl font-bold text-white mb-4">
+                    {gateway.name} - Payment Methods
+                  </h3>
                   <div className="grid gap-3">
-                    {gateway.paymentMethods.map((method) => (
-                      <div key={method.id} className="flex justify-between items-center p-4 rounded-lg bg-purple-500/10">
+                    {gateway.paymentMethods.map(method => (
+                      <div
+                        key={method.id}
+                        className="flex justify-between items-center p-4 rounded-lg bg-purple-500/10"
+                      >
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
                             <CreditCard className="w-5 h-5 text-purple-400" />
@@ -434,7 +504,9 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
                           </div>
                         </div>
                         <button
-                          onClick={() => togglePaymentMethod(gateway.id, method.id, method.isEnabled)}
+                          onClick={() =>
+                            togglePaymentMethod(gateway.id, method.id, method.isEnabled)
+                          }
                           className={`px-4 py-2 rounded-lg transition ${
                             method.isEnabled
                               ? 'bg-green-500/20 text-green-400'
@@ -456,7 +528,7 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
             <div className="space-y-4">
               <h2 className="text-2xl font-bold text-white mb-4">Gateway-Specific Plans</h2>
               <div className="grid gap-4">
-                {plans.map((plan) => (
+                {plans.map(plan => (
                   <div key={plan.id} className="p-6 rounded-xl glass border border-purple-500/20">
                     <div className="flex justify-between items-start">
                       <div>
@@ -471,14 +543,25 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
                         <p className="text-purple-300 mb-2">
                           Gateway: <span className="text-white">{plan.gateway.name}</span>
                         </p>
-                        <p className="text-sm text-purple-400">Plan ID: <code className="bg-purple-500/20 px-2 py-1 rounded">{plan.gatewayPlanId}</code></p>
+                        <p className="text-sm text-purple-400">
+                          Plan ID:{' '}
+                          <code className="bg-purple-500/20 px-2 py-1 rounded">
+                            {plan.gatewayPlanId}
+                          </code>
+                        </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-2xl font-bold text-purple-400">{formatCurrency(plan.price, plan.currency)}</p>
+                        <p className="text-2xl font-bold text-purple-400">
+                          {formatCurrency(plan.price, plan.currency)}
+                        </p>
                         <p className="text-sm text-purple-300 capitalize">{plan.interval}</p>
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          plan.isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                        }`}>
+                        <span
+                          className={`px-2 py-1 rounded text-xs ${
+                            plan.isActive
+                              ? 'bg-green-500/20 text-green-400'
+                              : 'bg-red-500/20 text-red-400'
+                          }`}
+                        >
                           {plan.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </div>
@@ -508,7 +591,7 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
                     </tr>
                   </thead>
                   <tbody>
-                    {transactions.map((tx) => (
+                    {transactions.map(tx => (
                       <tr key={tx.id} className="border-b border-purple-500/10">
                         <td className="py-3 text-white">
                           <div>
@@ -517,15 +600,22 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
                           </div>
                         </td>
                         <td className="py-3 text-purple-300">{tx.gateway.name}</td>
-                        <td className="py-3 text-white font-medium">{formatCurrency(tx.amount, tx.currency)}</td>
+                        <td className="py-3 text-white font-medium">
+                          {formatCurrency(tx.amount, tx.currency)}
+                        </td>
                         <td className="py-3">
-                          <span className={`px-2 py-1 rounded text-xs border ${getStatusColor(tx.status)}`}>
+                          <span
+                            className={`px-2 py-1 rounded text-xs border ${getStatusColor(tx.status)}`}
+                          >
                             {tx.status}
                           </span>
                         </td>
-                        <td className="py-3 text-purple-300 capitalize">{tx.paymentMethod || 'N/A'}</td>
+                        <td className="py-3 text-purple-300 capitalize">
+                          {tx.paymentMethod || 'N/A'}
+                        </td>
                         <td className="py-3 text-purple-400 text-sm">
-                          {new Date(tx.createdAt).toLocaleDateString()} {new Date(tx.createdAt).toLocaleTimeString()}
+                          {new Date(tx.createdAt).toLocaleDateString()}{' '}
+                          {new Date(tx.createdAt).toLocaleTimeString()}
                         </td>
                       </tr>
                     ))}
@@ -545,7 +635,10 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
               <h3 className="text-xl font-bold text-white">
                 {editingGateway.id ? 'Edit Gateway' : 'Add Gateway'}
               </h3>
-              <button onClick={() => setShowGatewayModal(false)} className="text-purple-400 hover:text-white">
+              <button
+                onClick={() => setShowGatewayModal(false)}
+                className="text-purple-400 hover:text-white"
+              >
                 <X className="w-6 h-6" />
               </button>
             </div>
@@ -555,16 +648,18 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
                 <input
                   type="text"
                   value={editingGateway.name || ''}
-                  onChange={(e) => setEditingGateway({ ...editingGateway, name: e.target.value })}
+                  onChange={e => setEditingGateway({ ...editingGateway, name: e.target.value })}
                   className="w-full bg-slate-800 border border-purple-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-500"
                 />
               </div>
               <div>
-                <label className="block text-sm text-purple-300 mb-1">Key (internal identifier)</label>
+                <label className="block text-sm text-purple-300 mb-1">
+                  Key (internal identifier)
+                </label>
                 <input
                   type="text"
                   value={editingGateway.key || ''}
-                  onChange={(e) => setEditingGateway({ ...editingGateway, key: e.target.value })}
+                  onChange={e => setEditingGateway({ ...editingGateway, key: e.target.value })}
                   className="w-full bg-slate-800 border border-purple-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-500"
                   placeholder="e.g., stripe, razorpay"
                 />
@@ -573,7 +668,9 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
                 <label className="block text-sm text-purple-300 mb-1">Description</label>
                 <textarea
                   value={editingGateway.description || ''}
-                  onChange={(e) => setEditingGateway({ ...editingGateway, description: e.target.value })}
+                  onChange={e =>
+                    setEditingGateway({ ...editingGateway, description: e.target.value })
+                  }
                   className="w-full bg-slate-800 border border-purple-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-500"
                   rows={2}
                 />
@@ -585,11 +682,18 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
                     <input
                       type={showKeys[editingGateway.id || 'new'] ? 'text' : 'password'}
                       value={editingGateway.apiKey || ''}
-                      onChange={(e) => setEditingGateway({ ...editingGateway, apiKey: e.target.value })}
+                      onChange={e =>
+                        setEditingGateway({ ...editingGateway, apiKey: e.target.value })
+                      }
                       className="flex-1 bg-slate-800 border border-purple-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-500"
                     />
                     <button
-                      onClick={() => setShowKeys({ ...showKeys, [editingGateway.id || 'new']: !showKeys[editingGateway.id || 'new'] })}
+                      onClick={() =>
+                        setShowKeys({
+                          ...showKeys,
+                          [editingGateway.id || 'new']: !showKeys[editingGateway.id || 'new'],
+                        })
+                      }
                       className="px-3 bg-purple-500/20 text-purple-400 rounded-lg"
                     >
                       <Eye className="w-4 h-4" />
@@ -602,11 +706,18 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
                     <input
                       type={showKeys[editingGateway.id || 'new'] ? 'text' : 'password'}
                       value={editingGateway.apiSecret || ''}
-                      onChange={(e) => setEditingGateway({ ...editingGateway, apiSecret: e.target.value })}
+                      onChange={e =>
+                        setEditingGateway({ ...editingGateway, apiSecret: e.target.value })
+                      }
                       className="flex-1 bg-slate-800 border border-purple-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-500"
                     />
                     <button
-                      onClick={() => setShowKeys({ ...showKeys, [editingGateway.id || 'new']: !showKeys[editingGateway.id || 'new'] })}
+                      onClick={() =>
+                        setShowKeys({
+                          ...showKeys,
+                          [editingGateway.id || 'new']: !showKeys[editingGateway.id || 'new'],
+                        })
+                      }
                       className="px-3 bg-purple-500/20 text-purple-400 rounded-lg"
                     >
                       <Eye className="w-4 h-4" />
@@ -615,11 +726,15 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
                 </div>
               </div>
               <div>
-                <label className="block text-sm text-purple-300 mb-1">Public Key (e.g., Razorpay Key ID)</label>
+                <label className="block text-sm text-purple-300 mb-1">
+                  Public Key (e.g., Razorpay Key ID)
+                </label>
                 <input
                   type="text"
                   value={editingGateway.publicKey || ''}
-                  onChange={(e) => setEditingGateway({ ...editingGateway, publicKey: e.target.value })}
+                  onChange={e =>
+                    setEditingGateway({ ...editingGateway, publicKey: e.target.value })
+                  }
                   className="w-full bg-slate-800 border border-purple-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-500"
                 />
               </div>
@@ -629,11 +744,15 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
                   <input
                     type={showKeys[editingGateway.id || 'new'] ? 'text' : 'password'}
                     value={editingGateway.webhookSecret || ''}
-                    onChange={(e) => setEditingGateway({ ...editingGateway, webhookSecret: e.target.value })}
+                    onChange={e =>
+                      setEditingGateway({ ...editingGateway, webhookSecret: e.target.value })
+                    }
                     className="flex-1 bg-slate-800 border border-purple-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-500"
                   />
                   <button
-                    onClick={() => copyToClipboard(editingGateway.webhookSecret || '', 'Webhook secret')}
+                    onClick={() =>
+                      copyToClipboard(editingGateway.webhookSecret || '', 'Webhook secret')
+                    }
                     className="px-3 bg-purple-500/20 text-purple-400 rounded-lg"
                   >
                     <Copy className="w-4 h-4" />
@@ -642,20 +761,28 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-purple-300 mb-1">Supported Currencies (JSON)</label>
+                  <label className="block text-sm text-purple-300 mb-1">
+                    Supported Currencies (JSON)
+                  </label>
                   <textarea
                     value={editingGateway.supportedCurrencies || '[]'}
-                    onChange={(e) => setEditingGateway({ ...editingGateway, supportedCurrencies: e.target.value })}
+                    onChange={e =>
+                      setEditingGateway({ ...editingGateway, supportedCurrencies: e.target.value })
+                    }
                     className="w-full bg-slate-800 border border-purple-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-500"
                     rows={2}
                     placeholder='["USD", "EUR", "INR"]'
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-purple-300 mb-1">Supported Countries (JSON)</label>
+                  <label className="block text-sm text-purple-300 mb-1">
+                    Supported Countries (JSON)
+                  </label>
                   <textarea
                     value={editingGateway.supportedCountries || '[]'}
-                    onChange={(e) => setEditingGateway({ ...editingGateway, supportedCountries: e.target.value })}
+                    onChange={e =>
+                      setEditingGateway({ ...editingGateway, supportedCountries: e.target.value })
+                    }
                     className="w-full bg-slate-800 border border-purple-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-500"
                     rows={2}
                     placeholder='["US", "GB", "IN"]'
@@ -667,7 +794,9 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
                   <input
                     type="checkbox"
                     checked={editingGateway.isEnabled || false}
-                    onChange={(e) => setEditingGateway({ ...editingGateway, isEnabled: e.target.checked })}
+                    onChange={e =>
+                      setEditingGateway({ ...editingGateway, isEnabled: e.target.checked })
+                    }
                     className="w-4 h-4"
                   />
                   Enabled
@@ -676,7 +805,9 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
                   <input
                     type="checkbox"
                     checked={editingGateway.isDefault || false}
-                    onChange={(e) => setEditingGateway({ ...editingGateway, isDefault: e.target.checked })}
+                    onChange={e =>
+                      setEditingGateway({ ...editingGateway, isDefault: e.target.checked })
+                    }
                     className="w-4 h-4"
                   />
                   Default
@@ -685,7 +816,9 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
                   <input
                     type="checkbox"
                     checked={editingGateway.testMode || false}
-                    onChange={(e) => setEditingGateway({ ...editingGateway, testMode: e.target.checked })}
+                    onChange={e =>
+                      setEditingGateway({ ...editingGateway, testMode: e.target.checked })
+                    }
                     className="w-4 h-4"
                   />
                   Test Mode
@@ -704,7 +837,11 @@ export default function PaymentsClient({ initialGateways, initialPlans, initialT
                 disabled={saving}
                 className="px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition flex items-center gap-2 disabled:opacity-50"
               >
-                {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {saving ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
                 Save Gateway
               </button>
             </div>

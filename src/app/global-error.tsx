@@ -1,5 +1,7 @@
 'use client'
 
+import { AlertTriangle, RefreshCw, Home, LifeBuoy, Mail } from 'lucide-react'
+import Link from 'next/link'
 import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,8 +12,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { AlertTriangle, RefreshCw, Home, LifeBuoy, Mail } from 'lucide-react'
-import Link from 'next/link'
 import { logError, reportError } from '@/lib/error-handling'
 
 interface GlobalErrorProps {
@@ -47,9 +47,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
             <div className="mx-auto mb-6 w-20 h-20 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center animate-pulse">
               <AlertTriangle className="w-10 h-10 text-white" />
             </div>
-            <CardTitle className="text-3xl font-bold text-white">
-              Critical Error
-            </CardTitle>
+            <CardTitle className="text-3xl font-bold text-white">Critical Error</CardTitle>
             <CardDescription className="text-gray-400 mt-2 text-lg">
               A serious error has occurred
             </CardDescription>
@@ -68,8 +66,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
             {error.digest && (
               <div className="p-4 rounded-lg bg-[#0F0A1F]/50 border border-purple-500/20">
                 <p className="text-sm text-gray-500">
-                  Error Reference:{' '}
-                  <code className="font-mono text-[#A78BFA]">{error.digest}</code>
+                  Error Reference: <code className="font-mono text-[#A78BFA]">{error.digest}</code>
                 </p>
                 <p className="text-xs text-gray-600 mt-1">
                   Please include this ID when contacting support
@@ -82,18 +79,14 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                 <LifeBuoy className="w-5 h-5 text-[#A78BFA] mt-0.5" />
                 <div className="text-left">
                   <p className="text-sm font-medium text-white">Need Help?</p>
-                  <p className="text-xs text-gray-400">
-                    Contact our support team for assistance
-                  </p>
+                  <p className="text-xs text-gray-400">Contact our support team for assistance</p>
                 </div>
               </div>
               <div className="flex items-start gap-3 p-4 rounded-lg bg-[#0F0A1F]/50 border border-purple-500/20">
                 <Mail className="w-5 h-5 text-[#A78BFA] mt-0.5" />
                 <div className="text-left">
                   <p className="text-sm font-medium text-white">Email Support</p>
-                  <p className="text-xs text-gray-400">
-                    support@starpathastrology.com
-                  </p>
+                  <p className="text-xs text-gray-400">support@starpathastrology.com</p>
                 </div>
               </div>
             </div>

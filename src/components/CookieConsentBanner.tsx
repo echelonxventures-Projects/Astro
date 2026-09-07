@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Cookie, X, Settings } from 'lucide-react'
+import { useState, useEffect } from 'react'
 
 interface CookieConsent {
   analytics: boolean
@@ -23,15 +23,17 @@ export function CookieConsentBanner() {
   })
 
   useEffect(() => {
-    // Check if consent already given
+    // Check if consent already given (hydration-safe read from external system)
     const storedConsent = localStorage.getItem(COOKIE_CONSENT_KEY)
     if (!storedConsent) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowBanner(true)
     } else {
       try {
         const parsed = JSON.parse(storedConsent)
         if (parsed.version !== COOKIE_CONSENT_VERSION) {
           // Version changed, ask again
+
           setShowBanner(true)
         }
       } catch {
@@ -92,13 +94,12 @@ export function CookieConsentBanner() {
             <div className="p-6 flex flex-col md:flex-row items-start md:items-center gap-4">
               <Cookie className="w-8 h-8 text-purple-400 flex-shrink-0" />
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-white mb-2">
-                  Cookie & Privacy Consent
-                </h3>
+                <h3 className="text-lg font-semibold text-white mb-2">Cookie & Privacy Consent</h3>
                 <p className="text-purple-200 text-sm">
-                  We use cookies to enhance your experience, provide personalized astrology readings,
-                  and analyze our traffic. By clicking "Accept All", you consent to our use of cookies.
-                  You can customize your preferences or reject non-essential cookies.
+                  We use cookies to enhance your experience, provide personalized astrology
+                  readings, and analyze our traffic. By clicking &quot;Accept All&quot;, you consent
+                  to our use of cookies. You can customize your preferences or reject non-essential
+                  cookies.
                 </p>
               </div>
               <div className="flex gap-3 flex-shrink-0">
@@ -126,9 +127,7 @@ export function CookieConsentBanner() {
           ) : (
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-white">
-                  Cookie Preferences
-                </h3>
+                <h3 className="text-lg font-semibold text-white">Cookie Preferences</h3>
                 <button
                   onClick={() => setShowSettings(false)}
                   className="text-purple-400 hover:text-white"
@@ -212,7 +211,11 @@ export function CookieConsentBanner() {
               </div>
 
               <p className="text-purple-400 text-xs mt-4">
-                View our <a href="/privacy" className="underline hover:text-white">Privacy Policy</a> for more details.
+                View our{' '}
+                <a href="/privacy" className="underline hover:text-white">
+                  Privacy Policy
+                </a>{' '}
+                for more details.
               </p>
             </div>
           )}

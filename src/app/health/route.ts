@@ -32,7 +32,7 @@ async function checkDatabase(): Promise<HealthCheck> {
       responseTime: Date.now() - start,
     }
   } catch (error) {
-    logger.error('Health check: Database connection failed', { error })
+    logger.error({ error }, 'Health check: Database connection failed')
     return {
       status: 'error',
       responseTime: Date.now() - start,
@@ -61,7 +61,7 @@ async function checkStripe(): Promise<HealthCheck> {
         message: 'Skipped - no API key in development',
       }
     }
-    logger.error('Health check: Stripe connection failed', { error })
+    logger.error({ error }, 'Health check: Stripe connection failed')
     return {
       status: 'error',
       responseTime: Date.now() - start,
@@ -96,7 +96,7 @@ async function checkAnthropic(): Promise<HealthCheck> {
       responseTime: Date.now() - start,
     }
   } catch (error) {
-    logger.error('Health check: Anthropic configuration failed', { error })
+    logger.error({ error }, 'Health check: Anthropic configuration failed')
     return {
       status: 'error',
       responseTime: Date.now() - start,
@@ -106,11 +106,7 @@ async function checkAnthropic(): Promise<HealthCheck> {
 }
 
 export async function GET(): Promise<NextResponse> {
-  const checks = await Promise.all([
-    checkDatabase(),
-    checkStripe(),
-    checkAnthropic(),
-  ])
+  const checks = await Promise.all([checkDatabase(), checkStripe(), checkAnthropic()])
 
   const [database, stripe, anthropic] = checks
 
@@ -144,8 +140,8 @@ export async function GET(): Promise<NextResponse> {
     status: statusCode,
     headers: {
       'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
+      Pragma: 'no-cache',
+      Expires: '0',
     },
   })
 }

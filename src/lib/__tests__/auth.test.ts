@@ -7,18 +7,16 @@ const mockUpsert = vi.fn()
 const mockBcryptCompare = vi.fn()
 const mockBcryptHash = vi.fn()
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 vi.mock('@/lib/db', () => ({
   prisma: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    findUnique: (...args: any[]) => mockFindUnique(...args),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    create: (...args: any[]) => mockCreate(...args)
+    user: {
+      findUnique: (...args: unknown[]) => mockFindUnique(...args),
+      create: (...args: unknown[]) => mockCreate(...args),
+    },
+    account: {
+      upsert: (...args: unknown[]) => mockUpsert(...args),
+    },
   },
-  account: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    upsert: (...args: any[]) => mockUpsert(...args)
-  }
 }))
 
 vi.mock('bcryptjs', () => ({
@@ -26,8 +24,8 @@ vi.mock('bcryptjs', () => ({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     compare: (...args: any[]) => mockBcryptCompare(...args),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    hash: (...args: any[]) => mockBcryptHash(...args)
-  }
+    hash: (...args: any[]) => mockBcryptHash(...args),
+  },
 }))
 
 // Now import the module under test
@@ -75,32 +73,30 @@ describe('Auth Configuration', () => {
       const user = { id: 'user-123', role: 'user', name: 'Test User' }
       const account = { provider: 'credentials' }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await authOptions.callbacks?.jwt?.({
         token,
         user,
         account,
-        trigger: 'signIn'
+        trigger: 'signIn',
       } as any)
 
       expect(result).toBeDefined()
-      expect(result.id).toBe('user-123')
-      expect(result.role).toBe('user')
-      expect(result.provider).toBe('credentials')
+      expect(result?.id).toBe('user-123')
+      expect(result?.role).toBe('user')
+      expect(result?.provider).toBe('credentials')
     })
 
     it('should handle session update trigger', async () => {
       const token = { sub: 'user-123', id: 'user-123', role: 'user' }
       const sessionUpdate = { name: 'Updated Name' }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await authOptions.callbacks?.jwt?.({
         token,
         session: sessionUpdate,
-        trigger: 'update'
+        trigger: 'update',
       } as any)
 
-      expect(result.name).toBe('Updated Name')
+      expect(result?.name).toBe('Updated Name')
     })
   })
 
@@ -109,23 +105,21 @@ describe('Auth Configuration', () => {
       const session = { user: { email: 'test@example.com' } }
       const token = { id: 'user-123', role: 'user' }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await authOptions.callbacks?.session?.({
         session,
-        token
+        token,
       } as any)
 
-      expect(result.user.id).toBe('user-123')
-      expect(result.user.role).toBe('user')
+      expect((result?.user as Record<string, unknown>)?.id).toBe('user-123')
+      expect((result?.user as Record<string, unknown>)?.role).toBe('user')
     })
   })
 
   describe('SignIn Callback', () => {
     it('should allow sign in', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await authOptions.callbacks?.signIn?.({
         user: { email: 'test@example.com' },
-        account: { provider: 'credentials' }
+        account: { provider: 'credentials' },
       } as any)
 
       expect(result).toBe(true)
@@ -139,7 +133,7 @@ describe('Auth Configuration', () => {
       const user = {
         email: 'oauth@example.com',
         name: 'OAuth User',
-        image: 'https://example.com/avatar.png'
+        image: 'https://example.com/avatar.png',
       }
       const account = {
         provider: 'google',
@@ -151,14 +145,13 @@ describe('Auth Configuration', () => {
         token_type: null,
         scope: null,
         id_token: null,
-        session_state: null
+        session_state: null,
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await authOptions.callbacks?.signIn?.({
         user,
         account,
-        profile: {}
+        profile: {},
       } as any)
 
       expect(result).toBe(true)
@@ -167,9 +160,7 @@ describe('Auth Configuration', () => {
 
   describe('Credentials Provider', () => {
     it('should reject empty credentials', async () => {
-      const credentialsProvider = authOptions.providers.find(
-        p => p.id === 'credentials'
-      )
+      const credentialsProvider = authOptions.providers.find(p => p.id === 'credentials')
 
       const authorize = credentialsProvider?.options?.authorize
       if (!authorize) {
@@ -184,16 +175,13 @@ describe('Auth Configuration', () => {
     it('should reject invalid credentials', async () => {
       mockFindUnique.mockResolvedValue(null)
 
-      const credentialsProvider = authOptions.providers.find(
-        p => p.id === 'credentials'
-      )
+      const credentialsProvider = authOptions.providers.find(p => p.id === 'credentials')
 
       const authorize = credentialsProvider?.options?.authorize
       if (!authorize) {
         expect.fail('Authorize function not found')
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await authorize(
         { email: 'test@example.com', password: 'wrongpassword' } as any,
         {} as any
@@ -211,20 +199,17 @@ describe('Auth Configuration', () => {
         name: 'Test User',
         image: null,
         role: 'user',
-        passwordHash: 'hashedpassword'
+        passwordHash: 'hashedpassword',
       }
       mockFindUnique.mockResolvedValue(mockUser)
 
-      const credentialsProvider = authOptions.providers.find(
-        p => p.id === 'credentials'
-      )
+      const credentialsProvider = authOptions.providers.find(p => p.id === 'credentials')
 
       const authorize = credentialsProvider?.options?.authorize
       if (!authorize) {
         expect.fail('Authorize function not found')
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await authorize(
         { email: 'test@example.com', password: 'correctpassword' } as any,
         {} as any
@@ -235,7 +220,7 @@ describe('Auth Configuration', () => {
         email: 'test@example.com',
         name: 'Test User',
         image: null,
-        role: 'user'
+        role: 'user',
       })
 
       expect(mockBcryptCompare).toHaveBeenCalledWith('correctpassword', 'hashedpassword')
@@ -251,20 +236,17 @@ describe('Auth Configuration', () => {
         name: 'Test User',
         image: null,
         role: 'user',
-        passwordHash: 'hashedpassword'
+        passwordHash: 'hashedpassword',
       }
       mockFindUnique.mockResolvedValue(mockUser)
 
-      const credentialsProvider = authOptions.providers.find(
-        p => p.id === 'credentials'
-      )
+      const credentialsProvider = authOptions.providers.find(p => p.id === 'credentials')
 
       const authorize = credentialsProvider?.options?.authorize
       if (!authorize) {
         expect.fail('Authorize function not found')
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await authorize(
         { email: 'test@example.com', password: 'wrongpassword' } as any,
         {} as any

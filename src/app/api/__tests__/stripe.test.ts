@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { NextRequest } from 'next/server'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { POST as webhookHandler } from '../stripe/webhook/route'
 
 // Mock dependencies
@@ -15,42 +15,42 @@ vi.mock('@/lib/db', () => ({
     user: {
       update: (...args: any[]) => mockUserUpdate(...args),
       updateMany: (...args: any[]) => mockUserUpdateMany(...args),
-      findFirst: (...args: any[]) => mockUserFindFirst(...args)
+      findFirst: (...args: any[]) => mockUserFindFirst(...args),
     },
     subscription: {
       create: (...args: any[]) => mockSubscriptionCreate(...args),
-      update: (...args: any[]) => mockSubscriptionUpdate(...args)
+      update: (...args: any[]) => mockSubscriptionUpdate(...args),
     },
     payment: {
-      create: (...args: any[]) => mockPaymentCreate(...args)
-    }
-  }
+      create: (...args: any[]) => mockPaymentCreate(...args),
+    },
+  },
 }))
 
 vi.mock('@/lib/logger', () => ({
   logger: {
     debug: vi.fn(),
-    error: vi.fn()
-  }
+    error: vi.fn(),
+  },
 }))
 
 vi.mock('@/lib/stripe', () => ({
   stripe: {
     webhooks: {
-      constructEvent: vi.fn()
+      constructEvent: vi.fn(),
     },
     subscriptions: {
-      retrieve: vi.fn()
-    }
+      retrieve: vi.fn(),
+    },
   },
-  handleWebhookEvent: vi.fn()
+  handleWebhookEvent: vi.fn(),
 }))
 
 const { stripe, handleWebhookEvent } = await import('@/lib/stripe')
 
-function createWebhookRequest(body: string, signature: string): NextRequest {
+function createWebhookRequest(body: string, _signature: string): NextRequest {
   return {
-    text: () => Promise.resolve(body)
+    text: () => Promise.resolve(body),
   } as NextRequest
 }
 
@@ -84,21 +84,21 @@ describe('Stripe Webhook API', () => {
       expect(data.received).toBe(true)
     })
 
-    it('should reject invalid webhook signature', async () => {
+    it('should reject invalid webhook _signature', async () => {
       const body = '{}'
-      const signature = 'invalid-signature'
+      const _signature = 'invalid-_signature'
 
       ;(stripe.webhooks.constructEvent as any).mockImplementation(() => {
-        throw new Error('Invalid signature')
+        throw new Error('Invalid _signature')
       })
 
-      const request = createWebhookRequest(body, signature)
+      const request = createWebhookRequest(body, _signature)
 
       const response = await webhookHandler(request)
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Invalid signature')
+      expect(data.error).toBe('Invalid _signature')
     })
 
     it('should handle checkout.session.completed', async () => {
@@ -110,9 +110,9 @@ describe('Stripe Webhook API', () => {
             id: 'cs_123',
             metadata: { userId: 'user-123', plan: 'monthly' },
             customer: 'cus_123',
-            subscription: 'sub_123'
-          }
-        }
+            subscription: 'sub_123',
+          },
+        },
       }
 
       ;(stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent)
@@ -121,13 +121,12 @@ describe('Stripe Webhook API', () => {
         subscriptionId: 'sub_123',
         customerId: 'cus_123',
         plan: 'monthly',
-        userId: 'user-123'
+        userId: 'user-123',
       })
-
       ;(stripe.subscriptions.retrieve as any).mockResolvedValue({
         id: 'sub_123',
         status: 'active',
-        current_period_end: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60
+        current_period_end: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
       })
 
       mockUserUpdate.mockResolvedValue({})
@@ -140,14 +139,16 @@ describe('Stripe Webhook API', () => {
 
       expect(response.status).toBe(200)
       expect(data.received).toBe(true)
-      expect(mockUserUpdate).toHaveBeenCalledWith(expect.objectContaining({
-        where: { id: 'user-123' },
-        data: expect.objectContaining({
-          subscriptionStatus: 'premium',
-          stripeCustomerId: 'cus_123',
-          stripeSubscriptionId: 'sub_123'
+      expect(mockUserUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-123' },
+          data: expect.objectContaining({
+            subscriptionStatus: 'premium',
+            stripeCustomerId: 'cus_123',
+            stripeSubscriptionId: 'sub_123',
+          }),
         })
-      }))
+      )
       expect(mockSubscriptionCreate).toHaveBeenCalled()
     })
 
@@ -158,9 +159,9 @@ describe('Stripe Webhook API', () => {
         data: {
           object: {
             id: 'sub_123',
-            status: 'active'
-          }
-        }
+            status: 'active',
+          },
+        },
       }
 
       ;(stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent)
@@ -169,7 +170,7 @@ describe('Stripe Webhook API', () => {
         subscriptionId: 'sub_123',
         status: 'active',
         currentPeriodEnd: new Date(),
-        plan: 'monthly'
+        plan: 'monthly',
       })
 
       mockSubscriptionUpdate.mockResolvedValue({})
@@ -180,10 +181,12 @@ describe('Stripe Webhook API', () => {
       const response = await webhookHandler(request)
 
       expect(response.status).toBe(200)
-      expect(mockUserUpdateMany).toHaveBeenCalledWith(expect.objectContaining({
-        where: { stripeSubscriptionId: 'sub_123' },
-        data: { subscriptionStatus: 'premium' }
-      }))
+      expect(mockUserUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { stripeSubscriptionId: 'sub_123' },
+          data: { subscriptionStatus: 'premium' },
+        })
+      )
     })
 
     it('should handle customer.subscription.updated - canceled', async () => {
@@ -193,9 +196,9 @@ describe('Stripe Webhook API', () => {
         data: {
           object: {
             id: 'sub_123',
-            status: 'canceled'
-          }
-        }
+            status: 'canceled',
+          },
+        },
       }
 
       ;(stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent)
@@ -204,7 +207,7 @@ describe('Stripe Webhook API', () => {
         subscriptionId: 'sub_123',
         status: 'canceled',
         currentPeriodEnd: new Date(),
-        plan: 'monthly'
+        plan: 'monthly',
       })
 
       mockSubscriptionUpdate.mockResolvedValue({})
@@ -215,10 +218,12 @@ describe('Stripe Webhook API', () => {
       const response = await webhookHandler(request)
 
       expect(response.status).toBe(200)
-      expect(mockUserUpdateMany).toHaveBeenCalledWith(expect.objectContaining({
-        where: { stripeSubscriptionId: 'sub_123' },
-        data: { subscriptionStatus: 'free' }
-      }))
+      expect(mockUserUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { stripeSubscriptionId: 'sub_123' },
+          data: { subscriptionStatus: 'free' },
+        })
+      )
     })
 
     it('should handle customer.subscription.deleted', async () => {
@@ -227,15 +232,15 @@ describe('Stripe Webhook API', () => {
         type: 'customer.subscription.deleted',
         data: {
           object: {
-            id: 'sub_123'
-          }
-        }
+            id: 'sub_123',
+          },
+        },
       }
 
       ;(stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent)
       ;(handleWebhookEvent as any).mockResolvedValue({
         type: 'subscription_deleted',
-        subscriptionId: 'sub_123'
+        subscriptionId: 'sub_123',
       })
 
       mockSubscriptionUpdate.mockResolvedValue({})
@@ -246,13 +251,15 @@ describe('Stripe Webhook API', () => {
       const response = await webhookHandler(request)
 
       expect(response.status).toBe(200)
-      expect(mockSubscriptionUpdate).toHaveBeenCalledWith(expect.objectContaining({
-        where: { stripeSubscriptionId: 'sub_123' },
-        data: expect.objectContaining({
-          status: 'canceled',
-          cancelAtPeriodEnd: true
+      expect(mockSubscriptionUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { stripeSubscriptionId: 'sub_123' },
+          data: expect.objectContaining({
+            status: 'canceled',
+            cancelAtPeriodEnd: true,
+          }),
         })
-      }))
+      )
     })
 
     it('should handle invoice.payment_succeeded', async () => {
@@ -264,9 +271,9 @@ describe('Stripe Webhook API', () => {
             id: 'in_123',
             payment_intent: 'pi_123',
             amount_paid: 1499,
-            customer: 'cus_123'
-          }
-        }
+            customer: 'cus_123',
+          },
+        },
       }
 
       ;(stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent)
@@ -274,7 +281,7 @@ describe('Stripe Webhook API', () => {
         type: 'payment_succeeded',
         paymentId: 'pi_123',
         amount: 1499,
-        customerId: 'cus_123'
+        customerId: 'cus_123',
       })
 
       mockUserFindFirst.mockResolvedValue({ id: 'user-123' })
@@ -285,14 +292,16 @@ describe('Stripe Webhook API', () => {
       const response = await webhookHandler(request)
 
       expect(response.status).toBe(200)
-      expect(mockPaymentCreate).toHaveBeenCalledWith(expect.objectContaining({
-        data: expect.objectContaining({
-          userId: 'user-123',
-          stripePaymentId: 'pi_123',
-          amount: 1499,
-          status: 'succeeded'
+      expect(mockPaymentCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            userId: 'user-123',
+            stripePaymentId: 'pi_123',
+            amount: 1499,
+            status: 'succeeded',
+          }),
         })
-      }))
+      )
     })
 
     it('should handle invoice.payment_failed', async () => {
@@ -303,16 +312,16 @@ describe('Stripe Webhook API', () => {
           object: {
             id: 'in_123',
             payment_intent: 'pi_123',
-            customer: 'cus_123'
-          }
-        }
+            customer: 'cus_123',
+          },
+        },
       }
 
       ;(stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent)
       ;(handleWebhookEvent as any).mockResolvedValue({
         type: 'payment_failed',
         paymentId: 'pi_123',
-        customerId: 'cus_123'
+        customerId: 'cus_123',
       })
 
       mockUserUpdateMany.mockResolvedValue({ count: 1 })
@@ -322,17 +331,19 @@ describe('Stripe Webhook API', () => {
       const response = await webhookHandler(request)
 
       expect(response.status).toBe(200)
-      expect(mockUserUpdateMany).toHaveBeenCalledWith(expect.objectContaining({
-        where: { stripeCustomerId: 'cus_123' },
-        data: { subscriptionStatus: 'past_due' }
-      }))
+      expect(mockUserUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { stripeCustomerId: 'cus_123' },
+          data: { subscriptionStatus: 'past_due' },
+        })
+      )
     })
 
     it('should handle unhandled event types gracefully', async () => {
       const mockEvent = {
         id: 'evt_123',
         type: 'customer.created',
-        data: { object: {} }
+        data: { object: {} },
       }
 
       ;(stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent)
@@ -356,9 +367,9 @@ describe('Stripe Webhook API', () => {
             id: 'cs_123',
             metadata: { plan: 'monthly' }, // Missing userId
             customer: 'cus_123',
-            subscription: 'sub_123'
-          }
-        }
+            subscription: 'sub_123',
+          },
+        },
       }
 
       ;(stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent)
@@ -379,7 +390,7 @@ describe('Stripe Webhook API', () => {
       const mockEvent = {
         id: 'evt_123',
         type: 'checkout.session.completed',
-        data: { object: {} }
+        data: { object: {} },
       }
 
       ;(stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent)

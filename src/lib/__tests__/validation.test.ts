@@ -15,7 +15,7 @@ import {
   validatePartial,
   ValidationError,
   sanitizeString,
-  validateQueryParams
+  validateQueryParams,
 } from '../validation'
 
 describe('Validation Schemas', () => {
@@ -37,11 +37,7 @@ describe('Validation Schemas', () => {
 
   describe('Email Schema', () => {
     it('should validate valid email', () => {
-      const validEmails = [
-        'user@example.com',
-        'test.user@domain.co.uk',
-        'user+tag@example.org'
-      ]
+      const validEmails = ['user@example.com', 'test.user@domain.co.uk', 'user+tag@example.org']
 
       for (const email of validEmails) {
         expect(() => EmailSchema.parse(email)).not.toThrow()
@@ -49,13 +45,7 @@ describe('Validation Schemas', () => {
     })
 
     it('should reject invalid email formats', () => {
-      const invalidEmails = [
-        'notanemail',
-        '@example.com',
-        'user@',
-        'user@.com',
-        ''
-      ]
+      const invalidEmails = ['notanemail', '@example.com', 'user@', 'user@.com', '']
 
       for (const email of invalidEmails) {
         expect(() => EmailSchema.parse(email)).toThrow()
@@ -70,12 +60,7 @@ describe('Validation Schemas', () => {
 
   describe('Password Schema', () => {
     it('should validate strong passwords', () => {
-      const validPasswords = [
-        'Password123!',
-        'MySecure@Pass1',
-        'Complex$Pass9',
-        'Test1234!@#$'
-      ]
+      const validPasswords = ['Password123!', 'MySecure@Pass1', 'Complex$Pass9', 'Test1234!@#$']
 
       for (const password of validPasswords) {
         expect(() => PasswordSchema.parse(password)).not.toThrow()
@@ -113,7 +98,7 @@ describe('Validation Schemas', () => {
       const validInput = {
         email: 'user@example.com',
         password: 'Password123!',
-        name: 'John Doe'
+        name: 'John Doe',
       }
 
       const result = SignupInputSchema.parse(validInput)
@@ -130,7 +115,7 @@ describe('Validation Schemas', () => {
       const input = {
         email: 'user@example.com',
         password: 'Password123!',
-        name: ''
+        name: '',
       }
       expect(() => SignupInputSchema.parse(input)).toThrow('Name is required')
     })
@@ -139,7 +124,7 @@ describe('Validation Schemas', () => {
       const input = {
         email: 'user@example.com',
         password: 'Password123!',
-        name: 'a'.repeat(101)
+        name: 'a'.repeat(101),
       }
       expect(() => SignupInputSchema.parse(input)).toThrow('Name too long')
     })
@@ -150,7 +135,7 @@ describe('Validation Schemas', () => {
         password: 'Password123!',
         name: 'John Doe',
         birthDate: '1990-01-01T00:00:00Z',
-        birthTime: '12:30'
+        birthTime: '12:30',
       }
 
       const result = SignupInputSchema.parse(validInput)
@@ -163,7 +148,7 @@ describe('Validation Schemas', () => {
         email: 'user@example.com',
         password: 'Password123!',
         name: 'John Doe',
-        birthTime: '25:00'
+        birthTime: '25:00',
       }
       expect(() => SignupInputSchema.parse(input)).toThrow('Invalid time format')
     })
@@ -174,7 +159,7 @@ describe('Validation Schemas', () => {
       const validInput = {
         email: 'user@example.com',
         password: 'password123',
-        rememberMe: true
+        rememberMe: true,
       }
 
       const result = LoginInputSchema.parse(validInput)
@@ -185,7 +170,7 @@ describe('Validation Schemas', () => {
     it('should default rememberMe to false', () => {
       const input = {
         email: 'user@example.com',
-        password: 'password123'
+        password: 'password123',
       }
 
       const result = LoginInputSchema.parse(input)
@@ -195,7 +180,7 @@ describe('Validation Schemas', () => {
     it('should reject empty password', () => {
       const input = {
         email: 'user@example.com',
-        password: ''
+        password: '',
       }
       expect(() => LoginInputSchema.parse(input)).toThrow('Password is required')
     })
@@ -206,8 +191,8 @@ describe('Validation Schemas', () => {
       const validLocation = {
         name: 'New York, USA',
         latitude: 40.7128,
-        longitude: -74.0060,
-        timezone: 'America/New_York'
+        longitude: -74.006,
+        timezone: 'America/New_York',
       }
 
       const result = LocationSchema.parse(validLocation)
@@ -220,7 +205,7 @@ describe('Validation Schemas', () => {
         name: 'Invalid',
         latitude: 91,
         longitude: 0,
-        timezone: 'UTC'
+        timezone: 'UTC',
       }
       expect(() => LocationSchema.parse(invalidLocation)).toThrow()
     })
@@ -230,7 +215,7 @@ describe('Validation Schemas', () => {
         name: 'Invalid',
         latitude: 0,
         longitude: 181,
-        timezone: 'UTC'
+        timezone: 'UTC',
       }
       expect(() => LocationSchema.parse(invalidLocation)).toThrow()
     })
@@ -245,10 +230,10 @@ describe('Validation Schemas', () => {
         location: {
           name: 'New York, USA',
           latitude: 40.7128,
-          longitude: -74.0060,
-          timezone: 'America/New_York'
+          longitude: -74.006,
+          timezone: 'America/New_York',
         },
-        type: 'natal'
+        type: 'natal',
       }
 
       const result = ChartInputSchema.parse(validInput)
@@ -268,9 +253,9 @@ describe('Validation Schemas', () => {
             name: 'Test',
             latitude: 0,
             longitude: 0,
-            timezone: 'UTC'
+            timezone: 'UTC',
           },
-          type
+          type,
         }
         expect(() => ChartInputSchema.parse(input)).not.toThrow()
       }
@@ -285,9 +270,9 @@ describe('Validation Schemas', () => {
           name: 'Test',
           latitude: 0,
           longitude: 0,
-          timezone: 'UTC'
+          timezone: 'UTC',
         },
-        type: 'invalid'
+        type: 'invalid',
       }
       expect(() => ChartInputSchema.parse(input)).toThrow()
     })
@@ -297,7 +282,7 @@ describe('Validation Schemas', () => {
     it('should validate valid reading input', () => {
       const validInput = {
         type: 'birth_chart_analysis',
-        chartId: '550e8400-e29b-41d4-a716-446655440000'
+        chartId: '550e8400-e29b-41d4-a716-446655440000',
       }
 
       const result = ReadingInputSchema.parse(validInput)
@@ -308,7 +293,7 @@ describe('Validation Schemas', () => {
       const input = {
         type: 'birth_chart_analysis',
         chartId: '550e8400-e29b-41d4-a716-446655440000',
-        questions: ['Question 1', 'Question 2']
+        questions: ['Question 1', 'Question 2'],
       }
 
       const result = ReadingInputSchema.parse(input)
@@ -319,7 +304,7 @@ describe('Validation Schemas', () => {
       const input = {
         type: 'birth_chart_analysis',
         chartId: '550e8400-e29b-41d4-a716-446655440000',
-        questions: ['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6']
+        questions: ['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6'],
       }
       expect(() => ReadingInputSchema.parse(input)).toThrow()
     })
@@ -329,7 +314,7 @@ describe('Validation Schemas', () => {
     it('should validate valid chat input', () => {
       const validInput = {
         message: 'Hello, this is a test message',
-        conversationId: '550e8400-e29b-41d4-a716-446655440000'
+        conversationId: '550e8400-e29b-41d4-a716-446655440000',
       }
 
       const result = ChatInputSchema.parse(validInput)
@@ -351,8 +336,8 @@ describe('Validation Schemas', () => {
         message: 'Hello',
         context: {
           chartId: '550e8400-e29b-41d4-a716-446655440000',
-          readingId: '550e8400-e29b-41d4-a716-446655440001'
-        }
+          readingId: '550e8400-e29b-41d4-a716-446655440001',
+        },
       }
 
       const result = ChatInputSchema.parse(input)
@@ -376,7 +361,7 @@ describe('Validation Schemas', () => {
           status: 'active',
           role: 'user',
           page: 2,
-          limit: 50
+          limit: 50,
         }
 
         const result = AdminUserSearchSchema.parse(input)
@@ -396,7 +381,7 @@ describe('Validation Schemas', () => {
         const input = {
           userId: '550e8400-e29b-41d4-a716-446655440000',
           status: 'suspended',
-          role: 'moderator'
+          role: 'moderator',
         }
 
         const result = AdminUserUpdateSchema.parse(input)
@@ -407,7 +392,7 @@ describe('Validation Schemas', () => {
       it('should validate partial update', () => {
         const input = {
           userId: '550e8400-e29b-41d4-a716-446655440000',
-          notes: 'Updated notes'
+          notes: 'Updated notes',
         }
 
         const result = AdminUserUpdateSchema.parse(input)
@@ -434,7 +419,7 @@ describe('Validation Schemas', () => {
           validateInput(EmailSchema, 'invalid', 'Email validation')
         } catch (error) {
           expect(error).toBeInstanceOf(ValidationError)
-          expect(error.message).toContain('Email validation')
+          expect((error as ValidationError).message).toContain('Email validation')
         }
       })
     })
@@ -442,7 +427,7 @@ describe('Validation Schemas', () => {
     describe('validatePartial', () => {
       it('should validate partial data', () => {
         const input = { name: 'Updated Name' }
-        const result = validatePartial(SignupInputSchema, input)
+        const result = validatePartial<{ name?: string }>(SignupInputSchema, input)
         expect(result.name).toBe('Updated Name')
       })
 
@@ -494,7 +479,7 @@ describe('Validation Schemas', () => {
         const params = {
           search: 'hello',
           page: '1',
-          malicious: '<script>alert(1)</script>'
+          malicious: '<script>alert(1)</script>',
         }
 
         const result = validateQueryParams(params)
@@ -507,7 +492,7 @@ describe('Validation Schemas', () => {
         const params = {
           valid: 'value',
           'invalid-key': 'value',
-          'another.invalid': 'value'
+          'another.invalid': 'value',
         }
 
         const result = validateQueryParams(params)
@@ -520,7 +505,7 @@ describe('Validation Schemas', () => {
         const params = {
           valid: 'value',
           nullValue: null,
-          undefinedValue: undefined
+          undefinedValue: undefined,
         }
 
         const result = validateQueryParams(params)

@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { logError } from '@/lib/logger'
 import {
   getActiveFeatures,
   getActiveRegions,
@@ -20,7 +21,6 @@ import {
   updateRegion,
   deleteRegion,
 } from '@/lib/plans'
-import { logError } from '@/lib/logger'
 
 async function checkAdmin() {
   const session = await auth()
@@ -144,6 +144,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 401 })
     }
     logError('Error', error)
-    return NextResponse.json({ error: error.message || 'Failed to process request' }, { status: 500 })
+    return NextResponse.json(
+      { error: error.message || 'Failed to process request' },
+      { status: 500 }
+    )
   }
 }

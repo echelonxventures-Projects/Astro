@@ -1,12 +1,21 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import {
+  Sparkles,
+  Plus,
+  Edit,
+  Trash2,
+  Save,
+  Loader2,
+  X,
+  Check,
+  DollarSign,
+  Star,
+} from 'lucide-react'
 import Link from 'next/link'
-import { Sparkles, Plus, Edit, Trash2, Save, Loader2, X, Check, DollarSign, Star } from 'lucide-react'
+import { useState, useEffect } from 'react'
 
-interface User {
+interface _User {
   email: string
   role: string
 }
@@ -267,7 +276,12 @@ export default function AdminPlansClient() {
     }
   }
 
-  const updateFeatureAccess = async (planId: string, featureId: string, enabled: boolean, value?: string) => {
+  const updateFeatureAccess = async (
+    planId: string,
+    featureId: string,
+    enabled: boolean,
+    value?: string
+  ) => {
     try {
       const response = await fetch('/api/admin/plans', {
         method: 'POST',
@@ -419,18 +433,21 @@ export default function AdminPlansClient() {
             </div>
 
             <div className="grid md:grid-cols-3 gap-4">
-              {plans.map((plan) => (
-                <div key={plan.id} className="bg-white/5 rounded-xl p-4 border border-purple-500/20">
+              {plans.map(plan => (
+                <div
+                  key={plan.id}
+                  className="bg-white/5 rounded-xl p-4 border border-purple-500/20"
+                >
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-bold">{plan.name}</h3>
-                    {plan.isPopular && (
-                      <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                    )}
+                    {plan.isPopular && <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />}
                   </div>
                   <p className="text-sm text-purple-300 mb-2">{plan.key}</p>
                   <p className="text-xl font-bold mb-2">
                     {plan.price === 0 ? 'Free' : `$${(plan.price / 100).toFixed(2)}`}
-                    {plan.interval && <span className="text-sm text-purple-300">/{plan.interval}</span>}
+                    {plan.interval && (
+                      <span className="text-sm text-purple-300">/{plan.interval}</span>
+                    )}
                   </p>
                   <p className="text-sm text-purple-200 mb-4">{plan.description}</p>
                   <div className="flex gap-2">
@@ -477,7 +494,7 @@ export default function AdminPlansClient() {
                   </tr>
                 </thead>
                 <tbody>
-                  {features.map((feature) => (
+                  {features.map(feature => (
                     <tr key={feature.id} className="border-b border-purple-500/10">
                       <td className="py-3 px-4">{feature.name}</td>
                       <td className="py-3 px-4 font-mono text-sm">{feature.key}</td>
@@ -534,7 +551,7 @@ export default function AdminPlansClient() {
                   </tr>
                 </thead>
                 <tbody>
-                  {regions.map((region) => (
+                  {regions.map(region => (
                     <tr key={region.id} className="border-b border-purple-500/10">
                       <td className="py-3 px-4">{region.name}</td>
                       <td className="py-3 px-4 font-mono text-sm">{region.code}</td>
@@ -585,7 +602,7 @@ export default function AdminPlansClient() {
                 <thead>
                   <tr className="border-b border-purple-500/20">
                     <th className="text-left py-3 px-4">Feature</th>
-                    {plans.map((plan) => (
+                    {plans.map(plan => (
                       <th key={plan.id} className="text-center py-3 px-4">
                         {plan.name}
                       </th>
@@ -593,10 +610,10 @@ export default function AdminPlansClient() {
                   </tr>
                 </thead>
                 <tbody>
-                  {features.map((feature) => (
+                  {features.map(feature => (
                     <tr key={feature.id} className="border-b border-purple-500/10">
                       <td className="py-3 px-4">{feature.name}</td>
-                      {plans.map((plan) => {
+                      {plans.map(plan => {
                         const access = featureAccess[`${plan.id}-${feature.id}`]
                         return (
                           <td key={plan.id} className="text-center py-3 px-4">
@@ -604,7 +621,7 @@ export default function AdminPlansClient() {
                               <input
                                 type="checkbox"
                                 checked={access?.enabled || false}
-                                onChange={(e) => {
+                                onChange={e => {
                                   setFeatureAccess({
                                     ...featureAccess,
                                     [`${plan.id}-${feature.id}`]: {
@@ -621,7 +638,7 @@ export default function AdminPlansClient() {
                                 type="text"
                                 placeholder="Value (optional)"
                                 value={access?.value || ''}
-                                onChange={(e) => {
+                                onChange={e => {
                                   setFeatureAccess({
                                     ...featureAccess,
                                     [`${plan.id}-${feature.id}`]: {
@@ -631,7 +648,7 @@ export default function AdminPlansClient() {
                                     },
                                   })
                                 }}
-                                onBlur={(e) => {
+                                onBlur={e => {
                                   updateFeatureAccess(
                                     plan.id,
                                     feature.id,
@@ -659,9 +676,7 @@ export default function AdminPlansClient() {
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
           <div className="glass rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold">
-                {editingPlan.id ? 'Edit Plan' : 'New Plan'}
-              </h3>
+              <h3 className="text-2xl font-bold">{editingPlan.id ? 'Edit Plan' : 'New Plan'}</h3>
               <button onClick={() => setShowPlanModal(false)} className="hover:text-white">
                 <X className="w-6 h-6" />
               </button>
@@ -669,11 +684,13 @@ export default function AdminPlansClient() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-purple-200 mb-2">Plan Name *</label>
+                <label className="block text-sm font-medium text-purple-200 mb-2">
+                  Plan Name *
+                </label>
                 <input
                   type="text"
                   value={editingPlan.name || ''}
-                  onChange={(e) => setEditingPlan({ ...editingPlan, name: e.target.value })}
+                  onChange={e => setEditingPlan({ ...editingPlan, name: e.target.value })}
                   className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                   placeholder="e.g., Premium Monthly"
                 />
@@ -684,17 +701,19 @@ export default function AdminPlansClient() {
                 <input
                   type="text"
                   value={editingPlan.key || ''}
-                  onChange={(e) => setEditingPlan({ ...editingPlan, key: e.target.value })}
+                  onChange={e => setEditingPlan({ ...editingPlan, key: e.target.value })}
                   className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                   placeholder="e.g., monthly"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-purple-200 mb-2">Description</label>
+                <label className="block text-sm font-medium text-purple-200 mb-2">
+                  Description
+                </label>
                 <textarea
                   value={editingPlan.description || ''}
-                  onChange={(e) => setEditingPlan({ ...editingPlan, description: e.target.value })}
+                  onChange={e => setEditingPlan({ ...editingPlan, description: e.target.value })}
                   className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                   rows={2}
                 />
@@ -709,16 +728,22 @@ export default function AdminPlansClient() {
                   <input
                     type="number"
                     value={editingPlan.price || 0}
-                    onChange={(e) => setEditingPlan({ ...editingPlan, price: parseInt(e.target.value) || 0 })}
+                    onChange={e =>
+                      setEditingPlan({ ...editingPlan, price: parseInt(e.target.value) || 0 })
+                    }
                     className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-purple-200 mb-2">Billing Interval</label>
+                  <label className="block text-sm font-medium text-purple-200 mb-2">
+                    Billing Interval
+                  </label>
                   <select
                     value={editingPlan.interval || ''}
-                    onChange={(e) => setEditingPlan({ ...editingPlan, interval: e.target.value || null })}
+                    onChange={e =>
+                      setEditingPlan({ ...editingPlan, interval: e.target.value || null })
+                    }
                     className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                   >
                     <option value="">One-time / Free</option>
@@ -729,11 +754,13 @@ export default function AdminPlansClient() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-purple-200 mb-2">Stripe Price ID</label>
+                <label className="block text-sm font-medium text-purple-200 mb-2">
+                  Stripe Price ID
+                </label>
                 <input
                   type="text"
                   value={editingPlan.stripePriceId || ''}
-                  onChange={(e) => setEditingPlan({ ...editingPlan, stripePriceId: e.target.value })}
+                  onChange={e => setEditingPlan({ ...editingPlan, stripePriceId: e.target.value })}
                   className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                   placeholder="price_..."
                 />
@@ -744,7 +771,7 @@ export default function AdminPlansClient() {
                   <input
                     type="checkbox"
                     checked={editingPlan.isPopular || false}
-                    onChange={(e) => setEditingPlan({ ...editingPlan, isPopular: e.target.checked })}
+                    onChange={e => setEditingPlan({ ...editingPlan, isPopular: e.target.checked })}
                     className="w-5 h-5 rounded"
                   />
                   <span className="text-purple-200">Most Popular (show badge)</span>
@@ -754,7 +781,7 @@ export default function AdminPlansClient() {
                   <input
                     type="checkbox"
                     checked={editingPlan.isActive || true}
-                    onChange={(e) => setEditingPlan({ ...editingPlan, isActive: e.target.checked })}
+                    onChange={e => setEditingPlan({ ...editingPlan, isActive: e.target.checked })}
                     className="w-5 h-5 rounded"
                   />
                   <span className="text-purple-200">Active</span>
@@ -806,22 +833,26 @@ export default function AdminPlansClient() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-purple-200 mb-2">Feature Name *</label>
+                <label className="block text-sm font-medium text-purple-200 mb-2">
+                  Feature Name *
+                </label>
                 <input
                   type="text"
                   value={editingFeature.name || ''}
-                  onChange={(e) => setEditingFeature({ ...editingFeature, name: e.target.value })}
+                  onChange={e => setEditingFeature({ ...editingFeature, name: e.target.value })}
                   className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                   placeholder="e.g., Daily Horoscope"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-purple-200 mb-2">Feature Key *</label>
+                <label className="block text-sm font-medium text-purple-200 mb-2">
+                  Feature Key *
+                </label>
                 <input
                   type="text"
                   value={editingFeature.key || ''}
-                  onChange={(e) => setEditingFeature({ ...editingFeature, key: e.target.value })}
+                  onChange={e => setEditingFeature({ ...editingFeature, key: e.target.value })}
                   className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                   placeholder="e.g., daily_horoscope"
                 />
@@ -832,7 +863,7 @@ export default function AdminPlansClient() {
                 <input
                   type="text"
                   value={editingFeature.category || ''}
-                  onChange={(e) => setEditingFeature({ ...editingFeature, category: e.target.value })}
+                  onChange={e => setEditingFeature({ ...editingFeature, category: e.target.value })}
                   className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                   placeholder="e.g., readings, ai, support"
                 />
@@ -843,7 +874,9 @@ export default function AdminPlansClient() {
                   <input
                     type="checkbox"
                     checked={editingFeature.isActive !== false}
-                    onChange={(e) => setEditingFeature({ ...editingFeature, isActive: e.target.checked })}
+                    onChange={e =>
+                      setEditingFeature({ ...editingFeature, isActive: e.target.checked })
+                    }
                     className="w-5 h-5 rounded"
                   />
                   <span className="text-purple-200">Active</span>
@@ -895,11 +928,13 @@ export default function AdminPlansClient() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-purple-200 mb-2">Region Name *</label>
+                <label className="block text-sm font-medium text-purple-200 mb-2">
+                  Region Name *
+                </label>
                 <input
                   type="text"
                   value={editingRegion.name || ''}
-                  onChange={(e) => setEditingRegion({ ...editingRegion, name: e.target.value })}
+                  onChange={e => setEditingRegion({ ...editingRegion, name: e.target.value })}
                   className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                   placeholder="e.g., United States, Europe, India"
                 />
@@ -907,22 +942,26 @@ export default function AdminPlansClient() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-purple-200 mb-2">Region Key *</label>
+                  <label className="block text-sm font-medium text-purple-200 mb-2">
+                    Region Key *
+                  </label>
                   <input
                     type="text"
                     value={editingRegion.key || ''}
-                    onChange={(e) => setEditingRegion({ ...editingRegion, key: e.target.value })}
+                    onChange={e => setEditingRegion({ ...editingRegion, key: e.target.value })}
                     className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                     placeholder="e.g., us, eu, in"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-purple-200 mb-2">Country Code *</label>
+                  <label className="block text-sm font-medium text-purple-200 mb-2">
+                    Country Code *
+                  </label>
                   <input
                     type="text"
                     value={editingRegion.code || ''}
-                    onChange={(e) => setEditingRegion({ ...editingRegion, code: e.target.value })}
+                    onChange={e => setEditingRegion({ ...editingRegion, code: e.target.value })}
                     className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                     placeholder="e.g., US, EU, IN"
                   />
@@ -930,10 +969,12 @@ export default function AdminPlansClient() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-purple-200 mb-2">Default Currency</label>
+                <label className="block text-sm font-medium text-purple-200 mb-2">
+                  Default Currency
+                </label>
                 <select
                   value={editingRegion.currency || 'usd'}
-                  onChange={(e) => setEditingRegion({ ...editingRegion, currency: e.target.value })}
+                  onChange={e => setEditingRegion({ ...editingRegion, currency: e.target.value })}
                   className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                 >
                   <option value="usd">USD - US Dollar</option>
@@ -947,12 +988,19 @@ export default function AdminPlansClient() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-purple-200 mb-2">Price Multiplier</label>
+                <label className="block text-sm font-medium text-purple-200 mb-2">
+                  Price Multiplier
+                </label>
                 <input
                   type="number"
                   step="0.01"
                   value={editingRegion.priceMultiplier || 1.0}
-                  onChange={(e) => setEditingRegion({ ...editingRegion, priceMultiplier: parseFloat(e.target.value) || 1.0 })}
+                  onChange={e =>
+                    setEditingRegion({
+                      ...editingRegion,
+                      priceMultiplier: parseFloat(e.target.value) || 1.0,
+                    })
+                  }
                   className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                   placeholder="1.0"
                 />
@@ -966,7 +1014,9 @@ export default function AdminPlansClient() {
                   <input
                     type="checkbox"
                     checked={editingRegion.isDefault || false}
-                    onChange={(e) => setEditingRegion({ ...editingRegion, isDefault: e.target.checked })}
+                    onChange={e =>
+                      setEditingRegion({ ...editingRegion, isDefault: e.target.checked })
+                    }
                     className="w-5 h-5 rounded"
                   />
                   <span className="text-purple-200">Default Region</span>
@@ -976,7 +1026,9 @@ export default function AdminPlansClient() {
                   <input
                     type="checkbox"
                     checked={editingRegion.isActive !== false}
-                    onChange={(e) => setEditingRegion({ ...editingRegion, isActive: e.target.checked })}
+                    onChange={e =>
+                      setEditingRegion({ ...editingRegion, isActive: e.target.checked })
+                    }
                     className="w-5 h-5 rounded"
                   />
                   <span className="text-purple-200">Active</span>
@@ -992,7 +1044,9 @@ export default function AdminPlansClient() {
                 </button>
                 <button
                   onClick={saveRegion}
-                  disabled={saving || !editingRegion.name || !editingRegion.key || !editingRegion.code}
+                  disabled={
+                    saving || !editingRegion.name || !editingRegion.key || !editingRegion.code
+                  }
                   className="flex-1 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-700 disabled:opacity-50 py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2"
                 >
                   {saving ? (

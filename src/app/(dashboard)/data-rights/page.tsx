@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Download, Trash2, Shield, AlertTriangle, Loader2 } from 'lucide-react'
-import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import { useState } from 'react'
 
 export default function DataRightsPage() {
   const { data: session, status } = useSession()
@@ -12,7 +12,7 @@ export default function DataRightsPage() {
   const [loading, setLoading] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [message, setMessage] = useState<{ type: 'success' | '_error'; text: string } | null>(null)
 
   const handleExportData = async () => {
     if (!session?.user) return
@@ -33,8 +33,8 @@ export default function DataRightsPage() {
       window.URL.revokeObjectURL(url)
 
       setMessage({ type: 'success', text: 'Data exported successfully!' })
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to export data. Please try again.' })
+    } catch (_error) {
+      setMessage({ type: '_error', text: 'Failed to export data. Please try again.' })
     } finally {
       setLoading(false)
     }
@@ -63,8 +63,8 @@ export default function DataRightsPage() {
       setTimeout(() => {
         router.push('/')
       }, 2000)
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to delete account. Please try again.' })
+    } catch (_error) {
+      setMessage({ type: '_error', text: 'Failed to delete account. Please try again.' })
     } finally {
       setLoading(false)
       setShowDeleteConfirm(false)
@@ -118,8 +118,8 @@ export default function DataRightsPage() {
               <div className="flex-1">
                 <h2 className="text-xl font-semibold text-white mb-2">Export Your Data</h2>
                 <p className="text-purple-200 mb-4">
-                  Download all your personal data stored with us. This includes your profile,
-                  birth charts, readings, chat history, and payment records.
+                  Download all your personal data stored with us. This includes your profile, birth
+                  charts, readings, chat history, and payment records.
                 </p>
                 <p className="text-purple-400 text-sm mb-4">
                   Format: JSON file with all personal data
@@ -129,7 +129,11 @@ export default function DataRightsPage() {
                   disabled={loading}
                   className="px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-500 transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+                  {loading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Download className="w-5 h-5" />
+                  )}
                   Export My Data
                 </button>
               </div>
@@ -154,9 +158,7 @@ export default function DataRightsPage() {
 
                 <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-4 mb-4">
                   <AlertTriangle className="w-5 h-5 text-red-400 mb-2" />
-                  <p className="text-red-300 text-sm">
-                    Warning: This will permanently delete:
-                  </p>
+                  <p className="text-red-300 text-sm">Warning: This will permanently delete:</p>
                   <ul className="text-red-400 text-sm mt-2 space-y-1">
                     <li>• Your profile and account credentials</li>
                     <li>• All saved birth charts and readings</li>
@@ -182,7 +184,7 @@ export default function DataRightsPage() {
                     <input
                       type="text"
                       value={deleteConfirmText}
-                      onChange={(e) => setDeleteConfirmText(e.target.value)}
+                      onChange={e => setDeleteConfirmText(e.target.value)}
                       placeholder="Type DELETE"
                       className="w-full px-4 py-3 bg-[#1e1b4b] border border-purple-500/30 rounded-xl text-white focus:border-red-500 focus:outline-none"
                     />
@@ -198,7 +200,11 @@ export default function DataRightsPage() {
                         disabled={loading || deleteConfirmText !== 'DELETE'}
                         className="px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-500 transition-colors disabled:opacity-50 flex items-center gap-2"
                       >
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
+                        {loading ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-5 h-5" />
+                        )}
                         Permanently Delete
                       </button>
                     </div>
@@ -219,7 +225,9 @@ export default function DataRightsPage() {
             <div className="grid md:grid-cols-2 gap-4 text-purple-200">
               <div>
                 <h3 className="text-white font-medium mb-1">Right to Access</h3>
-                <p className="text-sm">You can request a copy of all personal data we hold about you.</p>
+                <p className="text-sm">
+                  You can request a copy of all personal data we hold about you.
+                </p>
               </div>
               <div>
                 <h3 className="text-white font-medium mb-1">Right to Rectification</h3>

@@ -3,10 +3,10 @@ export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { getGateway } from '@/lib/payment'
 import { logger } from '@/lib/logger'
+import { getGateway } from '@/lib/payment'
 
-const isDev = process.env.NODE_ENV === 'development'
+const _isDev = process.env.NODE_ENV === 'development'
 
 /**
  * POST /api/payment/webhook/stripe
@@ -18,18 +18,12 @@ export async function POST(req: NextRequest) {
     const signature = req.headers.get('stripe-signature') || ''
 
     if (!signature) {
-      return NextResponse.json(
-        { error: 'Missing signature' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
     }
 
     const gateway = await getGateway('stripe')
     if (!gateway) {
-      return NextResponse.json(
-        { error: 'Stripe gateway not configured' },
-        { status: 503 }
-      )
+      return NextResponse.json({ error: 'Stripe gateway not configured' }, { status: 503 })
     }
 
     let event
@@ -37,10 +31,7 @@ export async function POST(req: NextRequest) {
       event = await gateway.handleWebhook(body, signature)
     } catch (error) {
       logger.debug({ error }, 'Webhook verification failed')
-      return NextResponse.json(
-        { error: 'Invalid signature' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
     }
 
     const eventData = event.data
@@ -162,9 +153,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true })
   } catch (error) {
     logger.error({ error }, 'Error processing Stripe webhook')
-    return NextResponse.json(
-      { error: 'Failed to process webhook' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to process webhook' }, { status: 500 })
   }
 }

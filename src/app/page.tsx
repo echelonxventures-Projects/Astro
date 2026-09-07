@@ -1,7 +1,17 @@
 export const dynamic = 'force-dynamic'
 
+import {
+  Star,
+  Heart,
+  Briefcase,
+  MessageCircle,
+  Sparkles,
+  Users,
+  ArrowRight,
+  Hand,
+  Eye,
+} from 'lucide-react'
 import Link from 'next/link'
-import { Star, Heart, Briefcase, MessageCircle, Sparkles, Users, ArrowRight, Hand, Eye } from 'lucide-react'
 
 export default function HomePage() {
   return (
@@ -15,13 +25,27 @@ export default function HomePage() {
               <span className="text-xl font-bold gradient-text">StarPath Astrology</span>
             </Link>
             <div className="hidden md:flex items-center gap-6">
-              <Link href="/chart" className="text-gray-300 hover:text-white transition">Birth Chart</Link>
-              <Link href="/horoscope/daily" className="text-gray-300 hover:text-white transition">Horoscopes</Link>
-              <Link href="/compatibility" className="text-gray-300 hover:text-white transition">Compatibility</Link>
-              <Link href="/chat/horoscope" className="text-gray-300 hover:text-white transition">AI Chat</Link>
-              <Link href="/palmistry" className="text-gray-300 hover:text-white transition">Palmistry</Link>
-              <Link href="/face-reading" className="text-gray-300 hover:text-white transition">Face Reading</Link>
-              <Link href="/pricing" className="text-gray-300 hover:text-white transition">Pricing</Link>
+              <Link href="/chart" className="text-gray-300 hover:text-white transition">
+                Birth Chart
+              </Link>
+              <Link href="/horoscope/daily" className="text-gray-300 hover:text-white transition">
+                Horoscopes
+              </Link>
+              <Link href="/compatibility" className="text-gray-300 hover:text-white transition">
+                Compatibility
+              </Link>
+              <Link href="/chat/horoscope" className="text-gray-300 hover:text-white transition">
+                AI Chat
+              </Link>
+              <Link href="/palmistry" className="text-gray-300 hover:text-white transition">
+                Palmistry
+              </Link>
+              <Link href="/face-reading" className="text-gray-300 hover:text-white transition">
+                Face Reading
+              </Link>
+              <Link href="/pricing" className="text-gray-300 hover:text-white transition">
+                Pricing
+              </Link>
             </div>
             <div className="flex items-center gap-4">
               <Link href="/login" className="text-gray-300 hover:text-white transition">
@@ -56,8 +80,8 @@ export default function HomePage() {
             <span className="gradient-text">Navigate Your Cosmic Journey</span>
           </h1>
           <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto mb-10">
-            Discover personalized astrology readings, birth charts, and celestial guidance
-            powered by advanced AI. Your trusted guide to cosmic wisdom.
+            Discover personalized astrology readings, birth charts, and celestial guidance powered
+            by advanced AI. Your trusted guide to cosmic wisdom.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
@@ -92,9 +116,12 @@ export default function HomePage() {
               <div className="w-14 h-14 rounded-xl bg-[#7C3AED]/30 flex items-center justify-center mb-4">
                 <Star className="w-8 h-8 text-[#A78BFA]" />
               </div>
-              <h3 className="text-xl font-semibold mb-2 group-hover:text-[#C4B5FD] transition">Birth Chart Analysis</h3>
+              <h3 className="text-xl font-semibold mb-2 group-hover:text-[#C4B5FD] transition">
+                Birth Chart Analysis
+              </h3>
               <p className="text-gray-300">
-                Discover your planetary positions, houses, and aspects. Understand your core personality and life path.
+                Discover your planetary positions, houses, and aspects. Understand your core
+                personality and life path.
               </p>
             </Link>
 
@@ -103,7 +130,9 @@ export default function HomePage() {
               <div className="w-14 h-14 rounded-xl bg-[#7C3AED]/30 flex items-center justify-center mb-4">
                 <Sparkles className="w-8 h-8 text-[#A78BFA]" />
               </div>
-              <h3 className="text-xl font-semibold mb-2 group-hover:text-[#C4B5FD] transition">Daily Horoscope</h3>
+              <h3 className="text-xl font-semibold mb-2 group-hover:text-[#C4B5FD] transition">
+                Daily Horoscope
+              </h3>
               <p className="text-gray-300">
                 AI-powered daily readings based on current transits and your unique birth chart.
               </p>
@@ -114,9 +143,12 @@ export default function HomePage() {
               <div className="w-14 h-14 rounded-xl bg-[#EC4899]/30 flex items-center justify-center mb-4">
                 <Heart className="w-8 h-8 text-[#EC4899]" />
               </div>
-              <h3 className="text-xl font-semibold mb-2 group-hover:text-[#F472B6] transition">Love & Relationships</h3>
+              <h3 className="text-xl font-semibold mb-2 group-hover:text-[#F472B6] transition">
+                Love & Relationships
+              </h3>
               <p className="text-gray-300">
-                Explore your romantic compatibility and discover what the stars say about your love life.
+                Explore your romantic compatibility and discover what the stars say about your love
+                life.
               </p>
             </Link>
 
@@ -125,9 +157,12 @@ export default function HomePage() {
               <div className="w-14 h-14 rounded-xl bg-[#06B6D4]/30 flex items-center justify-center mb-4">
                 <Briefcase className="w-8 h-8 text-[#06B6D4]" />
               </div>
-              <h3 className="text-xl font-semibold mb-2 group-hover:text-[#22D3EE] transition">Career Guidance</h3>
+              <h3 className="text-xl font-semibold mb-2 group-hover:text-[#22D3EE] transition">
+                Career Guidance
+              </h3>
               <p className="text-gray-300">
-                Find your professional strengths and ideal career paths through astrological insights.
+                Find your professional strengths and ideal career paths through astrological
+                insights.
               </p>
             </Link>
 
@@ -136,7 +171,9 @@ export default function HomePage() {
               <div className="w-14 h-14 rounded-xl bg-[#EC4899]/30 flex items-center justify-center mb-4">
                 <Users className="w-8 h-8 text-[#EC4899]" />
               </div>
-              <h3 className="text-xl font-semibold mb-2 group-hover:text-[#F472B6] transition">Compatibility Reading</h3>
+              <h3 className="text-xl font-semibold mb-2 group-hover:text-[#F472B6] transition">
+                Compatibility Reading
+              </h3>
               <p className="text-gray-300">
                 Compare birth charts with your partner to understand your cosmic connection.
               </p>
@@ -147,7 +184,9 @@ export default function HomePage() {
               <div className="w-14 h-14 rounded-xl bg-[#06B6D4]/30 flex items-center justify-center mb-4">
                 <MessageCircle className="w-8 h-8 text-[#06B6D4]" />
               </div>
-              <h3 className="text-xl font-semibold mb-2 group-hover:text-[#22D3EE] transition">AI Astrologer Chat</h3>
+              <h3 className="text-xl font-semibold mb-2 group-hover:text-[#22D3EE] transition">
+                AI Astrologer Chat
+              </h3>
               <p className="text-gray-300">
                 Have a conversation with our AI astrologer for personalized guidance on any topic.
               </p>
@@ -158,9 +197,12 @@ export default function HomePage() {
               <div className="w-14 h-14 rounded-xl bg-[#F59E0B]/30 flex items-center justify-center mb-4">
                 <Hand className="w-8 h-8 text-[#F59E0B]" />
               </div>
-              <h3 className="text-xl font-semibold mb-2 group-hover:text-[#FBBF24] transition">Palm Reading</h3>
+              <h3 className="text-xl font-semibold mb-2 group-hover:text-[#FBBF24] transition">
+                Palm Reading
+              </h3>
               <p className="text-gray-300">
-                Upload your palm photo for AI analysis of life lines, heart line, and destiny insights.
+                Upload your palm photo for AI analysis of life lines, heart line, and destiny
+                insights.
               </p>
             </Link>
 
@@ -169,9 +211,12 @@ export default function HomePage() {
               <div className="w-14 h-14 rounded-xl bg-[#7C3AED]/30 flex items-center justify-center mb-4">
                 <Eye className="w-8 h-8 text-[#A78BFA]" />
               </div>
-              <h3 className="text-xl font-semibold mb-2 group-hover:text-[#C4B5FD] transition">Face Reading</h3>
+              <h3 className="text-xl font-semibold mb-2 group-hover:text-[#C4B5FD] transition">
+                Face Reading
+              </h3>
               <p className="text-gray-300">
-                Discover personality traits and destiny through ancient Chinese physiognomy and AI analysis.
+                Discover personality traits and destiny through ancient Chinese physiognomy and AI
+                analysis.
               </p>
             </Link>
           </div>
@@ -181,9 +226,7 @@ export default function HomePage() {
       {/* How It Works */}
       <section className="py-20 px-4">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-4 gradient-text">
-            How It Works
-          </h2>
+          <h2 className="text-4xl font-bold text-center mb-4 gradient-text">How It Works</h2>
           <p className="text-gray-400 text-center mb-12 max-w-2xl mx-auto">
             Get started with your personalized astrology reading in three simple steps
           </p>
@@ -249,9 +292,15 @@ export default function HomePage() {
               <span className="font-bold gradient-text">StarPath Astrology</span>
             </Link>
             <div className="flex gap-6">
-              <Link href="/privacy" className="text-gray-400 hover:text-white transition">Privacy</Link>
-              <Link href="/terms" className="text-gray-400 hover:text-white transition">Terms</Link>
-              <Link href="/pricing" className="text-gray-400 hover:text-white transition">Pricing</Link>
+              <Link href="/privacy" className="text-gray-400 hover:text-white transition">
+                Privacy
+              </Link>
+              <Link href="/terms" className="text-gray-400 hover:text-white transition">
+                Terms
+              </Link>
+              <Link href="/pricing" className="text-gray-400 hover:text-white transition">
+                Pricing
+              </Link>
             </div>
             <p className="text-purple-400 text-sm">
               © {new Date().getFullYear()} StarPath Astrology. All rights reserved.

@@ -1,17 +1,16 @@
-import { logger } from '../logger';
-import { CircuitBreaker, getCircuitBreakerForGateway } from '../resilience/circuit-breaker';
-import { withRetry, RetryPresets } from '../resilience/retry';
-import { withTimeout, TimeoutPresets } from '../resilience/timeout';
-import { withFallback, withGracefulDegradation } from '../resilience/fallback';
-import { getBulkheadForPayment } from '../resilience/bulkhead';
+import { logger } from '../logger'
+import { getBulkheadForPayment } from '../resilience/bulkhead'
+import { getCircuitBreakerForGateway } from '../resilience/circuit-breaker'
+import { withRetry, RetryPresets } from '../resilience/retry'
+import { withTimeout, TimeoutPresets } from '../resilience/timeout'
 
 export interface PaymentResilienceConfig {
-  gateway: string;
-  enableCircuitBreaker?: boolean;
-  enableRetry?: boolean;
-  enableTimeout?: boolean;
-  enableBulkhead?: boolean;
-  enableFallback?: boolean;
+  gateway: string
+  enableCircuitBreaker?: boolean
+  enableRetry?: boolean
+  enableTimeout?: boolean
+  enableBulkhead?: boolean
+  enableFallback?: boolean
 }
 
 /**
@@ -29,58 +28,58 @@ export async function resilientPaymentOperation<T>(
     enableTimeout: true,
     enableBulkhead: true,
     enableFallback: false, // Payments typically shouldn't silently fallback
-    ...config
-  };
+    ...config,
+  }
 
-  let wrappedOperation = operation;
+  let wrappedOperation = operation
 
   // Apply bulkhead (limit concurrent payment requests)
   if (fullConfig.enableBulkhead) {
-    const bulkhead = getBulkheadForPayment(gateway);
-    const originalFn = wrappedOperation;
-    wrappedOperation = () => bulkhead.execute(originalFn);
+    const bulkhead = getBulkheadForPayment(gateway)
+    const originalFn = wrappedOperation
+    wrappedOperation = () => bulkhead.execute(originalFn)
   }
 
-  // Apply circuit breaker
+  // Apply circuit _breaker
   if (fullConfig.enableCircuitBreaker) {
-    const breaker = getCircuitBreakerForGateway(gateway);
-    const originalFn = wrappedOperation;
-    wrappedOperation = () => breaker.execute(originalFn);
+    const _breaker = getCircuitBreakerForGateway(gateway)
+    const originalFn = wrappedOperation
+    wrappedOperation = () => _breaker.execute(originalFn)
   }
 
   // Apply retry
   if (fullConfig.enableRetry) {
-    const originalFn = wrappedOperation;
-    wrappedOperation = () => withRetry(originalFn, RetryPresets.payment);
+    const originalFn = wrappedOperation
+    wrappedOperation = () => withRetry(originalFn, RetryPresets.payment)
   }
 
   // Apply timeout
   if (fullConfig.enableTimeout) {
-    const originalFn = wrappedOperation;
-    wrappedOperation = () => withTimeout(originalFn(), TimeoutPresets.payment);
+    const originalFn = wrappedOperation
+    wrappedOperation = () => withTimeout(originalFn(), TimeoutPresets.payment)
   }
 
-  return await wrappedOperation();
+  return await wrappedOperation()
 }
 
 /**
  * Process payment with resilience
  */
 export interface PaymentRequest {
-  amount: number;
-  currency: string;
-  customerId: string;
-  paymentMethod: string;
-  metadata?: Record<string, any>;
+  amount: number
+  currency: string
+  customerId: string
+  paymentMethod: string
+  metadata?: Record<string, any>
 }
 
 export interface PaymentResult {
-  success: boolean;
-  transactionId?: string;
-  status: 'completed' | 'pending' | 'failed' | 'requires_action';
-  message?: string;
-  error?: string;
-  retryable?: boolean;
+  success: boolean
+  transactionId?: string
+  status: 'completed' | 'pending' | 'failed' | 'requires_action'
+  message?: string
+  error?: string
+  retryable?: boolean
 }
 
 export async function processPaymentResilient(
@@ -93,21 +92,28 @@ export async function processPaymentResilient(
       gateway,
       () => processFn(gateway, request),
       { enableFallback: false } // Payments should not fallback silently
-    );
+    )
   } catch (error) {
-    logger.error('Payment operation failed after all resilience attempts', {
-      gateway,
-      request: { amount: request.amount, currency: request.currency, customerId: request.customerId },
-      error: (error as Error).message
-    });
+    logger.error(
+      {
+        gateway,
+        request: {
+          amount: request.amount,
+          currency: request.currency,
+          customerId: request.customerId,
+        },
+        error: (error as Error).message,
+      },
+      'Payment operation failed after all resilience attempts'
+    )
 
     // Return failure result instead of throwing
     return {
       success: false,
       status: 'failed',
       error: (error as Error).message,
-      retryable: isRetryablePaymentError(error as Error)
-    };
+      retryable: isRetryablePaymentError(error as Error),
+    }
   }
 }
 
@@ -115,17 +121,17 @@ export async function processPaymentResilient(
  * Refund payment with resilience
  */
 export interface RefundRequest {
-  transactionId: string;
-  amount?: number; // Partial refund amount, or omit for full refund
-  reason?: string;
+  transactionId: string
+  amount?: number // Partial refund amount, or omit for full refund
+  reason?: string
 }
 
 export interface RefundResult {
-  success: boolean;
-  refundId?: string;
-  status: 'completed' | 'pending' | 'failed';
-  amount: number;
-  error?: string;
+  success: boolean
+  refundId?: string
+  status: 'completed' | 'pending' | 'failed'
+  amount: number
+  error?: string
 }
 
 export async function processRefundResilient(
@@ -134,28 +140,27 @@ export async function processRefundResilient(
   refundFn: (gateway: string, request: RefundRequest) => Promise<RefundResult>
 ): Promise<RefundResult> {
   try {
-    return await resilientPaymentOperation(
-      gateway,
-      () => refundFn(gateway, request),
-      {
-        enableRetry: true,
-        enableCircuitBreaker: true,
-        enableTimeout: true
-      }
-    );
+    return await resilientPaymentOperation(gateway, () => refundFn(gateway, request), {
+      enableRetry: true,
+      enableCircuitBreaker: true,
+      enableTimeout: true,
+    })
   } catch (error) {
-    logger.error('Refund operation failed after all resilience attempts', {
-      gateway,
-      transactionId: request.transactionId,
-      error: (error as Error).message
-    });
+    logger.error(
+      {
+        gateway,
+        transactionId: request.transactionId,
+        error: (error as Error).message,
+      },
+      'Refund operation failed after all resilience attempts'
+    )
 
     return {
       success: false,
       status: 'failed',
       amount: request.amount || 0,
-      error: (error as Error).message
-    };
+      error: (error as Error).message,
+    }
   }
 }
 
@@ -163,12 +168,12 @@ export async function processRefundResilient(
  * Verify payment status with resilience
  */
 export interface PaymentStatusResult {
-  transactionId: string;
-  status: 'completed' | 'pending' | 'failed' | 'unknown';
-  amount?: number;
-  currency?: string;
-  processedAt?: Date;
-  error?: string;
+  transactionId: string
+  status: 'completed' | 'pending' | 'failed' | 'unknown'
+  amount?: number
+  currency?: string
+  processedAt?: Date
+  error?: string
 }
 
 export async function verifyPaymentStatusResilient(
@@ -177,27 +182,26 @@ export async function verifyPaymentStatusResilient(
   verifyFn: (gateway: string, transactionId: string) => Promise<PaymentStatusResult>
 ): Promise<PaymentStatusResult> {
   try {
-    return await resilientPaymentOperation(
-      gateway,
-      () => verifyFn(gateway, transactionId),
-      {
-        enableRetry: true,
-        enableCircuitBreaker: true,
-        enableTimeout: true
-      }
-    );
+    return await resilientPaymentOperation(gateway, () => verifyFn(gateway, transactionId), {
+      enableRetry: true,
+      enableCircuitBreaker: true,
+      enableTimeout: true,
+    })
   } catch (error) {
-    logger.error('Payment verification failed after all resilience attempts', {
-      gateway,
-      transactionId,
-      error: (error as Error).message
-    });
+    logger.error(
+      {
+        gateway,
+        transactionId,
+        error: (error as Error).message,
+      },
+      'Payment verification failed after all resilience attempts'
+    )
 
     return {
       transactionId,
       status: 'unknown',
-      error: (error as Error).message
-    };
+      error: (error as Error).message,
+    }
   }
 }
 
@@ -205,18 +209,18 @@ export async function verifyPaymentStatusResilient(
  * Create payment intent/setup with resilience
  */
 export interface PaymentSetupRequest {
-  customerId: string;
-  amount: number;
-  currency: string;
-  setupFutureUsage?: boolean;
+  customerId: string
+  amount: number
+  currency: string
+  setupFutureUsage?: boolean
 }
 
 export interface PaymentSetupResult {
-  success: boolean;
-  clientSecret?: string;
-  setupId?: string;
-  status: 'requires_action' | 'succeeded' | 'failed';
-  error?: string;
+  success: boolean
+  clientSecret?: string
+  setupId?: string
+  status: 'requires_action' | 'succeeded' | 'failed'
+  error?: string
 }
 
 export async function setupPaymentResilient(
@@ -225,27 +229,26 @@ export async function setupPaymentResilient(
   setupFn: (gateway: string, request: PaymentSetupRequest) => Promise<PaymentSetupResult>
 ): Promise<PaymentSetupResult> {
   try {
-    return await resilientPaymentOperation(
-      gateway,
-      () => setupFn(gateway, request),
-      {
-        enableRetry: true,
-        enableCircuitBreaker: true,
-        enableTimeout: true
-      }
-    );
+    return await resilientPaymentOperation(gateway, () => setupFn(gateway, request), {
+      enableRetry: true,
+      enableCircuitBreaker: true,
+      enableTimeout: true,
+    })
   } catch (error) {
-    logger.error('Payment setup failed after all resilience attempts', {
-      gateway,
-      customerId: request.customerId,
-      error: (error as Error).message
-    });
+    logger.error(
+      {
+        gateway,
+        customerId: request.customerId,
+        error: (error as Error).message,
+      },
+      'Payment setup failed after all resilience attempts'
+    )
 
     return {
       success: false,
       status: 'failed',
-      error: (error as Error).message
-    };
+      error: (error as Error).message,
+    }
   }
 }
 
@@ -253,16 +256,16 @@ export async function setupPaymentResilient(
  * Handle webhook processing with resilience
  */
 export interface WebhookPayload {
-  type: string;
-  data: Record<string, any>;
-  signature?: string;
-  timestamp?: number;
+  type: string
+  data: Record<string, any>
+  signature?: string
+  timestamp?: number
 }
 
 export interface WebhookResult {
-  processed: boolean;
-  acknowledged: boolean;
-  error?: string;
+  processed: boolean
+  acknowledged: boolean
+  error?: string
 }
 
 export async function processWebhookResilient(
@@ -272,28 +275,27 @@ export async function processWebhookResilient(
 ): Promise<WebhookResult> {
   // Webhooks should be processed quickly with minimal retries
   try {
-    return await resilientPaymentOperation(
-      gateway,
-      () => processFn(gateway, payload),
-      {
-        enableRetry: true,
-        enableCircuitBreaker: true,
-        enableTimeout: false, // Webhook timeout handled by gateway
-        enableBulkhead: true
-      }
-    );
+    return await resilientPaymentOperation(gateway, () => processFn(gateway, payload), {
+      enableRetry: true,
+      enableCircuitBreaker: true,
+      enableTimeout: false, // Webhook timeout handled by gateway
+      enableBulkhead: true,
+    })
   } catch (error) {
-    logger.error('Webhook processing failed', {
-      gateway,
-      type: payload.type,
-      error: (error as Error).message
-    });
+    logger.error(
+      {
+        gateway,
+        type: payload.type,
+        error: (error as Error).message,
+      },
+      'Webhook processing failed'
+    )
 
     return {
       processed: false,
       acknowledged: false,
-      error: (error as Error).message
-    };
+      error: (error as Error).message,
+    }
   }
 }
 
@@ -301,8 +303,8 @@ export async function processWebhookResilient(
  * Check if a payment error is retryable
  */
 function isRetryablePaymentError(error: Error): boolean {
-  const message = error.message.toLowerCase();
-  const code = (error as any).code || '';
+  const message = error.message.toLowerCase()
+  const code = (error as any).code || ''
 
   const retryableCodes = [
     'ECONNRESET',
@@ -310,8 +312,8 @@ function isRetryablePaymentError(error: Error): boolean {
     'ECONNREFUSED',
     'rate_limit',
     'gateway_timeout',
-    'service_unavailable'
-  ];
+    'service_unavailable',
+  ]
 
   const retryableMessages = [
     'timeout',
@@ -319,42 +321,41 @@ function isRetryablePaymentError(error: Error): boolean {
     'network',
     'temporary',
     'rate limit',
-    'unavailable'
-  ];
+    'unavailable',
+  ]
 
-  return retryableCodes.some(c => code === c) ||
-         retryableMessages.some(m => message.includes(m));
+  return retryableCodes.some(c => code === c) || retryableMessages.some(m => message.includes(m))
 }
 
 /**
  * Check payment gateway health
  */
 export async function checkPaymentGatewayHealth(gateway: string): Promise<{
-  healthy: boolean;
-  circuitState: string;
+  healthy: boolean
+  circuitState: string
   bulkheadMetrics: {
-    running: number;
-    queued: number;
-    maxConcurrent: number;
-    maxQueue: number;
-  };
+    running: number
+    queued: number
+    maxConcurrent: number
+    maxQueue: number
+  }
 }> {
-  const breaker = getCircuitBreakerForGateway(gateway);
-  const bulkhead = getBulkheadForPayment(gateway);
+  const _breaker = getCircuitBreakerForGateway(gateway)
+  const bulkhead = getBulkheadForPayment(gateway)
 
   return {
-    healthy: breaker.getState() === 'closed',
-    circuitState: breaker.getState(),
-    bulkheadMetrics: bulkhead.getMetrics()
-  };
+    healthy: _breaker.getState() === 'closed',
+    circuitState: _breaker.getState(),
+    bulkheadMetrics: bulkhead.getMetrics(),
+  }
 }
 
 /**
- * Reset circuit breaker for a gateway (use with caution)
+ * Reset circuit _breaker for a gateway (use with caution)
  */
 export function resetGatewayCircuitBreaker(gateway: string): void {
-  logger.warn(`Resetting circuit breaker for gateway: ${gateway}`);
-  const breaker = getCircuitBreakerForGateway(gateway);
-  // The circuit breaker will reset naturally on success or can be recreated
-  // by removing from registry (handled in circuit-breaker.ts)
+  logger.warn(`Resetting circuit _breaker for gateway: ${gateway}`)
+  const _breaker = getCircuitBreakerForGateway(gateway)
+  // The circuit _breaker will reset naturally on success or can be recreated
+  // by removing from registry (handled in circuit-_breaker.ts)
 }

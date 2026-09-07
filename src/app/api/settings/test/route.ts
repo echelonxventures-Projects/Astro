@@ -3,7 +3,6 @@ export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { getAIProvider } from '@/lib/ai/provider'
 import { logError } from '@/lib/logger'
 
 /**
@@ -35,10 +34,7 @@ export async function POST(req: NextRequest) {
     switch (provider) {
       case 'anthropic':
         if (!anthropicApiKey) {
-          return NextResponse.json(
-            { success: false, error: 'API key required' },
-            { status: 400 }
-          )
+          return NextResponse.json({ success: false, error: 'API key required' }, { status: 400 })
         }
         const { AnthropicProvider } = await import('@/lib/ai/anthropic-provider')
         testProvider = new AnthropicProvider({
@@ -49,10 +45,7 @@ export async function POST(req: NextRequest) {
         break
       case 'gemini':
         if (!geminiApiKey) {
-          return NextResponse.json(
-            { success: false, error: 'API key required' },
-            { status: 400 }
-          )
+          return NextResponse.json({ success: false, error: 'API key required' }, { status: 400 })
         }
         const { GeminiProvider } = await import('@/lib/ai/gemini-provider')
         testProvider = new GeminiProvider({

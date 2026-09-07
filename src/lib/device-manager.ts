@@ -3,8 +3,8 @@
  * Track and manage user devices and active sessions
  */
 
-import { prisma } from '@/lib/db'
 import { UAParser } from 'ua-parser-js'
+import { prisma } from '@/lib/db'
 
 export interface DeviceInfo {
   deviceName: string
@@ -23,7 +23,7 @@ export function parseUserAgent(userAgent: string): DeviceInfo {
   const parser = new UAParser(userAgent)
   const result = parser.getResult()
 
-  const deviceType = result.device.type as 'desktop' | 'mobile' | 'tablet' || 'unknown'
+  const deviceType = (result.device.type as 'desktop' | 'mobile' | 'tablet') || 'unknown'
 
   // Build device name
   let deviceName = 'Unknown Device'
@@ -86,18 +86,20 @@ export async function registerDevice(
 /**
  * Get all active devices for a user
  */
-export async function getUserDevices(userId: string): Promise<{
-  id: string
-  deviceName: string | null
-  deviceType: string | null
-  browser: string | null
-  os: string | null
-  ipAddress: string | null
-  location: string | null
-  lastActiveAt: Date
-  isActive: boolean
-  createdAt: Date
-}[]> {
+export async function getUserDevices(userId: string): Promise<
+  {
+    id: string
+    deviceName: string | null
+    deviceType: string | null
+    browser: string | null
+    os: string | null
+    ipAddress: string | null
+    location: string | null
+    lastActiveAt: Date
+    isActive: boolean
+    createdAt: Date
+  }[]
+> {
   return prisma.userDevice.findMany({
     where: { userId, isActive: true },
     orderBy: { lastActiveAt: 'desc' },

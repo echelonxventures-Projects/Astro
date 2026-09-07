@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { Upload, Sparkles, Loader2, Image as ImageIcon, Check, AlertCircle } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { Upload, Sparkles, Loader2, Image as ImageIcon, Check, AlertCircle } from 'lucide-react'
+import { useState, useRef } from 'react'
 
 export default function FaceReadingPage() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
@@ -35,7 +35,7 @@ export default function FaceReadingPage() {
       }
       setError(null)
       const reader = new FileReader()
-      reader.onload = (e) => {
+      reader.onload = e => {
         setSelectedImage(e.target?.result as string)
         setReading(null)
       }
@@ -49,7 +49,7 @@ export default function FaceReadingPage() {
     if (file && file.type.startsWith('image/')) {
       setError(null)
       const reader = new FileReader()
-      reader.onload = (e) => {
+      reader.onload = e => {
         setSelectedImage(e.target?.result as string)
         setReading(null)
       }
@@ -111,7 +111,7 @@ export default function FaceReadingPage() {
           >
             <div
               onClick={() => fileInputRef.current?.click()}
-              onDragOver={(e) => e.preventDefault()}
+              onDragOver={e => e.preventDefault()}
               onDrop={handleDrop}
               className="border-2 border-dashed border-slate-700 hover:border-violet-500/50 rounded-xl p-12 text-center cursor-pointer transition-colors"
             >
@@ -120,15 +120,9 @@ export default function FaceReadingPage() {
                   <Upload className="w-10 h-10 text-violet-400" />
                 </div>
                 <div className="space-y-2">
-                  <p className="text-lg font-medium text-slate-200">
-                    Upload Your Photo
-                  </p>
-                  <p className="text-slate-400">
-                    Drag and drop or click to browse
-                  </p>
-                  <p className="text-sm text-slate-500">
-                    PNG, JPG up to 10MB
-                  </p>
+                  <p className="text-lg font-medium text-slate-200">Upload Your Photo</p>
+                  <p className="text-slate-400">Drag and drop or click to browse</p>
+                  <p className="text-sm text-slate-500">PNG, JPG up to 10MB</p>
                 </div>
               </div>
             </div>
@@ -156,9 +150,7 @@ export default function FaceReadingPage() {
                   <Check className="w-4 h-4" />
                   <span className="font-medium text-sm">Good Lighting</span>
                 </div>
-                <p className="text-xs text-slate-400">
-                  Ensure even lighting with no harsh shadows
-                </p>
+                <p className="text-xs text-slate-400">Ensure even lighting with no harsh shadows</p>
               </div>
               <div className="bg-slate-800/50 rounded-lg p-4 space-y-2">
                 <div className="flex items-center gap-2 text-violet-400">
@@ -181,11 +173,7 @@ export default function FaceReadingPage() {
               {/* Image Preview */}
               <div className="md:w-1/2">
                 <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-800">
-                  <img
-                    src={selectedImage}
-                    alt="Face"
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={selectedImage} alt="Face" className="w-full h-full object-cover" />
                 </div>
                 <button
                   onClick={() => {
@@ -219,9 +207,7 @@ export default function FaceReadingPage() {
                   <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
                     <Loader2 className="w-12 h-12 text-violet-400 animate-spin" />
                     <p className="text-slate-300">Analyzing your facial features...</p>
-                    <p className="text-sm text-slate-500">
-                      This may take up to 30 seconds
-                    </p>
+                    <p className="text-sm text-slate-500">This may take up to 30 seconds</p>
                   </div>
                 )}
 
@@ -247,39 +233,55 @@ export default function FaceReadingPage() {
 
                     <div className="bg-slate-800/50 rounded-lg p-4 space-y-3">
                       <div>
-                        <span className="text-xs text-slate-500 uppercase tracking-wider">Face Shape</span>
+                        <span className="text-xs text-slate-500 uppercase tracking-wider">
+                          Face Shape
+                        </span>
                         <p className="text-slate-200 font-medium">{reading.faceShape}</p>
                       </div>
                       <div>
-                        <span className="text-xs text-slate-500 uppercase tracking-wider">Forehead</span>
+                        <span className="text-xs text-slate-500 uppercase tracking-wider">
+                          Forehead
+                        </span>
                         <p className="text-slate-300 text-sm">{reading.forehead}</p>
                       </div>
                       <div>
-                        <span className="text-xs text-slate-500 uppercase tracking-wider">Eyes</span>
+                        <span className="text-xs text-slate-500 uppercase tracking-wider">
+                          Eyes
+                        </span>
                         <p className="text-slate-300 text-sm">{reading.eyes}</p>
                       </div>
                       <div>
-                        <span className="text-xs text-slate-500 uppercase tracking-wider">Nose</span>
+                        <span className="text-xs text-slate-500 uppercase tracking-wider">
+                          Nose
+                        </span>
                         <p className="text-slate-300 text-sm">{reading.nose}</p>
                       </div>
                       <div>
-                        <span className="text-xs text-slate-500 uppercase tracking-wider">Lips</span>
+                        <span className="text-xs text-slate-500 uppercase tracking-wider">
+                          Lips
+                        </span>
                         <p className="text-slate-300 text-sm">{reading.lips}</p>
                       </div>
                       <div>
-                        <span className="text-xs text-slate-500 uppercase tracking-wider">Chin</span>
+                        <span className="text-xs text-slate-500 uppercase tracking-wider">
+                          Chin
+                        </span>
                         <p className="text-slate-300 text-sm">{reading.chin}</p>
                       </div>
                     </div>
 
                     <div className="bg-gradient-to-br from-violet-500/10 to-purple-500/10 border border-violet-500/20 rounded-lg p-4">
-                      <span className="text-xs text-violet-500 uppercase tracking-wider">Overall Reading</span>
+                      <span className="text-xs text-violet-500 uppercase tracking-wider">
+                        Overall Reading
+                      </span>
                       <p className="text-slate-200 mt-2">{reading.overallReading}</p>
                     </div>
 
                     {reading.personalityTraits.length > 0 && (
                       <div className="bg-slate-800/50 rounded-lg p-4">
-                        <span className="text-xs text-slate-500 uppercase tracking-wider mb-3 block">Personality Traits</span>
+                        <span className="text-xs text-slate-500 uppercase tracking-wider mb-3 block">
+                          Personality Traits
+                        </span>
                         <div className="flex flex-wrap gap-2">
                           {reading.personalityTraits.map((trait, i) => (
                             <span
@@ -295,7 +297,9 @@ export default function FaceReadingPage() {
 
                     {reading.strengths.length > 0 && (
                       <div className="bg-slate-800/50 rounded-lg p-4">
-                        <span className="text-xs text-slate-500 uppercase tracking-wider mb-3 block">Natural Strengths</span>
+                        <span className="text-xs text-slate-500 uppercase tracking-wider mb-3 block">
+                          Natural Strengths
+                        </span>
                         <ul className="space-y-2">
                           {reading.strengths.map((strength, i) => (
                             <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
@@ -309,7 +313,9 @@ export default function FaceReadingPage() {
 
                     {reading.recommendations.length > 0 && (
                       <div className="bg-slate-800/50 rounded-lg p-4">
-                        <span className="text-xs text-slate-500 uppercase tracking-wider mb-3 block">Recommendations</span>
+                        <span className="text-xs text-slate-500 uppercase tracking-wider mb-3 block">
+                          Recommendations
+                        </span>
                         <ul className="space-y-2">
                           {reading.recommendations.map((rec, i) => (
                             <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
@@ -339,21 +345,46 @@ export default function FaceReadingPage() {
             <div>
               <h3 className="text-violet-400 font-medium mb-2">Face Shapes</h3>
               <ul className="space-y-1">
-                <li>• <strong className="text-slate-300">Round:</strong> Friendly, adaptable, social</li>
-                <li>• <strong className="text-slate-300">Square:</strong> Determined, practical, strong-willed</li>
-                <li>• <strong className="text-slate-300">Oval:</strong> Balanced, diplomatic, creative</li>
-                <li>• <strong className="text-slate-300">Long:</strong> Analytical, thoughtful, independent</li>
-                <li>• <strong className="text-slate-300">Heart:</strong> Intuitive, artistic, compassionate</li>
+                <li>
+                  • <strong className="text-slate-300">Round:</strong> Friendly, adaptable, social
+                </li>
+                <li>
+                  • <strong className="text-slate-300">Square:</strong> Determined, practical,
+                  strong-willed
+                </li>
+                <li>
+                  • <strong className="text-slate-300">Oval:</strong> Balanced, diplomatic, creative
+                </li>
+                <li>
+                  • <strong className="text-slate-300">Long:</strong> Analytical, thoughtful,
+                  independent
+                </li>
+                <li>
+                  • <strong className="text-slate-300">Heart:</strong> Intuitive, artistic,
+                  compassionate
+                </li>
               </ul>
             </div>
             <div>
               <h3 className="text-violet-400 font-medium mb-2">Facial Features</h3>
               <ul className="space-y-1">
-                <li>• <strong className="text-slate-300">Forehead:</strong> Early life, intellect, vision</li>
-                <li>• <strong className="text-slate-300">Eyes:</strong> Emotional nature, perception</li>
-                <li>• <strong className="text-slate-300">Nose:</strong> Career, wealth, middle age</li>
-                <li>• <strong className="text-slate-300">Mouth:</strong> Communication, relationships</li>
-                <li>• <strong className="text-slate-300">Chin:</strong> Later life, stability, willpower</li>
+                <li>
+                  • <strong className="text-slate-300">Forehead:</strong> Early life, intellect,
+                  vision
+                </li>
+                <li>
+                  • <strong className="text-slate-300">Eyes:</strong> Emotional nature, perception
+                </li>
+                <li>
+                  • <strong className="text-slate-300">Nose:</strong> Career, wealth, middle age
+                </li>
+                <li>
+                  • <strong className="text-slate-300">Mouth:</strong> Communication, relationships
+                </li>
+                <li>
+                  • <strong className="text-slate-300">Chin:</strong> Later life, stability,
+                  willpower
+                </li>
               </ul>
             </div>
           </div>

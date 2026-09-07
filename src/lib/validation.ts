@@ -263,7 +263,7 @@ export const PaymentInputSchema = z.object({
   planId: z.string().min(1, 'Plan ID is required'),
   gateway: z.enum(PaymentGateways),
   couponCode: z.string().max(50).optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 })
 
 export type PaymentInput = z.infer<typeof PaymentInputSchema>
@@ -415,7 +415,7 @@ export const StripeWebhookSchema = z.object({
   id: z.string(),
   type: z.string(),
   data: z.object({
-    object: z.record(z.unknown()),
+    object: z.record(z.string(), z.unknown()),
   }),
   created: z.number(),
 })
@@ -427,7 +427,7 @@ export type StripeWebhook = z.infer<typeof StripeWebhookSchema>
  */
 export const RazorpayWebhookSchema = z.object({
   event: z.string(),
-  payload: z.record(z.unknown()),
+  payload: z.record(z.string(), z.unknown()),
   created_at: z.number(),
 })
 
@@ -453,17 +453,15 @@ export function validateInput<T>(schema: z.ZodSchema<T>, data: unknown, context?
   const result = schema.safeParse(data)
 
   if (!result.success) {
-    const issues = result.error.issues || []
+    const issues = (result.error.issues || []) as Array<{ path: PropertyKey[]; message: string }>
     const errorMessage = issues
-      .map(
-        (e: { path: (string | number)[]; message: string }) => `${e.path.join('.')}: ${e.message}`
-      )
+      .map((e: { path: PropertyKey[]; message: string }) => `${e.path.join('.')}: ${e.message}`)
       .join(', ')
 
     throw new ValidationError(
       context ? `${context}: ${errorMessage}` : errorMessage,
-      issues.map((e: { path: (string | number)[]; message: string }) => ({
-        path: e.path,
+      issues.map((e: { path: PropertyKey[]; message: string }) => ({
+        path: e.path as (string | number)[],
         message: e.message,
       }))
     )
@@ -476,7 +474,7 @@ export function validateInput<T>(schema: z.ZodSchema<T>, data: unknown, context?
  * Validate input partially (for PATCH requests)
  */
 export function validatePartial<T>(
-  schema: z.ZodSchema<T>,
+  schema: z.ZodObject<z.ZodRawShape>,
   data: unknown,
   context?: string
 ): Partial<T> {
@@ -484,17 +482,15 @@ export function validatePartial<T>(
   const result = partialSchema.safeParse(data)
 
   if (!result.success) {
-    const issues = result.error.issues || []
+    const issues = (result.error.issues || []) as Array<{ path: PropertyKey[]; message: string }>
     const errorMessage = issues
-      .map(
-        (e: { path: (string | number)[]; message: string }) => `${e.path.join('.')}: ${e.message}`
-      )
+      .map((e: { path: PropertyKey[]; message: string }) => `${e.path.join('.')}: ${e.message}`)
       .join(', ')
 
     throw new ValidationError(
       context ? `${context}: ${errorMessage}` : errorMessage,
-      issues.map((e: { path: (string | number)[]; message: string }) => ({
-        path: e.path,
+      issues.map((e: { path: PropertyKey[]; message: string }) => ({
+        path: e.path as (string | number)[],
         message: e.message,
       }))
     )

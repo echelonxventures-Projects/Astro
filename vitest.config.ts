@@ -1,6 +1,6 @@
-import { defineConfig } from 'vitest/config'
-import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
+import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   plugins: [react()],
@@ -19,7 +19,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      exclude: ['node_modules/', 'src/test/', '.next/', 'prisma/', 'e2e/']
+      exclude: ['node_modules/', 'src/test/', '.next/', 'prisma/', 'e2e/'],
     },
     exclude: [
       '**/node_modules/**',
@@ -27,8 +27,8 @@ export default defineConfig({
       '**/dist/**',
       '**/e2e/**',
       '**/playwright.config.ts',
-      'src/app/api/__tests__/**'  // API tests need more complex mocking
+      'src/app/api/__tests__/**', // API tests need more complex mocking
     ],
-    include: ['src/lib/**/*.{test,spec}.{ts,tsx}']
-  }
+    include: ['src/lib/**/*.{test,spec}.{ts,tsx}'],
+  },
 })

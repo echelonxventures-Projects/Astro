@@ -1,8 +1,19 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import {
+  Sparkles,
+  Loader2,
+  Save,
+  Settings,
+  RotateCcw,
+  CheckCircle,
+  XCircle,
+  Star,
+  Zap,
+  Crown,
+} from 'lucide-react'
 import Link from 'next/link'
-import { Sparkles, Loader2, Save, Settings, RotateCcw, CheckCircle, XCircle, Star, Zap, Crown } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { logger } from '@/lib/logger'
 
 interface ProviderConfig {
@@ -27,12 +38,24 @@ export default function SettingsClient() {
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
   const [testingConnection, setTestingConnection] = useState(false)
-  const [connectionStatus, setConnectionStatus] = useState<'success' | 'error' | null>(null)
+  const [connectionStatus, setConnectionStatus] = useState<'success' | '_error' | null>(null)
   const [activeTab, setActiveTab] = useState<'global' | 'plans'>('plans')
   const [planConfigs, setPlanConfigs] = useState<Record<string, AIPlanConfig>>({
     free: { plan: 'free', provider: 'ollama', model: 'llama3.2', maxTokens: 512, enabled: true },
-    monthly: { plan: 'monthly', provider: 'anthropic', model: 'claude-sonnet-4-20250514', maxTokens: 2048, enabled: true },
-    yearly: { plan: 'yearly', provider: 'anthropic', model: 'claude-opus-4-20250514', maxTokens: 4096, enabled: true },
+    monthly: {
+      plan: 'monthly',
+      provider: 'anthropic',
+      model: 'claude-sonnet-4-20250514',
+      maxTokens: 2048,
+      enabled: true,
+    },
+    yearly: {
+      plan: 'yearly',
+      provider: 'anthropic',
+      model: 'claude-opus-4-20250514',
+      maxTokens: 4096,
+      enabled: true,
+    },
   })
   const [globalConfig, setGlobalConfig] = useState<ProviderConfig>({
     provider: 'ollama',
@@ -58,11 +81,13 @@ export default function SettingsClient() {
       if (planRes.ok) {
         const plans = await planRes.json()
         const planMap: Record<string, AIPlanConfig> = {}
-        plans.forEach((p: AIPlanConfig) => { planMap[p.plan] = p })
+        plans.forEach((p: AIPlanConfig) => {
+          planMap[p.plan] = p
+        })
         setPlanConfigs(planMap)
       }
-    } catch (error) {
-      logger.warn({ error }, 'Failed to load settings')
+    } catch (_error) {
+      logger.warn({ _error }, 'Failed to load settings')
     }
   }
 
@@ -91,18 +116,21 @@ export default function SettingsClient() {
           setTimeout(() => setSaved(false), 3000)
         }
       }
-    } catch (error) {
-      logger.warn({ error }, 'Failed to save settings')
+    } catch (_error) {
+      logger.warn({ _error }, 'Failed to save settings')
       alert('Failed to save settings')
     } finally {
       setLoading(false)
     }
   }
 
-  const updatePlanConfig = (plan: 'free' | 'monthly' | 'yearly', updates: Partial<AIPlanConfig>) => {
+  const updatePlanConfig = (
+    plan: 'free' | 'monthly' | 'yearly',
+    updates: Partial<AIPlanConfig>
+  ) => {
     setPlanConfigs(prev => ({
       ...prev,
-      [plan]: { ...prev[plan], ...updates }
+      [plan]: { ...prev[plan], ...updates },
     }))
   }
 
@@ -119,10 +147,10 @@ export default function SettingsClient() {
       if (res.ok && data.success) {
         setConnectionStatus('success')
       } else {
-        setConnectionStatus('error')
+        setConnectionStatus('_error')
       }
-    } catch (error) {
-      setConnectionStatus('error')
+    } catch (_error) {
+      setConnectionStatus('_error')
     } finally {
       setTestingConnection(false)
     }
@@ -139,9 +167,27 @@ export default function SettingsClient() {
       })
     } else {
       setPlanConfigs({
-        free: { plan: 'free', provider: 'ollama', model: 'llama3.2', maxTokens: 512, enabled: true },
-        monthly: { plan: 'monthly', provider: 'anthropic', model: 'claude-sonnet-4-20250514', maxTokens: 2048, enabled: true },
-        yearly: { plan: 'yearly', provider: 'anthropic', model: 'claude-opus-4-20250514', maxTokens: 4096, enabled: true },
+        free: {
+          plan: 'free',
+          provider: 'ollama',
+          model: 'llama3.2',
+          maxTokens: 512,
+          enabled: true,
+        },
+        monthly: {
+          plan: 'monthly',
+          provider: 'anthropic',
+          model: 'claude-sonnet-4-20250514',
+          maxTokens: 2048,
+          enabled: true,
+        },
+        yearly: {
+          plan: 'yearly',
+          provider: 'anthropic',
+          model: 'claude-opus-4-20250514',
+          maxTokens: 4096,
+          enabled: true,
+        },
       })
     }
   }
@@ -171,7 +217,9 @@ export default function SettingsClient() {
             <button
               onClick={() => setActiveTab('plans')}
               className={`px-4 py-2 rounded-xl font-semibold transition ${
-                activeTab === 'plans' ? 'bg-purple-600 text-white' : 'bg-white/10 text-purple-200 hover:bg-white/20'
+                activeTab === 'plans'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-white/10 text-purple-200 hover:bg-white/20'
               }`}
             >
               <Star className="w-4 h-4 inline mr-2" />
@@ -180,7 +228,9 @@ export default function SettingsClient() {
             <button
               onClick={() => setActiveTab('global')}
               className={`px-4 py-2 rounded-xl font-semibold transition ${
-                activeTab === 'global' ? 'bg-purple-600 text-white' : 'bg-white/10 text-purple-200 hover:bg-white/20'
+                activeTab === 'global'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-white/10 text-purple-200 hover:bg-white/20'
               }`}
             >
               <Settings className="w-4 h-4 inline mr-2" />
@@ -191,28 +241,29 @@ export default function SettingsClient() {
           {activeTab === 'plans' && (
             <form onSubmit={handleSave} className="space-y-6">
               <div className="text-purple-200 mb-4">
-                Configure different AI models for each subscription tier. Premium users get better models.
+                Configure different AI models for each subscription tier. Premium users get better
+                models.
               </div>
 
               <PlanConfigCard
                 title="Free Plan"
                 icon={Zap}
                 config={planConfigs.free}
-                onChange={(updates) => updatePlanConfig('free', updates)}
+                onChange={updates => updatePlanConfig('free', updates)}
               />
 
               <PlanConfigCard
                 title="Premium Monthly"
                 icon={Star}
                 config={planConfigs.monthly}
-                onChange={(updates) => updatePlanConfig('monthly', updates)}
+                onChange={updates => updatePlanConfig('monthly', updates)}
               />
 
               <PlanConfigCard
                 title="Premium Yearly (VIP)"
                 icon={Crown}
                 config={planConfigs.yearly}
-                onChange={(updates) => updatePlanConfig('yearly', updates)}
+                onChange={updates => updatePlanConfig('yearly', updates)}
               />
 
               <div className="flex items-center gap-4">
@@ -222,9 +273,13 @@ export default function SettingsClient() {
                   className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-700 text-white px-6 py-3 rounded-xl font-semibold transition"
                 >
                   {loading ? (
-                    <><Loader2 className="w-5 h-5 animate-spin" /> Saving...</>
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" /> Saving...
+                    </>
                   ) : (
-                    <><Save className="w-5 h-5" /> Save Settings</>
+                    <>
+                      <Save className="w-5 h-5" /> Save Settings
+                    </>
                   )}
                 </button>
                 {saved && <span className="text-green-400">Settings saved successfully!</span>}
@@ -241,10 +296,18 @@ export default function SettingsClient() {
               <div className="glass rounded-2xl p-6">
                 <h2 className="text-xl font-semibold mb-4">AI Provider</h2>
                 <div>
-                  <label className="block text-sm font-medium text-purple-200 mb-2">Select Provider</label>
+                  <label className="block text-sm font-medium text-purple-200 mb-2">
+                    Select Provider
+                  </label>
                   <select
                     value={globalConfig.provider}
-                    onChange={(e) => setGlobalConfig({ ...globalConfig, provider: e.target.value, model: getDefaultModel(e.target.value) })}
+                    onChange={e =>
+                      setGlobalConfig({
+                        ...globalConfig,
+                        provider: e.target.value,
+                        model: getDefaultModel(e.target.value),
+                      })
+                    }
                     className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                   >
                     <option value="ollama">Ollama (Free, Local)</option>
@@ -258,22 +321,28 @@ export default function SettingsClient() {
                 <h2 className="text-xl font-semibold mb-4">Model Configuration</h2>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-purple-200 mb-2">Model Name</label>
+                    <label className="block text-sm font-medium text-purple-200 mb-2">
+                      Model Name
+                    </label>
                     <input
                       type="text"
                       value={globalConfig.model}
-                      onChange={(e) => setGlobalConfig({ ...globalConfig, model: e.target.value })}
+                      onChange={e => setGlobalConfig({ ...globalConfig, model: e.target.value })}
                       className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                       placeholder={getModelPlaceholder(globalConfig.provider)}
                     />
                   </div>
                   {globalConfig.provider === 'ollama' && (
                     <div>
-                      <label className="block text-sm font-medium text-purple-200 mb-2">Ollama Server URL</label>
+                      <label className="block text-sm font-medium text-purple-200 mb-2">
+                        Ollama Server URL
+                      </label>
                       <input
                         type="url"
                         value={globalConfig.ollamaUrl}
-                        onChange={(e) => setGlobalConfig({ ...globalConfig, ollamaUrl: e.target.value })}
+                        onChange={e =>
+                          setGlobalConfig({ ...globalConfig, ollamaUrl: e.target.value })
+                        }
                         className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                         placeholder="http://localhost:5566"
                       />
@@ -281,11 +350,15 @@ export default function SettingsClient() {
                   )}
                   {globalConfig.provider === 'anthropic' && (
                     <div>
-                      <label className="block text-sm font-medium text-purple-200 mb-2">Anthropic API Key</label>
+                      <label className="block text-sm font-medium text-purple-200 mb-2">
+                        Anthropic API Key
+                      </label>
                       <input
                         type="password"
                         value={globalConfig.anthropicApiKey}
-                        onChange={(e) => setGlobalConfig({ ...globalConfig, anthropicApiKey: e.target.value })}
+                        onChange={e =>
+                          setGlobalConfig({ ...globalConfig, anthropicApiKey: e.target.value })
+                        }
                         className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                         placeholder="sk-ant-..."
                       />
@@ -293,11 +366,15 @@ export default function SettingsClient() {
                   )}
                   {globalConfig.provider === 'gemini' && (
                     <div>
-                      <label className="block text-sm font-medium text-purple-200 mb-2">Google Gemini API Key</label>
+                      <label className="block text-sm font-medium text-purple-200 mb-2">
+                        Google Gemini API Key
+                      </label>
                       <input
                         type="password"
                         value={globalConfig.geminiApiKey}
-                        onChange={(e) => setGlobalConfig({ ...globalConfig, geminiApiKey: e.target.value })}
+                        onChange={e =>
+                          setGlobalConfig({ ...globalConfig, geminiApiKey: e.target.value })
+                        }
                         className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                         placeholder="AIza..."
                       />
@@ -316,7 +393,9 @@ export default function SettingsClient() {
                     className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-700 text-white px-6 py-3 rounded-xl font-semibold transition"
                   >
                     {testingConnection ? (
-                      <><Loader2 className="w-5 h-5 animate-spin" /> Testing...</>
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" /> Testing...
+                      </>
                     ) : (
                       'Test Connection'
                     )}
@@ -326,7 +405,7 @@ export default function SettingsClient() {
                       <CheckCircle className="w-5 h-5" /> Connection successful!
                     </span>
                   )}
-                  {connectionStatus === 'error' && (
+                  {connectionStatus === '_error' && (
                     <span className="flex items-center gap-2 text-red-400">
                       <XCircle className="w-5 h-5" /> Connection failed
                     </span>
@@ -341,9 +420,13 @@ export default function SettingsClient() {
                   className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-700 text-white px-6 py-3 rounded-xl font-semibold transition"
                 >
                   {loading ? (
-                    <><Loader2 className="w-5 h-5 animate-spin" /> Saving...</>
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" /> Saving...
+                    </>
                   ) : (
-                    <><Save className="w-5 h-5" /> Save Settings</>
+                    <>
+                      <Save className="w-5 h-5" /> Save Settings
+                    </>
                   )}
                 </button>
                 <button
@@ -385,11 +468,15 @@ function PlanConfigCard({ title, icon: Icon, config, onChange }: PlanConfigCardP
           <input
             type="checkbox"
             checked={config.enabled}
-            onChange={(e) => onChange({ enabled: e.target.checked })}
+            onChange={e => onChange({ enabled: e.target.checked })}
             className="sr-only"
           />
-          <div className={`w-12 h-6 rounded-full transition ${config.enabled ? 'bg-purple-600' : 'bg-white/10'}`}>
-            <div className={`w-4 h-4 rounded-full bg-white transition ${config.enabled ? 'translate-x-7' : 'translate-x-1'} transform mt-1`} />
+          <div
+            className={`w-12 h-6 rounded-full transition ${config.enabled ? 'bg-purple-600' : 'bg-white/10'}`}
+          >
+            <div
+              className={`w-4 h-4 rounded-full bg-white transition ${config.enabled ? 'translate-x-7' : 'translate-x-1'} transform mt-1`}
+            />
           </div>
           <span className="text-sm text-purple-200">{config.enabled ? 'Enabled' : 'Disabled'}</span>
         </label>
@@ -400,7 +487,9 @@ function PlanConfigCard({ title, icon: Icon, config, onChange }: PlanConfigCardP
           <label className="block text-sm font-medium text-purple-200 mb-2">AI Provider</label>
           <select
             value={config.provider}
-            onChange={(e) => onChange({ provider: e.target.value, model: getDefaultModel(e.target.value) })}
+            onChange={e =>
+              onChange({ provider: e.target.value, model: getDefaultModel(e.target.value) })
+            }
             className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
           >
             <option value="ollama">Ollama (Free)</option>
@@ -414,18 +503,20 @@ function PlanConfigCard({ title, icon: Icon, config, onChange }: PlanConfigCardP
           <input
             type="text"
             value={config.model}
-            onChange={(e) => onChange({ model: e.target.value })}
+            onChange={e => onChange({ model: e.target.value })}
             className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
           />
         </div>
 
         {config.provider === 'ollama' && (
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-purple-200 mb-2">Ollama Server URL</label>
+            <label className="block text-sm font-medium text-purple-200 mb-2">
+              Ollama Server URL
+            </label>
             <input
               type="url"
               value={config.ollamaUrl || 'http://localhost:5566'}
-              onChange={(e) => onChange({ ollamaUrl: e.target.value })}
+              onChange={e => onChange({ ollamaUrl: e.target.value })}
               className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
             />
           </div>
@@ -433,11 +524,13 @@ function PlanConfigCard({ title, icon: Icon, config, onChange }: PlanConfigCardP
 
         {config.provider === 'anthropic' && (
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-purple-200 mb-2">Anthropic API Key</label>
+            <label className="block text-sm font-medium text-purple-200 mb-2">
+              Anthropic API Key
+            </label>
             <input
               type="password"
               value={config.apiKey || ''}
-              onChange={(e) => onChange({ apiKey: e.target.value })}
+              onChange={e => onChange({ apiKey: e.target.value })}
               className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
             />
           </div>
@@ -445,11 +538,13 @@ function PlanConfigCard({ title, icon: Icon, config, onChange }: PlanConfigCardP
 
         {config.provider === 'gemini' && (
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-purple-200 mb-2">Google Gemini API Key</label>
+            <label className="block text-sm font-medium text-purple-200 mb-2">
+              Google Gemini API Key
+            </label>
             <input
               type="password"
               value={config.apiKey || ''}
-              onChange={(e) => onChange({ apiKey: e.target.value })}
+              onChange={e => onChange({ apiKey: e.target.value })}
               className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
             />
           </div>
@@ -460,10 +555,12 @@ function PlanConfigCard({ title, icon: Icon, config, onChange }: PlanConfigCardP
           <input
             type="number"
             value={config.maxTokens}
-            onChange={(e) => onChange({ maxTokens: parseInt(e.target.value) })}
+            onChange={e => onChange({ maxTokens: parseInt(e.target.value) })}
             className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
           />
-          <p className="text-xs text-purple-400 mt-1">Higher = longer readings (more tokens = higher cost)</p>
+          <p className="text-xs text-purple-400 mt-1">
+            Higher = longer readings (more tokens = higher cost)
+          </p>
         </div>
       </div>
     </div>
@@ -472,16 +569,22 @@ function PlanConfigCard({ title, icon: Icon, config, onChange }: PlanConfigCardP
 
 function getDefaultModel(provider: string): string {
   switch (provider) {
-    case 'anthropic': return 'claude-sonnet-4-20250514'
-    case 'gemini': return 'gemini-2.0-flash'
-    default: return 'llama3.2'
+    case 'anthropic':
+      return 'claude-sonnet-4-20250514'
+    case 'gemini':
+      return 'gemini-2.0-flash'
+    default:
+      return 'llama3.2'
   }
 }
 
 function getModelPlaceholder(provider: string): string {
   switch (provider) {
-    case 'anthropic': return 'claude-sonnet-4-20250514'
-    case 'gemini': return 'gemini-2.0-flash'
-    default: return 'llama3.2'
+    case 'anthropic':
+      return 'claude-sonnet-4-20250514'
+    case 'gemini':
+      return 'gemini-2.0-flash'
+    default:
+      return 'llama3.2'
   }
 }

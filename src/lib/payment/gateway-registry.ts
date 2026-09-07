@@ -3,11 +3,11 @@
  * Factory and registry for managing payment gateways
  */
 
-import { IPaymentGateway, PaymentGatewayConfig, GatewayFactory } from './gateway-interface'
+import { IPaymentGateway, GatewayFactory } from './gateway-interface'
 import { prisma } from '@/lib/db'
 
 // Gateway implementations
-let gatewayFactories: Map<string, GatewayFactory> = new Map()
+const gatewayFactories: Map<string, GatewayFactory> = new Map()
 
 /**
  * Register a payment gateway implementation
@@ -108,7 +108,10 @@ export async function getEnabledGateways(): Promise<IPaymentGateway[]> {
 /**
  * Get available gateways for a specific currency and country
  */
-export async function getAvailableGateways(currency: string, country?: string): Promise<IPaymentGateway[]> {
+export async function getAvailableGateways(
+  currency: string,
+  country?: string
+): Promise<IPaymentGateway[]> {
   const gateways = await prisma.paymentGateway.findMany({
     where: { isEnabled: true },
     orderBy: { sortOrder: 'asc' },
@@ -156,7 +159,9 @@ export async function getAvailableGateways(currency: string, country?: string): 
 /**
  * Get gateway by transaction ID
  */
-export async function getGatewayByTransaction(gatewayTransactionId: string): Promise<IPaymentGateway | null> {
+export async function getGatewayByTransaction(
+  gatewayTransactionId: string
+): Promise<IPaymentGateway | null> {
   const transaction = await prisma.paymentTransaction.findFirst({
     where: { gatewayTransactionId },
     include: { gateway: true },
@@ -186,7 +191,7 @@ export async function getPaymentMethods(gatewayKey: string, currency?: string, c
     return []
   }
 
-  return gateway.paymentMethods.filter((method) => {
+  return gateway.paymentMethods.filter(method => {
     if (currency && method.supportedCurrencies) {
       const supportedCurrencies = JSON.parse(method.supportedCurrencies)
       if (!supportedCurrencies.includes(currency.toUpperCase())) {

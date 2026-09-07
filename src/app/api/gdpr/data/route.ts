@@ -16,7 +16,7 @@ import { logError } from '@/lib/logger'
  * GET /api/gdpr/data
  * Export user's personal data (GDPR Right to Access)
  */
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   const session = await auth()
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -35,10 +35,7 @@ export async function GET(req: NextRequest) {
     })
   } catch (error) {
     logError('Error exporting user data', error, { userId: session.user.id })
-    return NextResponse.json(
-      { error: 'Failed to export data' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to export data' }, { status: 500 })
   }
 }
 
@@ -46,14 +43,14 @@ export async function GET(req: NextRequest) {
  * POST /api/gdpr/data
  * Record consent or request data deletion
  */
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
   const session = await auth()
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
-    const body = await req.json()
+    const body = await _req.json()
     const { action, consents } = body
 
     if (action === 'recordConsent' && consents) {
@@ -64,9 +61,12 @@ export async function POST(req: NextRequest) {
     if (action === 'deleteAccount') {
       // Require explicit confirmation
       if (!body.confirmDelete || body.confirmDelete !== 'DELETE_MY_ACCOUNT') {
-        return NextResponse.json({
-          error: 'Please confirm deletion by sending confirmDelete: "DELETE_MY_ACCOUNT"',
-        }, { status: 400 })
+        return NextResponse.json(
+          {
+            error: 'Please confirm deletion by sending confirmDelete: "DELETE_MY_ACCOUNT"',
+          },
+          { status: 400 }
+        )
       }
 
       await deleteUserData(session.user.id)
@@ -84,10 +84,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
   } catch (error) {
     logError('Error processing GDPR request', error, { userId: session.user.id })
-    return NextResponse.json(
-      { error: 'Failed to process request' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to process request' }, { status: 500 })
   }
 }
 
@@ -95,7 +92,7 @@ export async function POST(req: NextRequest) {
  * DELETE /api/gdpr/data
  * Delete user account and all data (GDPR Right to Erasure)
  */
-export async function DELETE(req: NextRequest) {
+export async function DELETE(_req: NextRequest) {
   const session = await auth()
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -103,12 +100,15 @@ export async function DELETE(req: NextRequest) {
 
   try {
     // Check for confirmation header
-    const confirmDelete = req.headers.get('X-Confirm-Delete')
+    const confirmDelete = _req.headers.get('X-Confirm-Delete')
     if (confirmDelete !== 'CONFIRM_ERASE') {
-      return NextResponse.json({
-        error: 'Deletion requires X-Confirm-Delete: CONFIRM_ERASE header',
-        warning: 'This action is irreversible and will permanently delete all your data',
-      }, { status: 400 })
+      return NextResponse.json(
+        {
+          error: 'Deletion requires X-Confirm-Delete: CONFIRM_ERASE header',
+          warning: 'This action is irreversible and will permanently delete all your data',
+        },
+        { status: 400 }
+      )
     }
 
     await deleteUserData(session.user.id)
@@ -119,9 +119,6 @@ export async function DELETE(req: NextRequest) {
     })
   } catch (error) {
     logError('Error deleting user data', error, { userId: session.user.id })
-    return NextResponse.json(
-      { error: 'Failed to delete data' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to delete data' }, { status: 500 })
   }
 }

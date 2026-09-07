@@ -1,5 +1,7 @@
 'use client'
 
+import { AlertCircle, RefreshCw, ArrowLeft, Shield } from 'lucide-react'
+import Link from 'next/link'
 import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,8 +12,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { AlertCircle, RefreshCw, ArrowLeft, Shield } from 'lucide-react'
-import Link from 'next/link'
 import { logError, getUserErrorMessage, reportError, AuthError } from '@/lib/error-handling'
 
 interface AuthErrorProps {
@@ -41,10 +41,7 @@ export default function AuthErrorBoundary({ error, reset }: AuthErrorProps) {
   }
 
   const handleReportError = async () => {
-    const { success, reportId } = await reportError(
-      error,
-      'User reported from auth error boundary'
-    )
+    const { success, reportId } = await reportError(error, 'User reported from auth error boundary')
     if (success && reportId) {
       alert(`Error reported successfully. Report ID: ${reportId}`)
     }
@@ -57,9 +54,7 @@ export default function AuthErrorBoundary({ error, reset }: AuthErrorProps) {
           <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#5B21B6] flex items-center justify-center pulse-glow">
             <Shield className="w-8 h-8 text-white" />
           </div>
-          <CardTitle className="text-2xl font-bold gradient-text">
-            Authentication Error
-          </CardTitle>
+          <CardTitle className="text-2xl font-bold gradient-text">Authentication Error</CardTitle>
           <CardDescription className="text-gray-400 mt-2">
             {isAuthErr ? 'Sign-in issue detected' : 'Something went wrong'}
           </CardDescription>
@@ -98,9 +93,7 @@ export default function AuthErrorBoundary({ error, reset }: AuthErrorProps) {
               asChild
               className="flex-1 border-purple-500/30 hover:bg-purple-500/10"
             >
-              <Link href="/login">
-                Sign In
-              </Link>
+              <Link href="/login">Sign In</Link>
             </Button>
           </div>
 
@@ -120,9 +113,7 @@ export default function AuthErrorBoundary({ error, reset }: AuthErrorProps) {
               asChild
               className="flex-1 text-gray-400 hover:text-white hover:bg-white/5"
             >
-              <Link href="/signup">
-                Create Account
-              </Link>
+              <Link href="/signup">Create Account</Link>
             </Button>
           </div>
 
