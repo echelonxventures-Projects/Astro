@@ -1,6 +1,16 @@
+import path from 'path'
+import { fileURLToPath } from 'url'
 import type { NextConfig } from 'next'
 
+// Project root (fixes Turbopack monorepo-lockfile confusion with parent directory)
+const projectRoot = path.dirname(fileURLToPath(import.meta.url))
+
 const nextConfig: NextConfig = {
+  // Explicit project root for Turbopack
+  turbopack: {
+    root: projectRoot,
+  },
+
   // Enable standalone output for Docker
   output: 'standalone',
 

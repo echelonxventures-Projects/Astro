@@ -27,6 +27,7 @@
     "@auth/prisma-adapter": "^2.11.1",
     "@prisma/client": "6.19.3",
     "@prisma/extension-accelerate": "^3.0.1",
+    "@sentry/nextjs": "^10.73.0",
     "bcryptjs": "^3.0.3",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.38.0",
