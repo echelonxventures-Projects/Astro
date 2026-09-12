@@ -3,6 +3,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { ensureDefaultCatalog } from '@/lib/ai/catalog'
 import { auth } from '@/lib/auth'
 import { mergeBranding } from '@/lib/branding'
 import { prisma } from '@/lib/db'
@@ -111,6 +112,7 @@ export async function POST(req: NextRequest) {
       include: { domains: true },
     })
 
+    await ensureDefaultCatalog(tenant.id, tenant.name)
     invalidateTenantHostCache()
     return NextResponse.json({ tenant })
   } catch (error: unknown) {

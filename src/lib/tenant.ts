@@ -218,6 +218,18 @@ export async function getTenantContext(): Promise<TenantContext> {
   return ctx
 }
 
+/** Display brand name for the current request (falls back to platform default). */
+export async function getBrandName(): Promise<string> {
+  try {
+    const ctx = await getTenantContext()
+    return ctx.branding.name
+  } catch {
+    return DEFAULT_BRANDING_FALLBACK
+  }
+}
+
+const DEFAULT_BRANDING_FALLBACK = 'Astrology Platform'
+
 export function invalidateTenantHostCache(): void {
   hostCache.clear()
 }

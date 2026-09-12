@@ -45,6 +45,7 @@ model Tenant {
   astroProfiles         AstroProfile[]
   appSettings           AppSettings[]
   aiProviderConfigs     AIProviderConfig[]
+  aiProviderCatalog     AIProviderCatalog[]
   subscriptionPlans     SubscriptionPlan[]
   planFeatures          PlanFeature[]
   paymentGateways       PaymentGateway[]
@@ -345,6 +346,33 @@ model AIProviderConfig {
   @@index([provider])
 }
 
+// Per-tenant AI provider catalog: the source of truth for which providers/models
+// this tenant offers. Adding a new OpenAI-compatible vendor requires NO code -
+// just a catalog row with kind "openai-compatible" and a baseUrl.
+model AIProviderCatalog {
+  id           String   @id @default(cuid())
+  tenantId     String
+  key          String // referenced by AIProviderConfig.provider
+  label        String // display name in admin UI
+  kind         String   @default("openai-compatible") // openai-compatible | ollama | anthropic | gemini | opencode
+  baseUrl      String?  // openai-compatible/ollama/opencode: server URL; anthropic/gemini: optional custom endpoint
+  apiKey       String?  @db.Text
+  models       String?  @db.Text // JSON array of model ids offered for this provider
+  capabilities String?  // JSON array e.g. ["vision"]
+  options      String?  @db.Text // JSON: { extraHeaders, noAuth, checkUrl, priority }
+  enabled      Boolean  @default(true)
+  isDefault    Boolean  @default(false)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
+  @@index([enabled])
+}
+
 // Configurable regions for multi-region support (global reference data)
 model Region {
   id          String   @id @default(cuid())
@@ -379,6 +407,7 @@ model SubscriptionPlan {
   stripeProductId String?  // Stripe Product ID
   isActive        Boolean  @default(true)
   isPopular       Boolean  @default(false) // Show "Most Popular" badge
+  tier            String   @default("free") // free | paid - drives "is this an upgrade" UI logic
   sortOrder       Int      @default(0) // Order for display
   features        String?  // JSON array of feature strings
   aiConfig        String?  // JSON for AI provider config (provider, model, maxTokens)

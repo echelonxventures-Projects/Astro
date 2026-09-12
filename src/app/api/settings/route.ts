@@ -1,102 +1,94 @@
+/**
+ * Global AI default settings for the current tenant (admin).
+ * Backed by the tenant AI provider catalog (no hardcoded provider list).
+ * GET  -> { providers, defaultKey, defaultModel }
+ * POST -> { providerKey, model } sets tenant default provider (+ model override)
+ */
+
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
+import { listCatalog } from '@/lib/ai/catalog'
 import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 import { logError } from '@/lib/logger'
-import { getAIProviderConfig, setSetting } from '@/lib/settings'
+import { getSetting, setSetting } from '@/lib/settings'
+import { getTenantContext, TenantNotFoundError } from '@/lib/tenant'
 
-/**
- * GET /api/settings
- * Get current AI provider configuration
- */
-export async function GET(_req: NextRequest) {
+async function checkAdmin(): Promise<string> {
   const session = await auth()
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user) throw new Error('Unauthorized')
+  if (session.user.role !== 'admin' && session.user.role !== 'superadmin') {
+    throw new Error('Admin access required')
   }
-
-  // Check admin role
-  const { prisma } = await import('@/lib/db')
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-  })
-
-  if (user?.role !== 'admin' && user?.role !== 'superadmin') {
-    return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-  }
-
-  const config = await getAIProviderConfig(user.tenantId)
-  return NextResponse.json(config)
+  const ctx = await getTenantContext()
+  if (session.user.tenantId !== ctx.tenantId) throw new Error('Unauthorized')
+  return ctx.tenantId
 }
 
-/**
- * POST /api/settings
- * Save AI provider configuration
- */
-export async function POST(_req: NextRequest) {
-  const session = await auth()
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  // Check admin role
-  const { prisma } = await import('@/lib/db')
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-  })
-
-  if (user?.role !== 'admin' && user?.role !== 'superadmin') {
-    return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-  }
-
+export async function GET(_req: NextRequest) {
   try {
+    const tenantId = await checkAdmin()
+    const providers = await listCatalog(tenantId, true)
+    const def = providers.find(p => p.isDefault) ?? providers[0] ?? null
+    const defaultModel = (await getSetting(tenantId, 'AI_DEFAULT_MODEL')) || def?.models[0] || ''
+    return NextResponse.json({
+      providers,
+      defaultKey: def?.key ?? '',
+      defaultModel,
+    })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    if (error instanceof TenantNotFoundError)
+      return NextResponse.json({ error: 'Unknown tenant' }, { status: 404 })
+    if (message === 'Unauthorized' || message === 'Admin access required') {
+      return NextResponse.json({ error: message }, { status: 401 })
+    }
+    logError('Settings fetch error', error)
+    return NextResponse.json({ error: 'Failed to load settings' }, { status: 500 })
+  }
+}
+
+export async function POST(_req: NextRequest) {
+  try {
+    const tenantId = await checkAdmin()
     const body = await _req.json()
-    const { provider, model, ollamaUrl, anthropicApiKey, geminiApiKey } = body
+    const { providerKey, model } = body as { providerKey?: string; model?: string }
 
-    // Validate provider
-    if (!['anthropic', 'ollama', 'gemini'].includes(provider)) {
+    if (!providerKey) {
+      return NextResponse.json({ error: 'providerKey is required' }, { status: 400 })
+    }
+    const providers = await listCatalog(tenantId, true)
+    const target = providers.find(p => p.key === providerKey)
+    if (!target) {
       return NextResponse.json(
-        { error: 'Invalid provider. Must be anthropic, ollama, or gemini' },
+        { error: `Unknown provider "${providerKey}". Add it in Providers first.` },
         { status: 400 }
       )
     }
 
-    // Validate API keys for paid providers
-    if (provider === 'anthropic' && !anthropicApiKey) {
-      return NextResponse.json(
-        { error: 'Anthropic API key is required for Anthropic provider' },
-        { status: 400 }
-      )
-    }
+    await prisma.aIProviderCatalog.updateMany({ where: { tenantId }, data: { isDefault: false } })
+    await prisma.aIProviderCatalog.update({ where: { id: target.id }, data: { isDefault: true } })
 
-    if (provider === 'gemini' && !geminiApiKey) {
-      return NextResponse.json(
-        { error: 'Google Gemini API key is required for Gemini provider' },
-        { status: 400 }
-      )
+    if (model) {
+      if (!target.models.includes(model) && !/^[a-z0-9._:/-]+$/i.test(model)) {
+        return NextResponse.json({ error: 'Invalid model name' }, { status: 400 })
+      }
+      await setSetting(tenantId, 'AI_DEFAULT_MODEL', model)
+    } else {
+      await prisma.appSettings.deleteMany({ where: { tenantId, key: 'AI_DEFAULT_MODEL' } })
     }
-
-    // Save settings
-    await setSetting(
-      user.tenantId,
-      'AI_PROVIDER',
-      provider,
-      'AI provider: anthropic, ollama, or gemini'
-    )
-    await setSetting(user.tenantId, 'AI_MODEL', model, 'Model name to use')
-    await setSetting(
-      user.tenantId,
-      'OLLAMA_URL',
-      ollamaUrl || 'http://localhost:5566',
-      'Ollama server URL'
-    )
-    await setSetting(user.tenantId, 'ANTHROPIC_API_KEY', anthropicApiKey || '', 'Anthropic API key')
-    await setSetting(user.tenantId, 'GEMINI_API_KEY', geminiApiKey || '', 'Google Gemini API key')
 
     return NextResponse.json({ success: true })
-  } catch (error) {
-    logError('Error saving settings', error, { userId: session.user.id })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    if (error instanceof TenantNotFoundError)
+      return NextResponse.json({ error: 'Unknown tenant' }, { status: 404 })
+    if (message === 'Unauthorized' || message === 'Admin access required') {
+      return NextResponse.json({ error: message }, { status: 401 })
+    }
+    logError('Settings save error', error)
     return NextResponse.json({ error: 'Failed to save settings' }, { status: 500 })
   }
 }

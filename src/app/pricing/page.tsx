@@ -67,9 +67,9 @@ export default function PricingPage() {
     setLoading(true)
     try {
       const [plansRes, featuresRes, regionsRes] = await Promise.all([
-        fetch('/api/admin/plans'),
-        fetch('/api/admin/plans?type=features'),
-        fetch('/api/admin/plans?type=regions'),
+        fetch('/api/plans'),
+        fetch('/api/plans?type=features'),
+        fetch('/api/plans?type=regions'),
       ])
 
       const [plansData, featuresData, regionsData] = await Promise.all([
@@ -93,7 +93,14 @@ export default function PricingPage() {
       const matrix: Record<string, Record<string, { enabled: boolean; value: string | null }>> = {}
       for (const plan of plansData.plans || []) {
         matrix[plan.key] = {}
-        // We need to fetch the plan with featureAccess included
+        for (const access of plan.featureAccess || []) {
+          if (access?.feature?.key) {
+            matrix[plan.key][access.feature.key] = {
+              enabled: Boolean(access.enabled),
+              value: access.value ?? null,
+            }
+          }
+        }
       }
       setAccessMatrix(matrix)
     } catch (err) {

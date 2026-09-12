@@ -3,8 +3,10 @@ export const dynamic = 'force-dynamic'
 import { Sparkles, Check, Calendar, CreditCard } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { BrandName } from '@/components/BrandProvider'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { getScopedDb } from '@/lib/tenant'
 
 export default async function SubscriptionPage() {
   const session = await auth()
@@ -27,6 +29,16 @@ export default async function SubscriptionPage() {
   const isPremium = user.subscriptionStatus === 'premium'
   const currentSubscription = user.subscriptions.find(s => s.status === 'active')
 
+  const db = getScopedDb(user.tenantId)
+  const tenantPlans = await db.subscriptionPlan.findMany({ where: { isActive: true } })
+  const freePlanName = tenantPlans.find(p => p.tier === 'free')?.name ?? 'Free'
+  const paidPlan =
+    tenantPlans.find(p => p.tier !== 'free' && p.key === user.subscriptionPlan) ??
+    tenantPlans.find(p => p.tier !== 'free') ??
+    null
+  const currentPlanName = isPremium ? (paidPlan?.name ?? 'Premium') : freePlanName
+  const upgradePlanName = paidPlan?.name ?? 'Premium'
+
   return (
     <>
       {/* Navigation */}
@@ -35,7 +47,9 @@ export default async function SubscriptionPage() {
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2">
               <Sparkles className="w-8 h-8 text-purple-400" />
-              <span className="text-xl font-bold gradient-text">StarPath Astrology</span>
+              <span className="text-xl font-bold gradient-text">
+                <BrandName />
+              </span>
             </Link>
             <Link href="/dashboard" className="text-purple-200 hover:text-white transition">
               Back to Dashboard
@@ -52,9 +66,7 @@ export default async function SubscriptionPage() {
           <div className="glass rounded-3xl p-8 mb-8">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-2xl font-bold mb-2">
-                  {isPremium ? 'Premium Plan' : 'Free Plan'}
-                </h2>
+                <h2 className="text-2xl font-bold mb-2">{currentPlanName}</h2>
                 <p className="text-purple-200">
                   {isPremium
                     ? `Next billing date: ${currentSubscription?.currentPeriodEnd ? new Date(currentSubscription.currentPeriodEnd).toLocaleDateString() : 'N/A'}`
@@ -143,8 +155,8 @@ export default async function SubscriptionPage() {
             ) : (
               <div>
                 <p className="text-purple-200 mb-6">
-                  Upgrade to Premium to unlock unlimited AI readings, detailed birth chart analysis,
-                  compatibility reports, and more.
+                  Upgrade to {upgradePlanName} to unlock unlimited AI readings, detailed birth chart
+                  analysis, compatibility reports, and more.
                 </p>
                 <Link
                   href="/pricing"

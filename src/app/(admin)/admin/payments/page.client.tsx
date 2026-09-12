@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
+import { BrandName } from '@/components/BrandProvider'
 
 interface User {
   email: string
@@ -290,7 +291,9 @@ export default function PaymentsClient({
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2">
               <Sparkles className="w-8 h-8 text-purple-400" />
-              <span className="text-xl font-bold gradient-text">StarPath Payments</span>
+              <span className="text-xl font-bold gradient-text">
+                <BrandName short /> Payments
+              </span>
             </Link>
             <div className="flex items-center gap-4">
               <Link href="/admin/plans" className="text-purple-200 hover:text-white transition">

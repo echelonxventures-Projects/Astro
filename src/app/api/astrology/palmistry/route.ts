@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Image required for palm analysis' }, { status: 400 })
     }
 
-    const provider = await getAIProvider()
+    const provider = await getAIProvider({ needsVision: true })
 
     if (!provider.supportsVision || !provider.completeWithVision) {
       return NextResponse.json(

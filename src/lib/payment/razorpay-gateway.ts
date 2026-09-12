@@ -17,6 +17,7 @@ import {
   CustomerResult,
   PaymentMethodResult,
 } from './gateway-interface'
+import { getBrandName } from '@/lib/tenant'
 
 interface RazorpayOptions {
   key_id: string
@@ -195,7 +196,7 @@ export class RazorpayGateway implements IPaymentGateway {
         order_id: order.id,
         amount: options.amount,
         currency: options.currency,
-        name: 'StarPath Astrology',
+        name: await getBrandName(),
         description: `Subscription - ${options.planId}`,
         prefill: {
           email: options.email,

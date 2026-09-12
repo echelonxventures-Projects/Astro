@@ -15,6 +15,7 @@ import { redirect } from 'next/navigation'
 import { BrandName } from '@/components/BrandProvider'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { getScopedDb } from '@/lib/tenant'
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -34,6 +35,13 @@ export default async function DashboardPage() {
   if (!user) {
     redirect('/signup')
   }
+
+  const db = getScopedDb(user.tenantId)
+  const activePlans = await db.subscriptionPlan.findMany({ where: { isActive: true } })
+  const currentPlan =
+    activePlans.find(p => p.key === user.subscriptionPlan && p.tier !== 'free') ??
+    activePlans.find(p => p.tier !== 'free') ??
+    null
 
   const hasChart = user.birthCharts.length > 0
 
@@ -99,7 +107,9 @@ export default async function DashboardPage() {
                     : 'bg-purple-600 hover:bg-purple-500 text-white'
                 }`}
               >
-                {user.subscriptionStatus === 'premium' ? 'Premium' : 'Upgrade'}
+                {user.subscriptionStatus === 'premium'
+                  ? (currentPlan?.name ?? 'Premium')
+                  : 'Upgrade'}
               </Link>
               <Link href="/profile" className="text-purple-200 hover:text-white transition">
                 {user.name || 'Profile'}

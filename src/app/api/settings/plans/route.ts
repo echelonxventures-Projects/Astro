@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
+import { listCatalog } from '@/lib/ai/catalog'
 import { getAllAIPlanConfigs, updateAIPlanConfig } from '@/lib/ai/plan-config'
 import { auth } from '@/lib/auth'
 import { logError } from '@/lib/logger'
@@ -57,6 +58,18 @@ export async function POST(_req: NextRequest) {
       enabled: boolean
     }>
 
+    const catalog = await listCatalog(session.user.tenantId!)
+    const knownKeys = new Set(catalog.map(c => c.key))
+    for (const plan of plans) {
+      if (plan.provider && !knownKeys.has(plan.provider)) {
+        return NextResponse.json(
+          {
+            error: `Unknown AI provider "${plan.provider}". Add it in Settings - Providers first.`,
+          },
+          { status: 400 }
+        )
+      }
+    }
     // Save each plan configuration
     for (const plan of plans) {
       await updateAIPlanConfig(session.user.tenantId!, plan.plan, {

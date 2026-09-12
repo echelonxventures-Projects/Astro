@@ -101,33 +101,6 @@ export async function setSetting(
 }
 
 /**
- * Get AI provider configuration for a tenant
- */
-export async function getAIProviderConfig(tenantId: string): Promise<{
-  provider: string
-  model: string
-  ollamaUrl: string
-  anthropicApiKey: string
-  geminiApiKey: string
-}> {
-  const settings = await getSettings(tenantId, [
-    'AI_PROVIDER',
-    'AI_MODEL',
-    'OLLAMA_URL',
-    'ANTHROPIC_API_KEY',
-    'GEMINI_API_KEY',
-  ])
-
-  return {
-    provider: settings['AI_PROVIDER'] || 'ollama',
-    model: settings['AI_MODEL'] || 'llama3.2',
-    ollamaUrl: settings['OLLAMA_URL'] || 'http://localhost:5566',
-    anthropicApiKey: settings['ANTHROPIC_API_KEY'] || '',
-    geminiApiKey: settings['GEMINI_API_KEY'] || '',
-  }
-}
-
-/**
  * Clear the settings cache (all, or a single tenant)
  */
 export function clearCache(tenantId?: string): void {

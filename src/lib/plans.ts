@@ -795,6 +795,7 @@ export async function initializeDefaultPlans(tenantId: string): Promise<void> {
       const plan = await prisma.subscriptionPlan.create({
         data: {
           tenantId,
+          tier: planData.key === 'free' ? 'free' : 'paid',
           name: planData.name,
           key: planData.key,
           description: planData.description,

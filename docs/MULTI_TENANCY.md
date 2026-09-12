@@ -54,6 +54,26 @@ AI configuration and payment gateways are isolated per tenant.
 - Client components read identity via `useBrand()` / `<BrandName />` / `<BrandLogo />`
   (`src/components/BrandProvider.tsx`).
 
+## AI providers (catalog-driven, zero-hardcoded)
+
+Providers live in `AIProviderCatalog` (one row per provider per tenant): key, label,
+protocol `kind`, baseUrl, apiKey, models, capabilities, priority, enabled/default.
+Kinds are the only wire protocols implemented in code:
+`openai-compatible`, `ollama`, `anthropic`, `gemini`, `opencode`.
+**Adding a new vendor = a DB row via the admin UI** (OpenAI, Groq, Together,
+DeepSeek, LM Studio, ...) - no deploy needed. Resolution order: plan binding
+(`AIProviderConfig`) -> tenant default -> priority. Vision routes auto-select a
+provider with the `vision` capability. Bootstrap defaults (env keys) only apply
+until the catalog exists; legacy env/settings chain remains as a safety net.
+
+## Plans
+
+Subscription plans are rows (`SubscriptionPlan`) with per-tenant `tier` (`free`/`paid`),
+prices, features, feature-access matrix and regional overrides. All UI labels
+(pricing page, dashboard chip, subscription page, CTA text, payment screens incl.
+Razorpay/PayPal brand_name) resolve names/prices from these rows at request time.
+Public read endpoint: `GET /api/plans` (tenant-scoped, no auth); admin CRUD: `/api/admin/plans`.
+
 ## Admin portals
 
 | Portal                      | Who          | What                                                                                                             |

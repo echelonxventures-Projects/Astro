@@ -9,6 +9,7 @@
 
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { ensureDefaultCatalog } from '../src/lib/ai/catalog'
 import { initializeDefaultAIPlanConfigs } from '../src/lib/ai/plan-config'
 import { initializeDefaultPlans } from '../src/lib/plans'
 
@@ -171,6 +172,7 @@ async function seedTenant(t: TenantSeed, passwordHash: string) {
 
   await initializeDefaultAIPlanConfigs(t.id)
   await initializeDefaultPlans(t.id)
+  await ensureDefaultCatalog(t.id, t.name)
 
   console.log(`Seeded tenant: ${t.name} (${t.slug})`)
 }

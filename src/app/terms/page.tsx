@@ -1,5 +1,6 @@
 import { Sparkles } from 'lucide-react'
 import Link from 'next/link'
+import { BrandName } from '@/components/BrandProvider'
 
 export default function TermsPage() {
   return (
@@ -10,7 +11,9 @@ export default function TermsPage() {
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2">
               <Sparkles className="w-8 h-8 text-[#A78BFA]" />
-              <span className="text-xl font-bold gradient-text">StarPath Astrology</span>
+              <span className="text-xl font-bold gradient-text">
+                <BrandName />
+              </span>
             </Link>
             <Link href="/" className="text-gray-300 hover:text-white transition">
               Back to Home
@@ -27,7 +30,7 @@ export default function TermsPage() {
             <section>
               <h2 className="text-xl font-semibold mb-3 text-[#A78BFA]">1. Acceptance of Terms</h2>
               <p className="text-gray-300">
-                By accessing and using StarPath Astrology, you accept and agree to be bound by these
+                By accessing and using <BrandName />, you accept and agree to be bound by these
                 Terms of Service.
               </p>
             </section>
@@ -37,10 +40,10 @@ export default function TermsPage() {
                 2. No Professional Advice
               </h2>
               <p className="text-gray-300">
-                StarPath Astrology provides AI-powered astrology readings, birth chart
-                interpretations, and cosmic guidance for entertainment and self-reflection purposes
-                only. The content provided is not intended to be a substitute for professional
-                advice, diagnosis, or treatment.
+                <BrandName /> provides AI-powered astrology readings, birth chart interpretations,
+                and cosmic guidance for entertainment and self-reflection purposes only. The content
+                provided is not intended to be a substitute for professional advice, diagnosis, or
+                treatment.
               </p>
             </section>
 
@@ -60,9 +63,9 @@ export default function TermsPage() {
                 4. User Responsibilities
               </h2>
               <p className="text-gray-300">
-                You agree to use StarPath Astrology responsibly and not to rely solely on
-                astrological readings for important life decisions. Always seek professional advice
-                for medical, legal, financial, or other significant matters.
+                You agree to use <BrandName /> responsibly and not to rely solely on astrological
+                readings for important life decisions. Always seek professional advice for medical,
+                legal, financial, or other significant matters.
               </p>
             </section>
 
@@ -71,7 +74,7 @@ export default function TermsPage() {
                 5. Intellectual Property
               </h2>
               <p className="text-gray-300">
-                All content, features, and functionality of StarPath Astrology are owned by us and
+                All content, features, and functionality of <BrandName /> are owned by us and
                 protected by copyright, trademark, and other intellectual property laws.
               </p>
             </section>
@@ -81,8 +84,8 @@ export default function TermsPage() {
                 6. Limitation of Liability
               </h2>
               <p className="text-gray-300">
-                StarPath Astrology is provided &quot;as is&quot; and &quot;as available&quot;
-                without warranties of any kind. To the maximum extent permitted by law, StarPath
+                <BrandName /> is provided &quot;as is&quot; and &quot;as available&quot; without
+                warranties of any kind. To the maximum extent permitted by law, <BrandName />
                 Astrology shall not be liable for any damages arising from the use of our services.
               </p>
             </section>
@@ -91,8 +94,8 @@ export default function TermsPage() {
               <h2 className="text-xl font-semibold mb-3 text-[#A78BFA]">7. Governing Law</h2>
               <p className="text-gray-300">
                 These terms shall be governed by and construed in accordance with the laws of the
-                jurisdiction where StarPath Astrology operates, without regard to its conflict of
-                law provisions.
+                jurisdiction where <BrandName /> operates, without regard to its conflict of law
+                provisions.
               </p>
             </section>
 
@@ -116,7 +119,9 @@ export default function TermsPage() {
       {/* Footer */}
       <footer className="py-12 px-4 border-t border-[#7C3AED]/30 mt-16">
         <div className="max-w-7xl mx-auto text-center text-gray-400">
-          <p>© {new Date().getFullYear()} StarPath Astrology. All rights reserved.</p>
+          <p>
+            © {new Date().getFullYear()} <BrandName />. All rights reserved.
+          </p>
         </div>
       </footer>
     </>
