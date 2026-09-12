@@ -300,6 +300,8 @@ const buildCallbacks = (ctx: TenantContext | null) => {
 export function buildAuthOptions(ctx: TenantContext | null = null): AuthOptions {
   return {
     providers: buildProviders(ctx),
+    // NOTE: browsers must set NEXTAUTH_TRUST_HOST=true (v4 env-based) for multi-tenant
+    // hostnames; see scripts/deploy docs. Tenant resolution itself stays strict.
     pages: {
       signIn: '/login',
       error: '/login',
@@ -316,7 +318,7 @@ export function buildAuthOptions(ctx: TenantContext | null = null): AuthOptions 
           httpOnly: true,
           sameSite: 'lax',
           path: '/',
-          secure: process.env.NODE_ENV === 'production',
+          secure: (process.env.NEXTAUTH_URL ?? '').startsWith('https'),
         },
       },
       csrfToken: {
@@ -325,7 +327,7 @@ export function buildAuthOptions(ctx: TenantContext | null = null): AuthOptions 
           httpOnly: true,
           sameSite: 'lax',
           path: '/',
-          secure: process.env.NODE_ENV === 'production',
+          secure: (process.env.NEXTAUTH_URL ?? '').startsWith('https'),
         },
       },
       callbackUrl: {
@@ -334,7 +336,7 @@ export function buildAuthOptions(ctx: TenantContext | null = null): AuthOptions 
           httpOnly: true,
           sameSite: 'lax',
           path: '/',
-          secure: process.env.NODE_ENV === 'production',
+          secure: (process.env.NEXTAUTH_URL ?? '').startsWith('https'),
         },
       },
     },

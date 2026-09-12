@@ -20,6 +20,14 @@ export default function LoginPage() {
 
   useEffect(() => {
     getProviders().then(p => setProviders(p as Record<string, unknown> | null))
+    const err = new URLSearchParams(window.location.search).get('error')
+    if (err === 'CredentialsSignin') {
+      setError(
+        'Invalid email or password for this platform. Accounts are separate per white-label platform.'
+      )
+    } else if (err) {
+      setError('Sign-in failed. Please try again.')
+    }
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,14 +42,18 @@ export default function LoginPage() {
         redirect: false,
       })
 
-      if (result?.error) {
-        setError('Invalid email or password')
+      if (result?.error || result?.url?.includes('error=')) {
+        setError(
+          'Invalid email or password for this platform. Accounts are separate per white-label platform - use the account you created on this site.'
+        )
       } else {
         router.push('/dashboard')
         router.refresh()
       }
     } catch {
-      setError('Something went wrong. Please try again.')
+      setError(
+        'Sign-in failed for this platform. Check your email and password - accounts are separate per white-label platform.'
+      )
     } finally {
       setLoading(false)
     }
@@ -79,6 +91,11 @@ export default function LoginPage() {
               {error}
             </div>
           )}
+
+          <p className="text-xs text-gray-500 mb-6">
+            You are signing in to <BrandName />. Accounts and passwords are specific to each
+            platform.
+          </p>
 
           {Boolean(providers?.google) && (
             <>
