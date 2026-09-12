@@ -14,6 +14,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated test output & coverage (minified bundles - never lint these):
+    "playwright-report/**",
+    "test-results/**",
+    "coverage/**",
+    // Generated Prisma client:
+    "src/generated/**",
   ]),
   {
     plugins: {

@@ -4,6 +4,7 @@ import { Check, Sparkles, Star } from 'lucide-react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
+import { BrandLogo, BrandName } from '@/components/BrandProvider'
 import { logger } from '@/lib/logger'
 import { CURRENCY_CONFIG, formatPrice } from '@/lib/plans'
 
@@ -141,8 +142,10 @@ export default function PricingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2">
-              <Sparkles className="w-8 h-8 text-purple-400" />
-              <span className="text-xl font-bold gradient-text">StarPath Astrology</span>
+              <BrandLogo className="w-8 h-8 text-[var(--primary-light)]" />
+              <span className="text-xl font-bold gradient-text">
+                <BrandName />
+              </span>
             </Link>
             <div className="flex items-center gap-4">
               {status === 'authenticated' ? (
@@ -389,7 +392,9 @@ export default function PricingPage() {
       {/* Footer */}
       <footer className="py-12 px-4 border-t border-purple-500/20 mt-16">
         <div className="max-w-7xl mx-auto text-center text-purple-400">
-          <p>© {new Date().getFullYear()} StarPath Astrology. All rights reserved.</p>
+          <p>
+            © {new Date().getFullYear()} <BrandName />. All rights reserved.
+          </p>
         </div>
       </footer>
     </>

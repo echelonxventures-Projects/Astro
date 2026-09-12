@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db'
 import { logger } from '@/lib/logger'
 import { getGateway } from '@/lib/payment'
 import { logTransaction, logSubscription } from '@/lib/payment/audit'
+import { getWebhookTenant } from '@/lib/tenant'
 
 const _isDev = process.env.NODE_ENV === 'development'
 
@@ -32,7 +33,8 @@ export async function POST(_req: NextRequest) {
       return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
     }
 
-    const gateway = await getGateway('paypal')
+    const ctx = await getWebhookTenant(_req)
+    const gateway = await getGateway(ctx.tenantId, 'paypal')
     if (!gateway) {
       logger.warn('PayPal gateway not configured')
       return NextResponse.json({ error: 'PayPal gateway not configured' }, { status: 503 })

@@ -55,8 +55,15 @@ export async function POST(req: NextRequest) {
 
         const subscription = await stripe.subscriptions.retrieve(subscriptionId!)
 
+        const hookUser = await prisma.user.findUnique({
+          where: { id: userId! },
+          select: { tenantId: true },
+        })
+        if (!hookUser) break
+
         await prisma.subscription.create({
           data: {
+            tenantId: hookUser.tenantId,
             userId: userId!,
             stripeSubscriptionId: subscriptionId!,
             plan: plan!,
@@ -124,6 +131,7 @@ export async function POST(req: NextRequest) {
         if (user) {
           await prisma.payment.create({
             data: {
+              tenantId: user.tenantId,
               userId: user.id,
               stripePaymentId: paymentId!,
               amount: amount!,

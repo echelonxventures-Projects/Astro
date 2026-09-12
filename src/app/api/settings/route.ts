@@ -22,11 +22,11 @@ export async function GET(_req: NextRequest) {
     where: { id: session.user.id },
   })
 
-  if (user?.role !== 'admin') {
+  if (user?.role !== 'admin' && user?.role !== 'superadmin') {
     return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
   }
 
-  const config = await getAIProviderConfig()
+  const config = await getAIProviderConfig(user.tenantId)
   return NextResponse.json(config)
 }
 
@@ -46,7 +46,7 @@ export async function POST(_req: NextRequest) {
     where: { id: session.user.id },
   })
 
-  if (user?.role !== 'admin') {
+  if (user?.role !== 'admin' && user?.role !== 'superadmin') {
     return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
   }
 
@@ -78,11 +78,21 @@ export async function POST(_req: NextRequest) {
     }
 
     // Save settings
-    await setSetting('AI_PROVIDER', provider, 'AI provider: anthropic, ollama, or gemini')
-    await setSetting('AI_MODEL', model, 'Model name to use')
-    await setSetting('OLLAMA_URL', ollamaUrl || 'http://localhost:5566', 'Ollama server URL')
-    await setSetting('ANTHROPIC_API_KEY', anthropicApiKey || '', 'Anthropic API key')
-    await setSetting('GEMINI_API_KEY', geminiApiKey || '', 'Google Gemini API key')
+    await setSetting(
+      user.tenantId,
+      'AI_PROVIDER',
+      provider,
+      'AI provider: anthropic, ollama, or gemini'
+    )
+    await setSetting(user.tenantId, 'AI_MODEL', model, 'Model name to use')
+    await setSetting(
+      user.tenantId,
+      'OLLAMA_URL',
+      ollamaUrl || 'http://localhost:5566',
+      'Ollama server URL'
+    )
+    await setSetting(user.tenantId, 'ANTHROPIC_API_KEY', anthropicApiKey || '', 'Anthropic API key')
+    await setSetting(user.tenantId, 'GEMINI_API_KEY', geminiApiKey || '', 'Google Gemini API key')
 
     return NextResponse.json({ success: true })
   } catch (error) {

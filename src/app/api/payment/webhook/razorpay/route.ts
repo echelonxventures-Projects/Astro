@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { logger } from '@/lib/logger'
 import { getGateway } from '@/lib/payment'
+import { getWebhookTenant } from '@/lib/tenant'
 
 const _isDev = process.env.NODE_ENV === 'development'
 
@@ -21,7 +22,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
     }
 
-    const gateway = await getGateway('razorpay')
+    const ctx = await getWebhookTenant(req)
+    const gateway = await getGateway(ctx.tenantId, 'razorpay')
     if (!gateway) {
       return NextResponse.json({ error: 'Razorpay gateway not configured' }, { status: 503 })
     }

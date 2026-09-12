@@ -32,7 +32,7 @@ async function checkAdmin() {
     where: { id: session.user.id },
   })
 
-  if (user?.role !== 'admin') {
+  if (user?.role !== 'admin' && user?.role !== 'superadmin') {
     throw new Error('Admin access required')
   }
 
@@ -41,13 +41,14 @@ async function checkAdmin() {
 
 export async function GET(req: NextRequest) {
   try {
-    await checkAdmin()
+    const session = await checkAdmin()
+    const tenantId = session.user!.tenantId!
 
     const url = new URL(req.url)
     const type = url.searchParams.get('type')
 
     if (type === 'features') {
-      const features = await getActiveFeatures()
+      const features = await getActiveFeatures(tenantId)
       return NextResponse.json({ features })
     }
 
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest) {
 
     // For default plans request, include featureAccess
     const plans = await prisma.subscriptionPlan.findMany({
-      where: { isActive: true },
+      where: { tenantId, isActive: true },
       orderBy: { sortOrder: 'asc' },
       include: {
         featureAccess: {
@@ -80,14 +81,15 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await checkAdmin()
+    const session = await checkAdmin()
+    const tenantId = session.user!.tenantId!
 
     const body = await req.json()
     const { action, ...data } = body
 
     switch (action) {
       case 'createPlan': {
-        const plan = await createPlan(data)
+        const plan = await createPlan({ ...data, tenantId })
         return NextResponse.json(plan)
       }
 
@@ -102,7 +104,7 @@ export async function POST(req: NextRequest) {
       }
 
       case 'createFeature': {
-        const feature = await createFeature(data)
+        const feature = await createFeature({ ...data, tenantId })
         return NextResponse.json(feature)
       }
 

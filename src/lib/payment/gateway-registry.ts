@@ -17,9 +17,9 @@ export function registerGateway(key: string, factory: GatewayFactory) {
 }
 
 /**
- * Get a gateway instance by key
+ * Get a gateway instance by key (within tenant)
  */
-export async function getGateway(key: string): Promise<IPaymentGateway | null> {
+export async function getGateway(tenantId: string, key: string): Promise<IPaymentGateway | null> {
   const factory = gatewayFactories.get(key)
   if (!factory) {
     return null
@@ -27,7 +27,7 @@ export async function getGateway(key: string): Promise<IPaymentGateway | null> {
 
   // Load gateway configuration from database
   const gateway = await prisma.paymentGateway.findUnique({
-    where: { key },
+    where: { tenantId_key: { tenantId, key } },
   })
 
   if (!gateway || !gateway.isEnabled) {
@@ -50,35 +50,35 @@ export async function getGateway(key: string): Promise<IPaymentGateway | null> {
 }
 
 /**
- * Get the default gateway
+ * Get the default gateway (within tenant)
  */
-export async function getDefaultGateway(): Promise<IPaymentGateway | null> {
+export async function getDefaultGateway(tenantId: string): Promise<IPaymentGateway | null> {
   const defaultGateway = await prisma.paymentGateway.findFirst({
-    where: { isEnabled: true, isDefault: true },
+    where: { tenantId, isEnabled: true, isDefault: true },
   })
 
   if (defaultGateway) {
-    return getGateway(defaultGateway.key)
+    return getGateway(tenantId, defaultGateway.key)
   }
 
   // Fallback to first enabled gateway
   const firstEnabled = await prisma.paymentGateway.findFirst({
-    where: { isEnabled: true },
+    where: { tenantId, isEnabled: true },
   })
 
   if (firstEnabled) {
-    return getGateway(firstEnabled.key)
+    return getGateway(tenantId, firstEnabled.key)
   }
 
   return null
 }
 
 /**
- * Get all enabled gateways
+ * Get all enabled gateways (within tenant)
  */
-export async function getEnabledGateways(): Promise<IPaymentGateway[]> {
+export async function getEnabledGateways(tenantId: string): Promise<IPaymentGateway[]> {
   const gateways = await prisma.paymentGateway.findMany({
-    where: { isEnabled: true },
+    where: { tenantId, isEnabled: true },
     orderBy: { sortOrder: 'asc' },
   })
 
@@ -109,11 +109,12 @@ export async function getEnabledGateways(): Promise<IPaymentGateway[]> {
  * Get available gateways for a specific currency and country
  */
 export async function getAvailableGateways(
+  tenantId: string,
   currency: string,
   country?: string
 ): Promise<IPaymentGateway[]> {
   const gateways = await prisma.paymentGateway.findMany({
-    where: { isEnabled: true },
+    where: { tenantId, isEnabled: true },
     orderBy: { sortOrder: 'asc' },
   })
 
@@ -157,13 +158,14 @@ export async function getAvailableGateways(
 }
 
 /**
- * Get gateway by transaction ID
+ * Get gateway by transaction ID (within tenant)
  */
 export async function getGatewayByTransaction(
+  tenantId: string,
   gatewayTransactionId: string
 ): Promise<IPaymentGateway | null> {
   const transaction = await prisma.paymentTransaction.findFirst({
-    where: { gatewayTransactionId },
+    where: { tenantId, gatewayTransactionId },
     include: { gateway: true },
   })
 
@@ -171,15 +173,20 @@ export async function getGatewayByTransaction(
     return null
   }
 
-  return getGateway(transaction.gateway.key)
+  return getGateway(tenantId, transaction.gateway.key)
 }
 
 /**
- * Get available payment methods for a gateway
+ * Get available payment methods for a gateway (within tenant)
  */
-export async function getPaymentMethods(gatewayKey: string, currency?: string, country?: string) {
+export async function getPaymentMethods(
+  tenantId: string,
+  gatewayKey: string,
+  currency?: string,
+  country?: string
+) {
   const gateway = await prisma.paymentGateway.findUnique({
-    where: { key: gatewayKey },
+    where: { tenantId_key: { tenantId, key: gatewayKey } },
     include: {
       paymentMethods: {
         where: { isEnabled: true },

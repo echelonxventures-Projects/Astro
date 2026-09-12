@@ -193,10 +193,11 @@ export async function getAIProvider(): Promise<AIProvider> {
  * This allows different tiers to use different models
  */
 export async function getAIProviderForPlan(
+  tenantId: string,
   plan: 'free' | 'monthly' | 'yearly'
 ): Promise<AIProvider> {
   const { getAIPlanConfig } = await import('./plan-config')
-  const config = await getAIPlanConfig(plan)
+  const config = await getAIPlanConfig(tenantId, plan)
 
   if (!config || !config.enabled) {
     // Fallback to default provider if plan config is disabled

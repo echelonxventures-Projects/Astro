@@ -83,6 +83,7 @@ export async function POST(req: NextRequest) {
     }
 
     const profile = await createAstroProfile({
+      tenantId: session.user.tenantId!,
       userId: session.user.id,
       name,
       relationship,

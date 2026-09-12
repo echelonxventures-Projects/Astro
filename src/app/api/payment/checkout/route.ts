@@ -6,6 +6,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { logError } from '@/lib/logger'
 import { getGateway, getDefaultGateway, getEnabledGateways } from '@/lib/payment'
+import { getTenantContext } from '@/lib/tenant'
 
 /**
  * POST /api/payment/checkout
@@ -16,6 +17,8 @@ export async function POST(req: NextRequest) {
   if (!_session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const tenantId = _session.user.tenantId!
 
   try {
     const body = await req.json()
@@ -35,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     // Get the subscription plan
     const plan = await prisma.subscriptionPlan.findUnique({
-      where: { key: planId },
+      where: { tenantId_key: { tenantId, key: planId } },
     })
 
     if (!plan || !plan.isActive) {
@@ -55,6 +58,7 @@ export async function POST(req: NextRequest) {
       where: {
         planId,
         isActive: true,
+        gateway: { tenantId },
       },
       include: {
         gateway: true,
@@ -73,21 +77,25 @@ export async function POST(req: NextRequest) {
         const userGatewayPlan = await prisma.gatewayPlan.findFirst({
           where: {
             planId,
-            gatewayId: (await prisma.paymentGateway.findUnique({ where: { key: gatewayKey } }))?.id,
+            gatewayId: (
+              await prisma.paymentGateway.findUnique({
+                where: { tenantId_key: { tenantId, key: gatewayKey } },
+              })
+            )?.id,
             isActive: true,
           },
           include: { gateway: true },
         })
 
         if (userGatewayPlan) {
-          gateway = await getGateway(userGatewayPlan.gateway.key)
+          gateway = await getGateway(tenantId, userGatewayPlan.gateway.key)
           amount = userGatewayPlan.price
           currency = userGatewayPlan.currency
         } else {
-          gateway = await getGateway(gatewayPlan.gateway.key)
+          gateway = await getGateway(tenantId, gatewayPlan.gateway.key)
         }
       } else {
-        gateway = await getGateway(gatewayPlan.gateway.key)
+        gateway = await getGateway(tenantId, gatewayPlan.gateway.key)
       }
 
       if (gateway) {
@@ -98,7 +106,7 @@ export async function POST(req: NextRequest) {
 
     // Fallback to default gateway
     if (!gateway) {
-      gateway = await getDefaultGateway()
+      gateway = await getDefaultGateway(tenantId)
     }
 
     if (!gateway) {
@@ -128,8 +136,11 @@ export async function POST(req: NextRequest) {
     // Store the pending transaction
     await prisma.paymentTransaction.create({
       data: {
+        tenantId,
         userId: user.id,
-        gatewayId: (await prisma.paymentGateway.findUnique({ where: { key: gateway.key } }))!.id,
+        gatewayId: (await prisma.paymentGateway.findUnique({
+          where: { tenantId_key: { tenantId, key: gateway.key } },
+        }))!.id,
         gatewayPlanId: gatewayPlan?.id,
         amount,
         currency,
@@ -162,7 +173,8 @@ export async function POST(req: NextRequest) {
  * Get available gateways and plans for checkout
  */
 export async function GET(req: NextRequest) {
-  const _session = await auth()
+  const ctx = await getTenantContext()
+  const tenantId = ctx.tenantId
 
   const searchParams = req.nextUrl.searchParams
   const planId = searchParams.get('plan')
@@ -170,12 +182,12 @@ export async function GET(req: NextRequest) {
   const currency = searchParams.get('currency')
 
   try {
-    const gateways = await getEnabledGateways()
+    const gateways = await getEnabledGateways(tenantId)
 
     const gatewayInfo = await Promise.all(
       gateways.map(async gw => {
         const gatewayRecord = await prisma.paymentGateway.findUnique({
-          where: { key: gw.key },
+          where: { tenantId_key: { tenantId, key: gw.key } },
           include: {
             paymentMethods: {
               where: { isEnabled: true },
@@ -200,7 +212,7 @@ export async function GET(req: NextRequest) {
     let plans: any[] = []
     if (planId) {
       const plan = await prisma.subscriptionPlan.findUnique({
-        where: { key: planId },
+        where: { tenantId_key: { tenantId, key: planId } },
         include: {
           featureAccess: {
             include: {

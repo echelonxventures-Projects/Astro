@@ -18,11 +18,11 @@ export async function GET(_req: NextRequest) {
 
   try {
     // Check if user is admin
-    if (session.user.role !== 'admin') {
+    if (session.user.role !== 'admin' && session.user.role !== 'superadmin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const configs = await getAllAIPlanConfigs()
+    const configs = await getAllAIPlanConfigs(session.user.tenantId!)
     return NextResponse.json(configs)
   } catch (error) {
     logError('Error fetching plan configs', error, { userId: session.user.id })
@@ -42,7 +42,7 @@ export async function POST(_req: NextRequest) {
 
   try {
     // Check if user is admin
-    if (session.user.role !== 'admin') {
+    if (session.user.role !== 'admin' && session.user.role !== 'superadmin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -59,7 +59,7 @@ export async function POST(_req: NextRequest) {
 
     // Save each plan configuration
     for (const plan of plans) {
-      await updateAIPlanConfig(plan.plan, {
+      await updateAIPlanConfig(session.user.tenantId!, plan.plan, {
         provider: plan.provider,
         model: plan.model,
         apiKey: plan.apiKey,

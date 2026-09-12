@@ -1,5 +1,5 @@
 /**
- * AI Plan Configuration Management
+ * AI Plan Configuration Management (per tenant)
  * Manages AI model settings per subscription tier
  */
 
@@ -7,6 +7,7 @@ import { prisma } from '@/lib/db'
 
 export interface AIPlanConfig {
   id?: string
+  tenantId?: string
   name: string
   plan: 'free' | 'monthly' | 'yearly' | string
   provider: 'ollama' | 'anthropic' | 'gemini' | 'nvidia' | 'opencode' | string
@@ -21,11 +22,14 @@ export interface AIPlanConfig {
 }
 
 /**
- * Get AI configuration for a specific plan
+ * Get AI configuration for a specific plan within a tenant
  */
-export async function getAIPlanConfig(plan: string): Promise<AIPlanConfig | null> {
-  const config = await prisma.aIProviderConfig.findUnique({
-    where: { id: plan },
+export async function getAIPlanConfig(
+  tenantId: string,
+  plan: string
+): Promise<AIPlanConfig | null> {
+  const config = await prisma.aIProviderConfig.findFirst({
+    where: { tenantId, plan },
   })
   if (!config) return null
   return {
@@ -35,10 +39,11 @@ export async function getAIPlanConfig(plan: string): Promise<AIPlanConfig | null
 }
 
 /**
- * Get all AI plan configurations
+ * Get all AI plan configurations for a tenant
  */
-export async function getAllAIPlanConfigs(): Promise<AIPlanConfig[]> {
+export async function getAllAIPlanConfigs(tenantId: string): Promise<AIPlanConfig[]> {
   const configs = await prisma.aIProviderConfig.findMany({
+    where: { tenantId },
     orderBy: { plan: 'asc' },
   })
   return configs.map(c => ({
@@ -48,26 +53,36 @@ export async function getAllAIPlanConfigs(): Promise<AIPlanConfig[]> {
 }
 
 /**
- * Update or create AI plan configuration
+ * Update or create AI plan configuration for a tenant
  */
 export async function updateAIPlanConfig(
+  tenantId: string,
   plan: string,
   config: Partial<AIPlanConfig>
 ): Promise<AIPlanConfig> {
-  const result = await prisma.aIProviderConfig.upsert({
-    where: { id: plan },
-    update: config,
-    create: {
-      id: plan,
-      name: `${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan AI`,
-      plan: plan as string,
-      provider: 'ollama',
-      model: 'llama3.2',
-      maxTokens: 512,
-      enabled: true,
-      ...config,
-    },
+  const existing = await prisma.aIProviderConfig.findFirst({
+    where: { tenantId, plan },
   })
+
+  const result = existing
+    ? await prisma.aIProviderConfig.update({
+        where: { id: existing.id },
+        data: config,
+      })
+    : await prisma.aIProviderConfig.create({
+        data: {
+          id: `${tenantId}:${plan}`,
+          tenantId,
+          name: `${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan AI`,
+          plan,
+          provider: 'ollama',
+          model: 'llama3.2',
+          maxTokens: 512,
+          enabled: true,
+          ...config,
+        },
+      })
+
   return {
     ...result,
     plan: result.plan || plan,
@@ -77,7 +92,10 @@ export async function updateAIPlanConfig(
 /**
  * Get AI provider configuration based on user's subscription
  */
-export async function getAIConfigForUser(subscriptionStatus: string): Promise<{
+export async function getAIConfigForUser(
+  tenantId: string,
+  subscriptionStatus: string
+): Promise<{
   provider: string
   model: string
   apiKey?: string | null
@@ -91,7 +109,7 @@ export async function getAIConfigForUser(subscriptionStatus: string): Promise<{
   }
 
   // Get config for plan
-  const config = await getAIPlanConfig(plan)
+  const config = await getAIPlanConfig(tenantId, plan)
 
   if (config && config.enabled) {
     return {
@@ -104,7 +122,7 @@ export async function getAIConfigForUser(subscriptionStatus: string): Promise<{
   }
 
   // Fallback to free plan if configured plan is disabled
-  const fallbackConfig = await getAIPlanConfig('free')
+  const fallbackConfig = await getAIPlanConfig(tenantId, 'free')
   return {
     provider: fallbackConfig?.provider || 'nvidia',
     model: fallbackConfig?.model || 'meta/llama-3.1-8b-instruct',
@@ -115,9 +133,9 @@ export async function getAIConfigForUser(subscriptionStatus: string): Promise<{
 }
 
 /**
- * Initialize default AI plan configurations
+ * Initialize default AI plan configurations for a tenant
  */
-export async function initializeDefaultAIPlanConfigs(): Promise<void> {
+export async function initializeDefaultAIPlanConfigs(tenantId: string): Promise<void> {
   const defaultConfigs = [
     {
       plan: 'free',
@@ -146,6 +164,6 @@ export async function initializeDefaultAIPlanConfigs(): Promise<void> {
   ]
 
   for (const config of defaultConfigs) {
-    await updateAIPlanConfig(config.plan, config)
+    await updateAIPlanConfig(tenantId, config.plan, config)
   }
 }

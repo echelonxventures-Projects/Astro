@@ -55,13 +55,9 @@ async function checkMigrations(): Promise<{
 
 async function checkDatabaseTables(): Promise<number> {
   try {
-    const result = (await prisma.$queryRaw`
-      SELECT COUNT(*) as count
-      FROM sqlite_master
-      WHERE type = 'table'
-    `) as Array<{ count: number }>
-
-    return Number(result[0]?.count || 0)
+    // Provider-neutral: count rows across a known migrated model
+    // (table existence is implied - the query throws if it's missing)
+    return await prisma.appSettings.count()
   } catch {
     return 0
   }

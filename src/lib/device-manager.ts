@@ -51,6 +51,7 @@ export function parseUserAgent(userAgent: string): DeviceInfo {
  * Register a new device/session
  */
 export async function registerDevice(
+  tenantId: string,
   userId: string,
   sessionId: string,
   userAgent: string,
@@ -63,6 +64,7 @@ export async function registerDevice(
   await prisma.userDevice.upsert({
     where: { sessionId },
     create: {
+      tenantId,
       userId,
       sessionId,
       deviceName: deviceInfo.deviceName,

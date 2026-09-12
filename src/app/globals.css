@@ -1,31 +1,31 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
   /* StarPath Astrology - Purple & Silver Theme */
-  --background: #0F0A1F;
-  --foreground: #FFFFFF;
+  --background: #0f0a1f;
+  --foreground: #ffffff;
 
   /* Primary - Bold Purple */
-  --primary: #7C3AED;
-  --primary-dark: #5B21B6;
-  --primary-light: #A78BFA;
-  --primary-glow: #C4B5FD;
+  --primary: #7c3aed;
+  --primary-dark: #5b21b6;
+  --primary-light: #a78bfa;
+  --primary-glow: #c4b5fd;
 
   /* Secondary - Silver */
-  --secondary: #E5E7EB;
-  --secondary-dark: #6B7280;
-  --secondary-light: #F9FAFB;
-  --silver: #C0C0C0;
-  --silver-light: #E8E8E8;
-  --silver-dark: #9CA3AF;
+  --secondary: #e5e7eb;
+  --secondary-dark: #6b7280;
+  --secondary-light: #f9fafb;
+  --silver: #c0c0c0;
+  --silver-light: #e8e8e8;
+  --silver-dark: #9ca3af;
 
   /* Accent Colors - Bold & Vibrant */
-  --accent-pink: #EC4899;
-  --accent-cyan: #06B6D4;
-  --accent-amber: #F59E0B;
-  --accent-emerald: #10B981;
+  --accent-pink: #ec4899;
+  --accent-cyan: #06b6d4;
+  --accent-amber: #f59e0b;
+  --accent-emerald: #10b981;
 
-  --muted: #1A1025;
+  --muted: #1a1025;
   --card: #1A1025/70;
   --border: #7C3AED/30;
 }
@@ -79,7 +79,12 @@ body {
 
 /* Gradient text - Bold Contemporary Silver */
 .gradient-text {
-  background: linear-gradient(135deg, #E8E8E8 0%, #FFFFFF 50%, #C0C0C0 100%);
+  background: linear-gradient(
+    135deg,
+    var(--silver-light) 0%,
+    var(--foreground) 50%,
+    var(--silver) 100%
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -88,7 +93,12 @@ body {
 
 /* Purple gradient alternative */
 .gradient-text-purple {
-  background: linear-gradient(135deg, #A78BFA 0%, #C4B5FD 50%, #E8E8E8 100%);
+  background: linear-gradient(
+    135deg,
+    var(--primary-light) 0%,
+    var(--primary-glow) 50%,
+    var(--silver-light) 100%
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -106,8 +116,13 @@ body {
 
 /* Star animation */
 @keyframes twinkle {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .twinkle {
@@ -116,8 +131,13 @@ body {
 
 /* Floating animation */
 @keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 .float {
@@ -126,8 +146,13 @@ body {
 
 /* Pulse glow - Bold Purple */
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(124, 58, 237, 0.6); }
-  50% { box-shadow: 0 0 50px rgba(167, 139, 250, 0.9); }
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 50px rgba(167, 139, 250, 0.9);
+  }
 }
 
 .pulse-glow {
@@ -136,8 +161,13 @@ body {
 
 /* Silver glow effect */
 @keyframes silver-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(192, 192, 192, 0.5); }
-  50% { box-shadow: 0 0 40px rgba(232, 232, 232, 0.8); }
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(192, 192, 192, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(232, 232, 232, 0.8);
+  }
 }
 
 .silver-glow {
@@ -164,18 +194,18 @@ body {
 .zodiac-wheel {
   conic-gradient: conic-gradient(
     from 0deg,
-    #7C3AED 0deg 30deg,
-    #A78BFA 30deg 60deg,
-    #C4B5FD 60deg 90deg,
-    #E8E8E8 90deg 120deg,
-    #C0C0C0 120deg 150deg,
-    #9CA3AF 150deg 180deg,
-    #7C3AED 180deg 210deg,
-    #A78BFA 210deg 240deg,
-    #C4B5FD 240deg 270deg,
-    #E8E8E8 270deg 300deg,
-    #C0C0C0 300deg 330deg,
-    #9CA3AF 330deg 360deg
+    var(--primary) 0deg 30deg,
+    var(--primary-light) 30deg 60deg,
+    var(--primary-glow) 60deg 90deg,
+    var(--silver-light) 90deg 120deg,
+    #c0c0c0 120deg 150deg,
+    #9ca3af 150deg 180deg,
+    #7c3aed 180deg 210deg,
+    #a78bfa 210deg 240deg,
+    #c4b5fd 240deg 270deg,
+    #e8e8e8 270deg 300deg,
+    #c0c0c0 300deg 330deg,
+    #9ca3af 330deg 360deg
   );
 }
 
@@ -186,7 +216,8 @@ body {
 
 .card-hover:hover {
   transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 25px 50px rgba(124, 58, 237, 0.3),
-              0 0 40px rgba(167, 139, 250, 0.2);
+  box-shadow:
+    0 25px 50px rgba(124, 58, 237, 0.3),
+    0 0 40px rgba(167, 139, 250, 0.2);
   border-color: rgba(124, 58, 237, 0.5);
 }

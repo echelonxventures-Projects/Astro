@@ -347,22 +347,11 @@ export async function searchReadings(
   searchTerm: string,
   options: PaginationOptions = {}
 ) {
-  const lowerTerm = searchTerm.toLowerCase()
-  const upperTerm = searchTerm.toUpperCase()
   const where: Prisma.ReadingWhereInput = {
     userId,
     OR: [
-      {
-        title: {
-          in: [
-            searchTerm,
-            lowerTerm,
-            upperTerm,
-            searchTerm.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()),
-          ],
-        },
-      },
-      { content: { contains: searchTerm } },
+      { title: { contains: searchTerm, mode: 'insensitive' } },
+      { content: { contains: searchTerm, mode: 'insensitive' } },
     ],
   }
 

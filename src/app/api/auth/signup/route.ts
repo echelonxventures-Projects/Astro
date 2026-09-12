@@ -5,24 +5,27 @@ import bcrypt from 'bcryptjs'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { logError } from '@/lib/logger'
+import { getTenantContext, TenantNotFoundError } from '@/lib/tenant'
 
 /**
  * POST /api/auth/signup
- * Create a new user account
+ * Create a new user account within the requesting tenant
  */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { name, email, password } = body
 
+    const ctx = await getTenantContext()
+
     // Validate input
     if (!email || !password) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 })
     }
 
-    // Check if user already exists
+    // Check if user already exists in this tenant
     const existingUser = await prisma.user.findUnique({
-      where: { email },
+      where: { tenantId_email: { tenantId: ctx.tenantId, email } },
     })
 
     if (existingUser) {
@@ -38,6 +41,7 @@ export async function POST(req: NextRequest) {
     // Create user
     const user = await prisma.user.create({
       data: {
+        tenantId: ctx.tenantId,
         email,
         name,
         passwordHash,
@@ -51,6 +55,9 @@ export async function POST(req: NextRequest) {
       name: user.name,
     })
   } catch (error) {
+    if (error instanceof TenantNotFoundError) {
+      return NextResponse.json({ error: 'Unknown tenant' }, { status: 404 })
+    }
     logError('Signup error', error)
     return NextResponse.json({ error: 'Failed to create account' }, { status: 500 })
   }

@@ -82,6 +82,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // Save to database
     const chart = await prisma.birthChart.create({
       data: {
+        tenantId: session.user.tenantId!,
         userId: session.user.id,
         name,
         birthDate: new Date(birthDate),

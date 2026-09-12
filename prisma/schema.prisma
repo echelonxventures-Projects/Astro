@@ -1,25 +1,84 @@
-// StarPath Astrology Database Schema
-// https://pris.ly/d/prisma-schema
-// Uses SQLite for local dev by default - see schema.prisma.postgresql for PostgreSQL
+// StarPath Astrology Database Schema - PostgreSQL (Production)
+// Multi-tenant: every customer-facing table carries a required tenantId.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-// Updated User model with payment gateway fields
+// ===========================================
+// TENANCY
+// ===========================================
+
+// A tenant = one white-label customer platform served by this deployment
+model Tenant {
+  id        String  @id @default(cuid()) // default tenant uses a stable literal id
+  slug      String  @unique // subdomain label, e.g. "luna" -> luna.example.com
+  name      String
+  status    String  @default("active") // active, suspended, pending
+  isDefault Boolean @default(false)
+
+  // JSON BrandConfig (colors, tagline, logoUrl, faviconUrl, seo, social) - see src/lib/branding.ts
+  branding  Json?
+  // JSON TenantSettings (email from-name, per-tenant OAuth keys, analytics id, feature flags)
+  settings  Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  domains               TenantDomain[]
+  users                 User[]
+  birthCharts           BirthChart[]
+  readings              Reading[]
+  chatSessions          ChatSession[]
+  subscriptions         Subscription[]
+  payments              Payment[]
+  paymentTransactions   PaymentTransaction[]
+  notifications         Notification[]
+  userDevices           UserDevice[]
+  userMemories          UserMemory[]
+  astroProfiles         AstroProfile[]
+  appSettings           AppSettings[]
+  aiProviderConfigs     AIProviderConfig[]
+  subscriptionPlans     SubscriptionPlan[]
+  planFeatures          PlanFeature[]
+  paymentGateways       PaymentGateway[]
+
+  @@index([status])
+}
+
+// Hostnames owned by a tenant (primary subdomain, vanity domains)
+model TenantDomain {
+  id        String   @id @default(cuid())
+  host      String   @unique // lowercase, no port: "luna.starpath.app"
+  tenantId  String
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+// ===========================================
+// AUTH (NextAuth)
+// ===========================================
+
+// User model with payment gateway fields
 model User {
   id                String    @id @default(cuid())
-  email             String    @unique
+  tenantId          String
+  email             String // unique per tenant
   emailVerified     DateTime?
   name              String?
   image             String?
   passwordHash      String?
-  role              String    @default("user") // user, admin
+  role              String    @default("user") // user, moderator, admin, superadmin
 
   // Birth details for astrology calculations
   birthDate         DateTime?
@@ -46,6 +105,7 @@ model User {
   updatedAt         DateTime  @updatedAt
 
   // Relations
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   accounts          Account[]
   sessions          Session[]
   birthCharts       BirthChart[]
@@ -59,8 +119,10 @@ model User {
   astroProfiles     AstroProfile[]
   notifications     Notification[]
 
-  @@index([subscriptionStatus])
+  @@unique([tenantId, email])
   @@index([email])
+  @@index([tenantId])
+  @@index([subscriptionStatus])
 }
 
 model Account {
@@ -69,17 +131,18 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String?
-  access_token      String?
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String?
+  id_token          String? @db.Text
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model Session {
@@ -88,6 +151,8 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model VerificationToken {
@@ -98,10 +163,15 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// ===========================================
+// DOMAIN DATA (tenant-scoped)
+// ===========================================
+
 model BirthChart {
   id              String   @id @default(cuid())
+  tenantId        String
   userId          String
-  profileId       String?
+  profileId       String?  // Optional link to AstroProfile
   name            String   @default("My Birth Chart")
 
   // Input data
@@ -120,34 +190,40 @@ model BirthChart {
   // Calculated at
   createdAt       DateTime @default(now())
 
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   profile         AstroProfile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
 
+  @@index([tenantId])
   @@index([userId])
-  @@index([userId, createdAt])
+  @@index([profileId])
 }
 
 model Reading {
   id              String   @id @default(cuid())
+  tenantId        String
   userId          String
-  profileId       String?
+  profileId       String?  // Optional link to AstroProfile
   type            String   // daily, love, career, compatibility, transit, natal
   title           String?
-  content         String
+  content         String   @db.Text
   input           Json     // Input parameters (birth data, partner data, etc.)
   aiGenerated     Boolean  @default(true)
   createdAt       DateTime @default(now())
 
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   profile         AstroProfile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
 
+  @@index([tenantId])
   @@index([userId, type])
-  @@index([userId, createdAt])
+  @@index([profileId])
   @@index([createdAt])
 }
 
 model ChatSession {
   id              String   @id @default(cuid())
+  tenantId        String
   userId          String
   title           String?
   messages        Json     // Array of {role, content, timestamp}
@@ -155,14 +231,17 @@ model ChatSession {
   createdAt       DateTime @default(now())
   lastActiveAt    DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([tenantId])
   @@index([userId])
   @@index([lastActiveAt])
 }
 
 model Subscription {
   id                  String   @id @default(cuid())
+  tenantId            String
   userId              String
   stripeSubscriptionId String   @unique
   plan                String   // monthly, yearly
@@ -172,14 +251,43 @@ model Subscription {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([tenantId])
   @@index([userId])
   @@index([stripeSubscriptionId])
 }
 
+// Payment audit log for comprehensive transaction tracking
+model PaymentAuditLog {
+  id                String   @id @default(cuid())
+  action            String   // payment_intent_created, payment_captured, refund_processed, etc.
+  tenantId          String?
+  userId            String?
+  transactionId     String?
+  gateway           String?
+  amount            Int?
+  currency          String?
+  status            String   // success, failure, pending, warning
+  ipAddress         String?
+  userAgent         String?
+  metadata          String?  @db.Text // JSON for additional data
+  error             String?
+  createdAt         DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([transactionId])
+  @@index([action])
+  @@index([status])
+  @@index([createdAt])
+  @@index([gateway])
+}
+
 model Payment {
   id                String   @id @default(cuid())
+  tenantId          String
   userId            String
   stripePaymentId   String   @unique
   amount            Int      // In cents
@@ -187,31 +295,39 @@ model Payment {
   status            String   // succeeded, pending, failed
   createdAt         DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([tenantId])
   @@index([userId])
   @@index([stripePaymentId])
-  @@index([status, createdAt])
 }
 
-// Application settings for configurable features
+// Application settings for configurable features (unique per tenant)
 model AppSettings {
   id          String   @id @default(cuid())
-  key         String   @unique
-  value       String
+  tenantId    String
+  key         String
+  value       String   @db.Text
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
 }
 
-// AI Provider configuration - fully dynamic
+// AI Provider configuration - fully dynamic, per tenant
 model AIProviderConfig {
   id          String   @id @default(cuid())
+  tenantId    String
   name        String   // Display name (e.g., "Free Plan AI", "Premium AI")
   plan        String?  // Associated subscription plan (free, monthly, yearly, or custom)
   provider    String   @default("ollama") // ollama, anthropic, gemini, openai, etc.
   model       String   @default("llama3.2")
-  apiKey      String?  // For paid providers
+  apiKey      String?  @db.Text // For paid providers
   ollamaUrl   String?  // For Ollama provider
   baseUrl     String?  // For custom providers
   maxTokens   Int      @default(512)
@@ -222,10 +338,14 @@ model AIProviderConfig {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
   @@index([plan])
+  @@index([provider])
 }
 
-// Configurable regions for multi-region support
+// Configurable regions for multi-region support (global reference data)
 model Region {
   id          String   @id @default(cuid())
   name        String   // Display name (e.g., "United States", "Europe", "India")
@@ -245,11 +365,12 @@ model Region {
   @@index([isActive])
 }
 
-// Configurable subscription plans - fully dynamic pricing
+// Configurable subscription plans - fully dynamic pricing, per tenant
 model SubscriptionPlan {
   id              String   @id @default(cuid())
+  tenantId        String
   name            String   // Display name (e.g., "Free", "Premium Monthly")
-  key             String   @unique // Internal key (e.g., "free", "monthly", "yearly")
+  key             String   // Internal key (e.g., "free", "monthly", "yearly") - unique per tenant
   description     String?
   price           Int      @default(0) // Price in cents (base price)
   currency        String   @default("usd") // Base currency
@@ -269,17 +390,20 @@ model SubscriptionPlan {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   featureAccess   PlanFeatureAccess[]
 
-  @@index([key])
+  @@unique([tenantId, key])
+  @@index([tenantId])
   @@index([isActive])
 }
 
-// Configurable features for comparison table
+// Configurable features for comparison table, per tenant
 model PlanFeature {
   id          String   @id @default(cuid())
+  tenantId    String
   name        String   // Display name (e.g., "Daily Horoscope")
-  key         String   @unique // Internal key (e.g., "daily_horoscope")
+  key         String   // Internal key (e.g., "daily_horoscope") - unique per tenant
   description String?
   category    String?  // Grouping category (e.g., "readings", "support", "ai")
   sortOrder   Int      @default(0)
@@ -287,9 +411,11 @@ model PlanFeature {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  tenant        Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   featureAccess PlanFeatureAccess[]
 
-  @@index([key])
+  @@unique([tenantId, key])
+  @@index([tenantId])
   @@index([isActive])
   @@index([category])
 }
@@ -312,30 +438,34 @@ model PlanFeatureAccess {
   @@index([featureId])
 }
 
-// Payment Gateway configuration - supports Stripe, Razorpay, PayPal, etc.
+// Payment Gateway configuration - supports Stripe, Razorpay, PayPal, etc. (per tenant)
 model PaymentGateway {
   id                String   @id @default(cuid())
+  tenantId          String
   name              String   // Display name (e.g., "Stripe", "Razorpay")
-  key               String   @unique // Internal key (stripe, razorpay, paypal)
+  key               String   // Internal key (stripe, razorpay, paypal) - unique per tenant
   description       String?
-  apiKey            String?  // Encrypted API key
-  apiSecret         String?  // Encrypted API secret
-  webhookSecret     String?  // Encrypted webhook signing secret
+  apiKey            String?  @db.Text // Encrypted API key
+  apiSecret         String?  @db.Text // Encrypted API secret
+  webhookSecret     String?  @db.Text // Encrypted webhook signing secret
   publicKey         String?  // Public key for client-side (e.g., Razorpay Key ID)
   isEnabled         Boolean  @default(true)
   isDefault         Boolean  @default(false)
   supportedCurrencies String? // JSON array: ["USD", "EUR", "INR"]
   supportedCountries  String? // JSON array: ["US", "GB", "IN"]
-  config            String?  // JSON for provider-specific config
+  config            String?  @db.Text // JSON for provider-specific config
   testMode          Boolean  @default(false)
   sortOrder         Int      @default(0)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   paymentMethods    PaymentMethod[]
   gatewayPlans      GatewayPlan[]
   transactions      PaymentTransaction[]
 
+  @@unique([tenantId, key])
+  @@index([tenantId])
   @@index([key])
   @@index([isEnabled])
 }
@@ -393,6 +523,7 @@ model GatewayPlan {
 // Unified payment transactions across all gateways
 model PaymentTransaction {
   id                  String   @id @default(cuid())
+  tenantId            String
   userId              String
   gatewayId           String
   gatewayPlanId       String?
@@ -403,16 +534,18 @@ model PaymentTransaction {
   paymentMethod       String?  // Method used (upi, card, etc.)
   errorCode           String?  // Error code if failed
   errorMessage        String?  // Error message if failed
-  metadata            String?  // JSON for additional data
+  metadata            String?  @db.Text // JSON for additional data
   refundedAmount      Int      @default(0)
   refundReason        String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  tenant              Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   gateway             PaymentGateway   @relation(fields: [gatewayId], references: [id])
   gatewayPlan         GatewayPlan?     @relation(fields: [gatewayPlanId], references: [id])
 
+  @@index([tenantId])
   @@index([userId])
   @@index([gatewayId])
   @@index([status])
@@ -420,113 +553,131 @@ model PaymentTransaction {
   @@index([createdAt])
 }
 
+// ===========================================
+// DEVICE & SESSION MANAGEMENT
+// ===========================================
+
 // Active user sessions for device tracking
 model UserDevice {
   id                String   @id @default(cuid())
+  tenantId          String
   userId            String
-  deviceName        String?
-  deviceType        String?
-  browser           String?
-  os                String?
+  deviceName        String?  // e.g., "MacBook Pro", "iPhone 15"
+  deviceType        String?  // desktop, mobile, tablet
+  browser           String?  // Chrome, Safari, Firefox
+  os                String?  // macOS, iOS, Windows, Android
   ipAddress         String?
-  location          String?
+  location          String?  // City, Country (from IP)
   userAgent         String?
-  sessionId         String   @unique
+  sessionId         String   @unique // Reference to NextAuth session
   lastActiveAt      DateTime @default(now())
   isActive          Boolean  @default(true)
   createdAt         DateTime @default(now())
 
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([tenantId])
   @@index([userId])
+  @@index([isActive])
+  @@index([lastActiveAt])
 }
+
+// ===========================================
+// USER MEMORY SYSTEM
+// ===========================================
 
 // Persistent memory for AI conversations
 model UserMemory {
   id                String   @id @default(cuid())
+  tenantId          String
   userId            String
-  category          String
-  key               String
-  value             String
-  source            String?
-  confidence        Float    @default(1.0)
-  importance        Int      @default(1)
-  expiresAt         DateTime?
+  category          String   // preference, preference_astro, preference_chat, fact, insight
+  key               String   // e.g., "favorite_zodiac", "preferred_reading_style"
+  value             String   @db.Text // The stored memory value
+  source            String?  // Where this memory came from: chat, profile, chart
+  confidence        Float    @default(1.0) // How confident we are (0-1)
+  importance        Int      @default(1) // Priority level (1-10)
+  expiresAt         DateTime? // Optional expiration for temporary memories
   lastUsedAt        DateTime @default(now())
   useCount          Int      @default(0)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, key])
+  @@unique([tenantId, userId, key])
+  @@index([tenantId])
   @@index([userId])
+  @@index([category])
+  @@index([importance])
 }
 
-// Multiple astro profiles per account
+// ===========================================
+// SUB-PROFILES (MULTIPLE PROFILES)
+// ===========================================
+
+// Astrological profiles for family members or different people under one account
 model AstroProfile {
   id                String   @id @default(cuid())
-  userId            String
-  name              String
-  relationship      String?
+  tenantId          String   // Owner tenant
+  userId            String   // Owner account
+  name              String   // Profile name: "My Chart", "Spouse", "Child"
+  relationship      String?  // self, spouse, child, parent, friend, other
   isDefault         Boolean  @default(false)
+
+  // Birth details
   birthDate         DateTime
-  birthTime         String
+  birthTime         String   // "HH:mm" format
   birthPlace        String
   latitude          Float
   longitude         Float
   timezone          String
-  gender            String?
+
+  // Gender for specific readings (optional)
+  gender            String?  // male, female, other
+
+  // Photo (optional)
   photoUrl          String?
-  notes             String?
+
+  // Notes about this person
+  notes             String?  @db.Text
+
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   birthCharts       BirthChart[]
   readings          Reading[]
 
+  @@index([tenantId])
   @@index([userId])
+  @@index([isDefault])
 }
 
-// Notifications
+// ===========================================
+// NOTIFICATION SYSTEM
+// ===========================================
+
 model Notification {
   id                String   @id @default(cuid())
+  tenantId          String
   userId            String
-  type              String
+  type              String   // daily_horoscope, reading_reminder, payment, system
   title             String
-  message           String
-  data              String?
+  message           String   @db.Text
+  data              String?  @db.Text // JSON payload
   isRead            Boolean  @default(false)
   readAt            DateTime?
   createdAt         DateTime @default(now())
 
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, isRead])
-  @@index([createdAt])
-}
-
-// Payment audit log for comprehensive transaction tracking
-model PaymentAuditLog {
-  id                String   @id @default(cuid())
-  action            String   // payment_intent_created, payment_captured, refund_processed, etc.
-  userId            String?
-  transactionId     String?
-  gateway           String?
-  amount            Int?
-  currency          String?
-  status            String   // success, failure, pending, warning
-  ipAddress         String?
-  userAgent         String?
-  metadata          String?  // JSON for additional data
-  error             String?
-  createdAt         DateTime @default(now())
-
+  @@index([tenantId])
   @@index([userId])
-  @@index([transactionId])
-  @@index([action])
-  @@index([status])
+  @@index([isRead])
   @@index([createdAt])
-  @@index([gateway])
 }

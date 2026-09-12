@@ -99,9 +99,9 @@ export function formatPrice(priceCents: number, currency: string): string {
 /**
  * Get all active subscription plans ordered by sort order
  */
-export async function getActivePlans(): Promise<SubscriptionPlanConfig[]> {
+export async function getActivePlans(tenantId: string): Promise<SubscriptionPlanConfig[]> {
   const plans = await prisma.subscriptionPlan.findMany({
-    where: { isActive: true },
+    where: { tenantId, isActive: true },
     orderBy: { sortOrder: 'asc' },
     include: {
       featureAccess: {
@@ -112,7 +112,7 @@ export async function getActivePlans(): Promise<SubscriptionPlanConfig[]> {
     },
   })
 
-  return plans.map((plan) => ({
+  return plans.map(plan => ({
     ...plan,
     features: plan.features ? JSON.parse(plan.features) : [],
     aiConfig: plan.aiConfig ? JSON.parse(plan.aiConfig) : null,
@@ -123,9 +123,12 @@ export async function getActivePlans(): Promise<SubscriptionPlanConfig[]> {
 /**
  * Get a specific plan by key
  */
-export async function getPlanByKey(key: string): Promise<SubscriptionPlanConfig | null> {
+export async function getPlanByKey(
+  tenantId: string,
+  key: string
+): Promise<SubscriptionPlanConfig | null> {
   const plan = await prisma.subscriptionPlan.findUnique({
-    where: { key },
+    where: { tenantId_key: { tenantId, key } },
   })
 
   if (!plan) return null
@@ -142,10 +145,11 @@ export async function getPlanByKey(key: string): Promise<SubscriptionPlanConfig 
  * Get plan with regional pricing for a specific region
  */
 export async function getPlanWithRegionalPricing(
+  tenantId: string,
   key: string,
   regionKey: string
 ): Promise<SubscriptionPlanConfig | null> {
-  const plan = await getPlanByKey(key)
+  const plan = await getPlanByKey(tenantId, key)
   if (!plan) return null
 
   // Apply regional pricing if available
@@ -171,7 +175,7 @@ export async function getActiveRegions(): Promise<RegionConfig[]> {
     orderBy: { sortOrder: 'asc' },
   })
 
-  return regions.map((region) => ({
+  return regions.map(region => ({
     ...region,
     currencies: region.currencies ? JSON.parse(region.currencies) : null,
   }))
@@ -216,9 +220,9 @@ export async function getRegionByKey(key: string): Promise<RegionConfig | null> 
 /**
  * Get all active features for comparison table
  */
-export async function getActiveFeatures(): Promise<PlanFeatureConfig[]> {
+export async function getActiveFeatures(tenantId: string): Promise<PlanFeatureConfig[]> {
   const features = await prisma.planFeature.findMany({
-    where: { isActive: true },
+    where: { tenantId, isActive: true },
     orderBy: { sortOrder: 'asc' },
   })
 
@@ -229,11 +233,11 @@ export async function getActiveFeatures(): Promise<PlanFeatureConfig[]> {
  * Get feature access matrix for all plans
  * Returns a map of planKey -> featureKey -> { enabled, value }
  */
-export async function getFeatureAccessMatrix(): Promise<
-  Record<string, Record<string, { enabled: boolean; value: string | null }>>
-> {
+export async function getFeatureAccessMatrix(
+  tenantId: string
+): Promise<Record<string, Record<string, { enabled: boolean; value: string | null }>>> {
   const plans = await prisma.subscriptionPlan.findMany({
-    where: { isActive: true },
+    where: { tenantId, isActive: true },
     include: {
       featureAccess: {
         include: {
@@ -280,6 +284,7 @@ export async function getPlanById(id: string): Promise<SubscriptionPlanConfig | 
  * Create a new subscription plan
  */
 export async function createPlan(data: {
+  tenantId: string
   name: string
   key: string
   description?: string
@@ -351,8 +356,13 @@ export async function updatePlan(
     updateData.regionalPricing = JSON.stringify(data.regionalPricing)
   }
 
-  Object.keys(data).forEach((key) => {
-    if (key !== 'features' && key !== 'aiConfig' && key !== 'regionalPricing' && data[key as keyof typeof data] !== undefined) {
+  Object.keys(data).forEach(key => {
+    if (
+      key !== 'features' &&
+      key !== 'aiConfig' &&
+      key !== 'regionalPricing' &&
+      data[key as keyof typeof data] !== undefined
+    ) {
       updateData[key] = data[key as keyof typeof data]
     }
   })
@@ -383,6 +393,7 @@ export async function deletePlan(id: string): Promise<void> {
  * Create a new feature
  */
 export async function createFeature(data: {
+  tenantId: string
   name: string
   key: string
   description?: string
@@ -472,7 +483,7 @@ export async function updateRegion(
     updateData.currencies = JSON.stringify(data.currencies)
   }
 
-  Object.keys(data).forEach((key) => {
+  Object.keys(data).forEach(key => {
     if (key !== 'currencies' && data[key as keyof typeof data] !== undefined) {
       updateData[key] = data[key as keyof typeof data]
     }
@@ -546,7 +557,7 @@ export async function setFeatureAccess(
 /**
  * Initialize default subscription plans and features
  */
-export async function initializeDefaultPlans(): Promise<void> {
+export async function initializeDefaultPlans(tenantId: string): Promise<void> {
   // Create default regions first
   const defaultRegions = [
     {
@@ -554,9 +565,7 @@ export async function initializeDefaultPlans(): Promise<void> {
       name: 'United States',
       code: 'US',
       currency: 'usd',
-      currencies: [
-        { code: 'usd', symbol: '$', name: 'US Dollar' },
-      ],
+      currencies: [{ code: 'usd', symbol: '$', name: 'US Dollar' }],
       isDefault: true,
       sortOrder: 0,
       priceMultiplier: 1.0,
@@ -579,9 +588,7 @@ export async function initializeDefaultPlans(): Promise<void> {
       name: 'India',
       code: 'IN',
       currency: 'inr',
-      currencies: [
-        { code: 'inr', symbol: '₹', name: 'Indian Rupee' },
-      ],
+      currencies: [{ code: 'inr', symbol: '₹', name: 'Indian Rupee' }],
       isDefault: false,
       sortOrder: 2,
       priceMultiplier: 83.5,
@@ -591,9 +598,7 @@ export async function initializeDefaultPlans(): Promise<void> {
       name: 'United Kingdom',
       code: 'GB',
       currency: 'gbp',
-      currencies: [
-        { code: 'gbp', symbol: '£', name: 'British Pound' },
-      ],
+      currencies: [{ code: 'gbp', symbol: '£', name: 'British Pound' }],
       isDefault: false,
       sortOrder: 3,
       priceMultiplier: 0.79,
@@ -639,7 +644,12 @@ export async function initializeDefaultPlans(): Promise<void> {
     { key: 'ai_readings', name: 'AI Readings / month', category: 'ai', sortOrder: 2 },
     { key: 'love_horoscope', name: 'Love Horoscope', category: 'readings', sortOrder: 3 },
     { key: 'career_horoscope', name: 'Career Horoscope', category: 'readings', sortOrder: 4 },
-    { key: 'compatibility_reading', name: 'Compatibility Reading', category: 'readings', sortOrder: 5 },
+    {
+      key: 'compatibility_reading',
+      name: 'Compatibility Reading',
+      category: 'readings',
+      sortOrder: 5,
+    },
     { key: 'ai_chat', name: 'AI Chat', category: 'ai', sortOrder: 6 },
     { key: 'transit_forecasts', name: 'Transit Forecasts', category: 'readings', sortOrder: 7 },
     { key: 'priority_support', name: 'Priority Support', category: 'support', sortOrder: 8 },
@@ -647,12 +657,12 @@ export async function initializeDefaultPlans(): Promise<void> {
   ]
 
   for (const featureData of defaultFeatures) {
-    const existing = await prisma.planFeature.findUnique({
-      where: { key: featureData.key },
+    const existing = await prisma.planFeature.findFirst({
+      where: { tenantId, key: featureData.key },
     })
 
     if (!existing) {
-      await createFeature(featureData)
+      await createFeature({ ...featureData, tenantId })
     }
   }
 
@@ -778,12 +788,13 @@ export async function initializeDefaultPlans(): Promise<void> {
 
   for (const planData of defaultPlans) {
     const existing = await prisma.subscriptionPlan.findUnique({
-      where: { key: planData.key },
+      where: { tenantId_key: { tenantId, key: planData.key } },
     })
 
     if (!existing) {
       const plan = await prisma.subscriptionPlan.create({
         data: {
+          tenantId,
           name: planData.name,
           key: planData.key,
           description: planData.description,
@@ -799,9 +810,9 @@ export async function initializeDefaultPlans(): Promise<void> {
       })
 
       // Set up feature access
-      const features = await getActiveFeatures()
+      const features = await getActiveFeatures(tenantId)
       for (const [featureKey, access] of Object.entries(planData.featureAccess || {})) {
-        const feature = features.find((f) => f.key === featureKey)
+        const feature = features.find(f => f.key === featureKey)
         if (feature) {
           await setFeatureAccess(plan.id, feature.id, access.enabled, access.value)
         }

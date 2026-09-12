@@ -256,7 +256,9 @@ async function processRequest(
   // Clone headers and add request ID
   const headers = new Headers(request.headers)
   headers.set('x-request-id', requestId)
-  headers.set('x-csp-nonce', nonce)
+  // Next.js reads the CSP from the request headers to extract the nonce
+  // and inject it into its own <script> tags (documented pattern)
+  headers.set('content-security-policy', generateCspHeader(nonce))
 
   // Create modified request
   const modifiedRequest = new NextRequest(request.url, {

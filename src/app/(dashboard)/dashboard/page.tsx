@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { BrandName } from '@/components/BrandProvider'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
@@ -44,7 +45,9 @@ export default async function DashboardPage() {
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2">
               <Sparkles className="w-8 h-8 text-purple-400" />
-              <span className="text-xl font-bold gradient-text">StarPath Astrology</span>
+              <span className="text-xl font-bold gradient-text">
+                <BrandName />
+              </span>
             </Link>
             <div className="hidden md:flex items-center gap-6">
               <Link href="/dashboard" className="text-purple-200 hover:text-white transition">
@@ -70,9 +73,22 @@ export default async function DashboardPage() {
               </Link>
             </div>
             <div className="flex items-center gap-4">
-              {user.role === 'admin' && (
-                <Link href="/settings" className="text-purple-300 hover:text-white transition">
-                  Settings
+              {(user.role === 'admin' || user.role === 'superadmin') && (
+                <>
+                  <Link href="/settings" className="text-purple-300 hover:text-white transition">
+                    Settings
+                  </Link>
+                  <Link
+                    href="/admin/branding"
+                    className="text-purple-300 hover:text-white transition"
+                  >
+                    Branding
+                  </Link>
+                </>
+              )}
+              {user.role === 'superadmin' && (
+                <Link href="/admin/tenants" className="text-purple-300 hover:text-white transition">
+                  Tenants
                 </Link>
               )}
               <Link

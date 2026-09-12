@@ -6,14 +6,15 @@
 import { prisma } from '@/lib/db'
 
 export type MemoryCategory =
-  | 'preference'        // General preferences
-  | 'preference_astro'  // Astrology-related preferences
-  | 'preference_chat'   // Chat behavior preferences
-  | 'fact'              // Facts about the user
-  | 'insight'           // AI-derived insights
-  | 'temporary'         // Temporary context
+  | 'preference' // General preferences
+  | 'preference_astro' // Astrology-related preferences
+  | 'preference_chat' // Chat behavior preferences
+  | 'fact' // Facts about the user
+  | 'insight' // AI-derived insights
+  | 'temporary' // Temporary context
 
 export interface MemoryInput {
+  tenantId: string
   userId: string
   category: MemoryCategory
   key: string
@@ -43,12 +44,14 @@ export interface UserMemoryData {
 export async function storeMemory(input: MemoryInput): Promise<void> {
   await prisma.userMemory.upsert({
     where: {
-      userId_key: {
+      tenantId_userId_key: {
+        tenantId: input.tenantId,
         userId: input.userId,
         key: input.key,
       },
     },
     create: {
+      tenantId: input.tenantId,
       userId: input.userId,
       category: input.category,
       key: input.key,
@@ -70,9 +73,13 @@ export async function storeMemory(input: MemoryInput): Promise<void> {
 /**
  * Get a specific memory
  */
-export async function getMemory(userId: string, key: string): Promise<UserMemoryData | null> {
+export async function getMemory(
+  tenantId: string,
+  userId: string,
+  key: string
+): Promise<UserMemoryData | null> {
   const memory = await prisma.userMemory.findUnique({
-    where: { userId_key: { userId, key } },
+    where: { tenantId_userId_key: { tenantId, userId, key } },
   })
 
   if (!memory) return null
@@ -92,20 +99,17 @@ export async function getMemory(userId: string, key: string): Promise<UserMemory
 /**
  * Get all memories for a user (for AI context)
  */
-export async function getUserMemories(userId: string, categories?: MemoryCategory[]): Promise<UserMemoryData[]> {
+export async function getUserMemories(
+  userId: string,
+  categories?: MemoryCategory[]
+): Promise<UserMemoryData[]> {
   const memories = await prisma.userMemory.findMany({
     where: {
       userId,
       category: categories ? { in: categories } : undefined,
-      OR: [
-        { expiresAt: null },
-        { expiresAt: { gt: new Date() } },
-      ],
+      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
     },
-    orderBy: [
-      { importance: 'desc' },
-      { lastUsedAt: 'desc' },
-    ],
+    orderBy: [{ importance: 'desc' }, { lastUsedAt: 'desc' }],
     take: 50, // Limit to prevent context overflow
   })
 
@@ -131,16 +135,19 @@ export async function getMemoryContext(userId: string): Promise<string> {
 /**
  * Delete a specific memory
  */
-export async function deleteMemory(userId: string, key: string): Promise<void> {
+export async function deleteMemory(tenantId: string, userId: string, key: string): Promise<void> {
   await prisma.userMemory.delete({
-    where: { userId_key: { userId, key } },
+    where: { tenantId_userId_key: { tenantId, userId, key } },
   })
 }
 
 /**
  * Clear all memories for a user
  */
-export async function clearUserMemories(userId: string, category?: MemoryCategory): Promise<number> {
+export async function clearUserMemories(
+  userId: string,
+  category?: MemoryCategory
+): Promise<number> {
   const result = await prisma.userMemory.deleteMany({
     where: {
       userId,
@@ -155,6 +162,7 @@ export async function clearUserMemories(userId: string, category?: MemoryCategor
  * Extract and store preferences from chat conversation
  */
 export async function extractPreferencesFromChat(
+  tenantId: string,
   userId: string,
   messages: { role: string; content: string }[]
 ): Promise<void> {
@@ -168,8 +176,24 @@ export async function extractPreferencesFromChat(
     const zodiacMatch = content.match(/i'm (?:a|an) (\w+)/i)
     if (zodiacMatch) {
       const sign = zodiacMatch[1]
-      if (['aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo', 'libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces'].includes(sign)) {
+      if (
+        [
+          'aries',
+          'taurus',
+          'gemini',
+          'cancer',
+          'leo',
+          'virgo',
+          'libra',
+          'scorpio',
+          'sagittarius',
+          'capricorn',
+          'aquarius',
+          'pisces',
+        ].includes(sign)
+      ) {
         await storeMemory({
+          tenantId,
           userId,
           category: 'fact',
           key: 'zodiac_sign',
@@ -182,9 +206,12 @@ export async function extractPreferencesFromChat(
     }
 
     // Birth date mentions
-    const dateMatch = content.match(/born (?:on|in) (\w+ \d{1,2},? \d{4}|\d{1,2}[\/-]\d{1,2}[\/-]\d{4})/i)
+    const dateMatch = content.match(
+      /born (?:on|in) (\w+ \d{1,2},? \d{4}|\d{1,2}[\/-]\d{1,2}[\/-]\d{4})/i
+    )
     if (dateMatch) {
       await storeMemory({
+        tenantId,
         userId,
         category: 'fact',
         key: 'birth_date_mentioned',
@@ -198,6 +225,7 @@ export async function extractPreferencesFromChat(
     // Reading preferences
     if (content.includes('detailed') || content.includes('thorough')) {
       await storeMemory({
+        tenantId,
         userId,
         category: 'preference_chat',
         key: 'reading_style',
@@ -210,6 +238,7 @@ export async function extractPreferencesFromChat(
 
     if (content.includes('brief') || content.includes('short') || content.includes('quick')) {
       await storeMemory({
+        tenantId,
         userId,
         category: 'preference_chat',
         key: 'reading_style',
@@ -225,7 +254,7 @@ export async function extractPreferencesFromChat(
 /**
  * Create default memories for new users
  */
-export async function initializeUserMemory(userId: string): Promise<void> {
+export async function initializeUserMemory(tenantId: string, userId: string): Promise<void> {
   const defaultMemories = [
     {
       category: 'preference_chat' as MemoryCategory,
@@ -249,6 +278,7 @@ export async function initializeUserMemory(userId: string): Promise<void> {
 
   for (const mem of defaultMemories) {
     await storeMemory({
+      tenantId,
       userId,
       category: mem.category,
       key: mem.key,
@@ -277,8 +307,10 @@ export async function getMemoryStats(userId: string): Promise<{
     byCategory[m.category] = (byCategory[m.category] || 0) + 1
   }
 
-  const mostUsed = memories.reduce((max, m) =>
-    m.useCount > (max?.useCount || 0) ? m : max, null as UserMemoryData | null)
+  const mostUsed = memories.reduce(
+    (max, m) => (m.useCount > (max?.useCount || 0) ? m : max),
+    null as UserMemoryData | null
+  )
 
   return {
     total: memories.length,

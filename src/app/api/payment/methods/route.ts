@@ -4,6 +4,7 @@ export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { logError } from '@/lib/logger'
+import { getTenantContext } from '@/lib/tenant'
 
 /**
  * GET /api/payment/methods
@@ -11,6 +12,7 @@ import { logError } from '@/lib/logger'
  */
 export async function GET(req: NextRequest) {
   try {
+    const ctx = await getTenantContext()
     const searchParams = req.nextUrl.searchParams
     const gateway = searchParams.get('gateway')
     const country = searchParams.get('country')
@@ -18,7 +20,7 @@ export async function GET(req: NextRequest) {
 
     // Get all enabled gateways
     const gateways = await prisma.paymentGateway.findMany({
-      where: { isEnabled: true },
+      where: { tenantId: ctx.tenantId, isEnabled: true },
       orderBy: { sortOrder: 'asc' },
       include: {
         paymentMethods: {
@@ -32,12 +34,12 @@ export async function GET(req: NextRequest) {
 
     // Filter by gateway if specified
     if (gateway) {
-      filteredGateways = filteredGateways.filter((g) => g.key === gateway)
+      filteredGateways = filteredGateways.filter(g => g.key === gateway)
     }
 
     // Filter by country and currency
     if (country || currency) {
-      filteredGateways = filteredGateways.filter((g) => {
+      filteredGateways = filteredGateways.filter(g => {
         if (currency && g.supportedCurrencies) {
           const supportedCurrencies = JSON.parse(g.supportedCurrencies)
           if (!supportedCurrencies.includes(currency.toUpperCase())) {
@@ -56,13 +58,13 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    const result = filteredGateways.map((g) => ({
+    const result = filteredGateways.map(g => ({
       key: g.key,
       name: g.name,
       description: g.description,
       isDefault: g.isDefault,
       testMode: g.testMode,
-      paymentMethods: g.paymentMethods.map((pm) => ({
+      paymentMethods: g.paymentMethods.map(pm => ({
         key: pm.key,
         name: pm.name,
         description: pm.description,
@@ -79,9 +81,6 @@ export async function GET(req: NextRequest) {
     })
   } catch (error) {
     logError('Error fetching payment methods', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch payment methods' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch payment methods' }, { status: 500 })
   }
 }

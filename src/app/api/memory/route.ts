@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 
     // Get specific memory
     if (key) {
-      const memory = await getMemory(session.user.id, key)
+      const memory = await getMemory(session.user.tenantId!, session.user.id, key)
       return NextResponse.json({ memory })
     }
 
@@ -81,6 +81,7 @@ export async function POST(req: NextRequest) {
     }
 
     await storeMemory({
+      tenantId: session.user.tenantId!,
       userId: session.user.id,
       category,
       key,
@@ -116,7 +117,7 @@ export async function DELETE(req: NextRequest) {
     const category = url.searchParams.get('category')
 
     if (key) {
-      await deleteMemory(session.user.id, key)
+      await deleteMemory(session.user.tenantId!, session.user.id, key)
       return NextResponse.json({
         success: true,
         message: 'Memory deleted',

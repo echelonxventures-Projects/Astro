@@ -21,6 +21,8 @@ const getRedisConfig = (): RedisOptions => {
       },
       maxRetriesPerRequest: 3,
       lazyConnect: true,
+      // Distinguish auth failures (misconfiguration) from transient outages
+      enableOfflineQueue: true,
     }
   }
 
@@ -90,7 +92,14 @@ const initRedis = async (): Promise<void> => {
     redis.on('error', err => {
       isRedisConnected = false
       redisConnectionError = err
-      logger.error({ error: err.message }, 'Redis error')
+      if (err.message.includes('NOAUTH') || err.message.includes('invalid password')) {
+        logger.error(
+          { error: err.message },
+          'Redis authentication failed - check REDIS_URL credentials (redis://:PASSWORD@host:port)'
+        )
+      } else {
+        logger.error({ error: err.message }, 'Redis error')
+      }
     })
 
     redis.on('close', () => {
