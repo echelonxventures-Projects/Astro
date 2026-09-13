@@ -132,13 +132,15 @@ CSP nonce + security headers (middleware), HSTS, clickjacking/MIME protections Â
 ### Local self-host (what's running now)
 
 ```bash
-colima start && docker start starpath-postgres starpath-redis   # PG :15433, Redis :16380 (colima context)
-cd StarPath-Astrology && npm ci && npm run build                # standalone output
-rm -rf .next/standalone/public .next/standalone/.next/static
-cp -R public .next/standalone/public && cp -R .next/static .next/standalone/.next/static
-set -a; source .env; set +a; NEXTAUTH_URL=http://localhost:3001 PORT=3001 \
-  node .next/standalone/server.js                               # app :3001 (:3000 is taken by another stack)
+scripts/run-local.sh          # colima -> containers -> (build if needed) -> loopback server on :3001
+scripts/run-local.sh --lan    # bind 0.0.0.0 for phone/LAN testing
+scripts/stop-local.sh         # stop app; add --services to stop postgres/redis
 ```
+
+The standalone server binds **127.0.0.1 by default** (dev needs no LAN exposure). Manual
+equivalent: `NEXTAUTH_URL=... PORT=... HOSTNAME=127.0.0.1 node .next/standalone/server.js`.
+Seed credentials: dev keeps `admin123` with a printed warning; production requires
+`SEED_ADMIN_PASSWORD` (>=12 chars) or seeding refuses.
 
 DB bootstrap: `npx prisma migrate deploy && npx tsx prisma/seed.ts && npx tsx prisma/seed-payment-gateways.ts`
 

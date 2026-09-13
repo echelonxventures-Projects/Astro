@@ -196,15 +196,38 @@ async function seedTenant(t: TenantSeed, passwordHash: string) {
   console.log(`Seeded tenant: ${t.name} (${t.slug})`)
 }
 
+function resolveAdminPassword(): string {
+  const isProd = process.env.NODE_ENV === 'production'
+  const explicit = process.env.SEED_ADMIN_PASSWORD
+  if (isProd) {
+    if (!explicit || explicit.length < 12) {
+      console.error(
+        'Production seeding requires SEED_ADMIN_PASSWORD (>= 12 chars). Refusing to seed shared dev credentials.'
+      )
+      process.exit(1)
+    }
+    return explicit
+  }
+  return explicit || 'admin123'
+}
+
 async function main() {
-  const password = 'admin123'
+  const password = resolveAdminPassword()
+  const generated = password === 'admin123'
   const passwordHash = await bcrypt.hash(password, 12)
 
   for (const t of TENANTS) {
     await seedTenant(t, passwordHash)
   }
 
-  console.log('\nDone. Logins (password: admin123):')
+  if (generated && !process.env.CI) {
+    console.log(
+      '\n⚠️  DEV-ONLY credentials (admin123). Set SEED_ADMIN_PASSWORD before seeding any real deployment.'
+    )
+  }
+  console.log(
+    `\nDone. Logins (password: ${generated ? 'admin123 (dev-only)' : 'SEED_ADMIN_PASSWORD'}):`
+  )
   console.log('  starpath : http://localhost:3001  -> admin@localhost (admin)')
   console.log(
     '  luna     : http://luna.localhost:3001 -> admin@localhost (admin, same email, different tenant)'
