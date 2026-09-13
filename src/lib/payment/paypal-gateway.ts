@@ -19,6 +19,7 @@ import {
 } from './gateway-interface'
 import { validateWebhookSignature } from './security'
 import { logger } from '@/lib/logger'
+import { getBrandName } from '@/lib/tenant'
 
 // PayPal API types
 interface PayPalOrder {
@@ -169,7 +170,7 @@ export class PaypalGateway implements IPaymentGateway {
             },
           ],
           application_context: {
-            brand_name: 'StarPath Astrology',
+            brand_name: await getBrandName(),
             landing_page: 'LOGIN',
             shipping_preference: 'NO_SHIPPING',
             user_action: 'PAY_NOW',
@@ -325,7 +326,7 @@ export class PaypalGateway implements IPaymentGateway {
               },
             },
             application_context: {
-              brand_name: 'StarPath Astrology',
+              brand_name: await getBrandName(),
               shipping_preference: 'NO_SHIPPING',
               user_action: 'SUBSCRIBE_NOW',
               payment_method: {

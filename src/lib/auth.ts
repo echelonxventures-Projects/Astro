@@ -1,4 +1,5 @@
-import NextAuth, { type AuthOptions, type Session } from 'next-auth'
+import { headers } from 'next/headers'
+import { type AuthOptions, type Session } from 'next-auth'
 import { getServerSession } from 'next-auth/next'
 import Apple from 'next-auth/providers/apple'
 import Credentials from 'next-auth/providers/credentials'
@@ -7,16 +8,22 @@ import Facebook from 'next-auth/providers/facebook'
 import GitHub from 'next-auth/providers/github'
 import Google from 'next-auth/providers/google'
 import Twitter from 'next-auth/providers/twitter'
-import { logger } from './logger'
+import { DEFAULT_TENANT_ID, resolveTenantByHost, type TenantContext } from './tenant'
 
 // Runtime validation for production (not during build)
 const validateProductionEnv = () => {
   if (process.env.NODE_ENV === 'production' && typeof window === 'undefined') {
-    if (!process.env.NEXTAUTH_SECRET) {
-      logger.error('NEXTAUTH_SECRET must be set in production')
+    const missing: string[] = []
+    if (!process.env.NEXTAUTH_SECRET) missing.push('NEXTAUTH_SECRET')
+    if (!process.env.NEXTAUTH_URL) missing.push('NEXTAUTH_URL')
+    if (process.env.ENCRYPTION_KEY && process.env.ENCRYPTION_KEY.length < 32) {
+      throw new Error('ENCRYPTION_KEY must be at least 32 characters in production')
     }
-    if (!process.env.NEXTAUTH_URL) {
-      logger.error('NEXTAUTH_URL must be set in production')
+    if (missing.length > 0) {
+      throw new Error(
+        `Missing required production environment variables: ${missing.join(', ')}. ` +
+          'Generate secrets with: openssl rand -base64 32'
+      )
     }
   }
 }
@@ -27,76 +34,106 @@ if (process.env.NEXT_PHASE !== 'phase-production-build') {
 }
 
 // Helper to check if provider credentials exist
-const hasCredentials = (clientId: string | undefined, clientSecret: string | undefined) => {
-  return clientId && clientId.length > 0 && clientSecret && clientSecret.length > 0
+const hasCredentials = (
+  clientId: string | undefined,
+  clientSecret: string | undefined
+): boolean => {
+  return Boolean(clientId && clientId.length > 0 && clientSecret && clientSecret.length > 0)
 }
 
-// Build providers array based on available credentials
-const buildProviders = () => {
-  const providers = []
+interface ProviderCreds {
+  clientId: string
+  clientSecret: string
+}
 
-  // Google OAuth (always included if credentials exist)
-  if (hasCredentials(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET)) {
-    providers.push(
-      Google({
-        clientId: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      })
-    )
+/**
+ * Resolve OAuth credentials for a provider: tenant-specific keys win; global env
+ * keys are used as fallback only for the default tenant.
+ */
+function providerCreds(
+  provider: string,
+  env: { clientId?: string; clientSecret?: string },
+  ctx: TenantContext | null
+): ProviderCreds | null {
+  const tenantCreds = ctx?.settings.oauth?.[provider]
+  if (tenantCreds && hasCredentials(tenantCreds.clientId, tenantCreds.clientSecret)) {
+    return { clientId: tenantCreds.clientId!, clientSecret: tenantCreds.clientSecret! }
   }
-
-  // Facebook OAuth
-  if (hasCredentials(process.env.FACEBOOK_CLIENT_ID, process.env.FACEBOOK_CLIENT_SECRET)) {
-    providers.push(
-      Facebook({
-        clientId: process.env.FACEBOOK_CLIENT_ID!,
-        clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
-      })
-    )
+  if (!ctx || ctx.tenantId === DEFAULT_TENANT_ID) {
+    if (hasCredentials(env.clientId, env.clientSecret)) {
+      return { clientId: env.clientId!, clientSecret: env.clientSecret! }
+    }
   }
+  return null
+}
 
-  // GitHub OAuth
-  if (hasCredentials(process.env.GITHUB_CLIENT_ID, process.env.GITHUB_CLIENT_SECRET)) {
-    providers.push(
-      GitHub({
-        clientId: process.env.GITHUB_CLIENT_ID!,
-        clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-      })
-    )
-  }
+// Build providers array for a specific tenant (null = default/global)
+const buildProviders = (ctx: TenantContext | null) => {
+  const providers: AuthOptions['providers'] = []
 
-  // Discord OAuth
-  if (hasCredentials(process.env.DISCORD_CLIENT_ID, process.env.DISCORD_CLIENT_SECRET)) {
-    providers.push(
-      Discord({
-        clientId: process.env.DISCORD_CLIENT_ID!,
-        clientSecret: process.env.DISCORD_CLIENT_SECRET!,
-      })
-    )
-  }
+  const google = providerCreds(
+    'google',
+    {
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    },
+    ctx
+  )
+  if (google) providers.push(Google(google))
 
-  // Twitter/X OAuth
-  if (hasCredentials(process.env.TWITTER_CLIENT_ID, process.env.TWITTER_CLIENT_SECRET)) {
-    providers.push(
-      Twitter({
-        clientId: process.env.TWITTER_CLIENT_ID!,
-        clientSecret: process.env.TWITTER_CLIENT_SECRET!,
-        version: '2.0', // OAuth 2.0
-      })
-    )
-  }
+  const facebook = providerCreds(
+    'facebook',
+    {
+      clientId: process.env.FACEBOOK_CLIENT_ID,
+      clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+    },
+    ctx
+  )
+  if (facebook) providers.push(Facebook(facebook))
 
-  // Apple OAuth (requires special setup)
-  if (hasCredentials(process.env.APPLE_CLIENT_ID, process.env.APPLE_CLIENT_SECRET)) {
-    providers.push(
-      Apple({
-        clientId: process.env.APPLE_CLIENT_ID!,
-        clientSecret: process.env.APPLE_CLIENT_SECRET!,
-      })
-    )
-  }
+  const github = providerCreds(
+    'github',
+    {
+      clientId: process.env.GITHUB_CLIENT_ID,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET,
+    },
+    ctx
+  )
+  if (github) providers.push(GitHub(github))
 
-  // Credentials provider (email/password) - always included
+  const discord = providerCreds(
+    'discord',
+    {
+      clientId: process.env.DISCORD_CLIENT_ID,
+      clientSecret: process.env.DISCORD_CLIENT_SECRET,
+    },
+    ctx
+  )
+  if (discord) providers.push(Discord(discord))
+
+  const twitter = providerCreds(
+    'twitter',
+    {
+      clientId: process.env.TWITTER_CLIENT_ID,
+      clientSecret: process.env.TWITTER_CLIENT_SECRET,
+    },
+    ctx
+  )
+  if (twitter) providers.push(Twitter({ ...twitter, version: '2.0' }))
+
+  const apple = providerCreds(
+    'apple',
+    {
+      clientId: process.env.APPLE_CLIENT_ID,
+      clientSecret: process.env.APPLE_CLIENT_SECRET,
+    },
+    ctx
+  )
+  if (apple) providers.push(Apple(apple))
+
+  const tenantId = ctx?.tenantId ?? DEFAULT_TENANT_ID
+
+  // Credentials provider (email/password) - always included, tenant-scoped
   providers.push(
     Credentials({
       name: 'credentials',
@@ -114,7 +151,7 @@ const buildProviders = () => {
         const bcrypt = (await import('bcryptjs')).default
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { tenantId_email: { tenantId, email: credentials.email } },
         })
 
         if (!user || !user.passwordHash) {
@@ -133,6 +170,7 @@ const buildProviders = () => {
           name: user.name,
           image: user.image,
           role: user.role,
+          tenantId: user.tenantId,
         }
       },
     })
@@ -141,83 +179,82 @@ const buildProviders = () => {
   return providers
 }
 
-export const authOptions: AuthOptions = {
-  providers: buildProviders(),
-  pages: {
-    signIn: '/login',
-    error: '/login',
-  },
-  session: {
-    strategy: 'jwt',
-    maxAge: 7 * 24 * 60 * 60, // 7 days
-    updateAge: 24 * 60 * 60, // Update session every 24 hours
-  },
-  cookies: {
-    sessionToken: {
-      name: 'next-auth.session-token',
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-      },
-    },
-    csrfToken: {
-      name: 'next-auth.csrf-token',
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-      },
-    },
-    callbackUrl: {
-      name: 'next-auth.callback-url',
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-      },
-    },
-  },
-  callbacks: {
-    async jwt({ token, user, account, trigger, session }) {
+const buildCallbacks = (ctx: TenantContext | null) => {
+  const tenantId = ctx?.tenantId ?? DEFAULT_TENANT_ID
+  return {
+    async jwt({
+      token,
+      user,
+      account,
+      trigger,
+      session,
+    }: {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      token: any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      user?: any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      account?: any
+      trigger?: string
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      session?: any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    }): Promise<any> {
       if (user) {
         token.id = user.id
         token.role = user.role
-        // Store provider info for device tracking
+        token.tenantId = (user.tenantId as string) ?? tenantId
         if (account) {
           token.provider = account.provider
         }
+      }
+      if (!token.tenantId) {
+        token.tenantId = tenantId
       }
       if (trigger === 'update' && session) {
         return { ...token, ...session }
       }
       return token
     },
-    async session({ session, token }) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async session({ session, token }: { session: any; token: any }): Promise<any> {
       if (session.user) {
+        // Cross-tenant guard: a session issued for another tenant is not valid here
+        if (ctx && token.tenantId && token.tenantId !== ctx.tenantId) {
+          return null as any
+        }
         session.user.id = token.id as string
         session.user.role = token.role as string
+        session.user.tenantId = token.tenantId as string
       }
       return session
     },
-    async signIn({ user, account, profile: _profile }) {
-      // Handle OAuth sign-in - create user if not exists
+    async signIn({
+      user,
+      account,
+    }: {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      user: any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      account?: any
+    }): Promise<boolean> {
+      // Handle OAuth sign-in - create user within the current tenant
       if (account?.provider && account.provider !== 'credentials') {
         const { prisma } = await import('@/lib/db')
 
-        const existingUser = await prisma.user.findUnique({
-          where: { email: user.email! },
+        if (!user.email) return false
+
+        let dbUser = await prisma.user.findUnique({
+          where: { tenantId_email: { tenantId, email: user.email } },
         })
 
-        if (!existingUser) {
-          await prisma.user.create({
+        if (!dbUser) {
+          dbUser = await prisma.user.create({
             data: {
-              email: user.email!,
-              name: user.name!,
-              image: user.image!,
+              tenantId,
+              email: user.email,
+              name: user.name ?? null,
+              image: user.image ?? null,
               emailVerified: new Date(),
             },
           })
@@ -232,7 +269,7 @@ export const authOptions: AuthOptions = {
             },
           },
           create: {
-            userId: existingUser?.id || user.email!,
+            userId: dbUser.id,
             type: account.type,
             provider: account.provider,
             providerAccountId: account.providerAccountId,
@@ -250,14 +287,86 @@ export const authOptions: AuthOptions = {
             expires_at: account.expires_at,
           },
         })
+
+        user.id = dbUser.id
+        user.role = dbUser.role
+        user.tenantId = dbUser.tenantId
       }
       return true
     },
-  },
-  debug: process.env.NODE_ENV === 'development',
+  }
 }
 
-const handler = NextAuth(authOptions)
+export function buildAuthOptions(ctx: TenantContext | null = null): AuthOptions {
+  return {
+    providers: buildProviders(ctx),
+    // NOTE: browsers must set NEXTAUTH_TRUST_HOST=true (v4 env-based) for multi-tenant
+    // hostnames; see scripts/deploy docs. Tenant resolution itself stays strict.
+    pages: {
+      signIn: '/login',
+      error: '/login',
+    },
+    session: {
+      strategy: 'jwt',
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+      updateAge: 24 * 60 * 60, // Update session every 24 hours
+    },
+    cookies: {
+      sessionToken: {
+        name: 'next-auth.session-token',
+        options: {
+          httpOnly: true,
+          sameSite: 'lax',
+          path: '/',
+          secure: (process.env.NEXTAUTH_URL ?? '').startsWith('https'),
+        },
+      },
+      csrfToken: {
+        name: 'next-auth.csrf-token',
+        options: {
+          httpOnly: true,
+          sameSite: 'lax',
+          path: '/',
+          secure: (process.env.NEXTAUTH_URL ?? '').startsWith('https'),
+        },
+      },
+      callbackUrl: {
+        name: 'next-auth.callback-url',
+        options: {
+          httpOnly: true,
+          sameSite: 'lax',
+          path: '/',
+          secure: (process.env.NEXTAUTH_URL ?? '').startsWith('https'),
+        },
+      },
+    },
+    callbacks: buildCallbacks(ctx),
+    debug: process.env.NODE_ENV === 'development',
+  }
+}
 
-export { handler as GET, handler as POST }
-export const auth = () => getServerSession(authOptions) as Promise<Session | null>
+// Base options (default tenant) - sufficient for getServerSession, which only
+// needs the secret + session config + jwt/session callbacks.
+export const authOptions: AuthOptions = buildAuthOptions(null)
+
+/** Resolve the tenant bound to the current request (server context). */
+export async function getRequestTenant(): Promise<TenantContext | null> {
+  try {
+    const h = await headers()
+    const host = h.get('host') ?? h.get('x-forwarded-host')
+    return await resolveTenantByHost(host)
+  } catch {
+    return null
+  }
+}
+
+export async function auth(): Promise<Session | null> {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return session
+  // Cross-tenant guard: a session issued for another tenant is unauthenticated here
+  const ctx = await getRequestTenant()
+  if (ctx && session.user.tenantId && session.user.tenantId !== ctx.tenantId) {
+    return null
+  }
+  return session
+}

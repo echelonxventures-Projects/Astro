@@ -1,3 +1,9 @@
+<!--
+  HISTORY NOTE (documentation consolidation): this file describes an earlier
+  implementation phase (pre multi-tenancy / pre PostgreSQL migration).
+  Canonical current docs: README.md, PROJECT_DOCUMENTATION.md, docs/MULTI_TENANCY.md.
+-->
+
 # Code Review Checklist
 
 Use this checklist when reviewing code changes for the StarPath Astrology project.

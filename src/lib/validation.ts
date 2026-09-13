@@ -299,7 +299,7 @@ export type SubscriptionChange = z.infer<typeof SubscriptionChangeSchema>
 export const AdminUserSearchSchema = z.object({
   query: z.string().max(200).optional(),
   status: z.enum(['active', 'inactive', 'suspended', 'all']).default('all'),
-  role: z.enum(['user', 'admin', 'moderator', 'all']).default('all'),
+  role: z.enum(['user', 'admin', 'moderator', 'superadmin', 'all']).default('all'),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 })
@@ -312,7 +312,7 @@ export type AdminUserSearch = z.infer<typeof AdminUserSearchSchema>
 export const AdminUserUpdateSchema = z.object({
   userId: UuidSchema,
   status: z.enum(['active', 'suspended', 'banned']).optional(),
-  role: z.enum(['user', 'admin', 'moderator']).optional(),
+  role: z.enum(['user', 'admin', 'moderator', 'superadmin']).optional(),
   notes: z.string().max(1000).optional(),
 })
 

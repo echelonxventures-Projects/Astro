@@ -1,3 +1,11 @@
+<!--
+  HISTORY NOTE (documentation consolidation): PostgreSQL is now the only
+  supported database and the app is multi-tenant (hostname -> platform).
+  Steps below referencing SQLite, single-tenant flows, or `prisma migrate dev`
+  are outdated. See PROJECT_DOCUMENTATION.md section 11 for the current runbook
+  (migrate deploy + seeds, standalone build or Docker Compose).
+-->
+
 # StarPath Astrology - OCI Deployment Guide
 
 ## Deploy to Oracle Cloud Infrastructure (Always Free)
@@ -97,6 +105,7 @@ nano .env
 ```
 
 **Update these values:**
+
 ```bash
 NODE_ENV="production"
 DATABASE_URL="file:./prod.db"
@@ -196,6 +205,7 @@ ollama pull llama3.2
 ## Useful Commands
 
 ### Application Management
+
 ```bash
 pm2 status
 pm2 logs starpath-astrology
@@ -205,6 +215,7 @@ pm2 delete starpath-astrology
 ```
 
 ### Nginx
+
 ```bash
 sudo systemctl status nginx
 sudo nginx -t
@@ -212,11 +223,13 @@ sudo systemctl restart nginx
 ```
 
 ### SSL Renewal
+
 ```bash
 sudo certbot renew --dry-run
 ```
 
 ### Firewall
+
 ```bash
 sudo ufw status
 sudo ufw allow 'Nginx Full'
@@ -228,24 +241,28 @@ sudo ufw allow 'OpenSSH'
 ## Troubleshooting
 
 ### Application not responding
+
 ```bash
 pm2 logs starpath-astrology
 pm2 restart starpath-astrology
 ```
 
 ### Nginx errors
+
 ```bash
 sudo nginx -t
 sudo systemctl status nginx
 ```
 
 ### Database errors
+
 ```bash
 npx prisma generate
 npx prisma migrate deploy
 ```
 
 ### AI not working
+
 ```bash
 # Check Ollama
 ollama list
@@ -258,11 +275,11 @@ ollama run llama3.2 "Hello"
 
 ## Files Deployed
 
-| File | Purpose |
-|------|---------|
-| `.env.production` | Production environment template |
-| `deploy-oci.sh` | Automated deployment script |
-| `DEPLOYMENT_OCI.md` | This guide |
+| File                | Purpose                         |
+| ------------------- | ------------------------------- |
+| `.env.production`   | Production environment template |
+| `deploy-oci.sh`     | Automated deployment script     |
+| `DEPLOYMENT_OCI.md` | This guide                      |
 
 ---
 

@@ -31,8 +31,8 @@ export class OpenCodeProvider implements AIProvider {
   constructor(config: AIProviderConfig) {
     this.baseUrl = config.baseUrl || 'http://localhost:8080'
     // Parse model format "provider/model" or just "model"
-    if (config.model.includes('/')) {
-      const parts = config.model.split('/')
+    if ((config.model ?? '').includes('/')) {
+      const parts = (config.model ?? '').split('/')
       this.providerId = parts[0] || 'opencode'
       this.model = parts[1] || 'minimax-m2.5-free'
     } else {

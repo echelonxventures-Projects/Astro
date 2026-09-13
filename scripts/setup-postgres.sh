@@ -24,21 +24,16 @@ fi
 
 echo "✅ DATABASE_URL is set"
 
-# Backup SQLite schema
-echo "📦 Backing up SQLite schema..."
-cp prisma/schema.prisma prisma/schema.prisma.sqlite
-
-# Copy PostgreSQL schema to main schema file
-echo "📄 Switching to PostgreSQL schema..."
-cp prisma/schema.prisma.postgresql prisma/schema.prisma
+# Schema is PostgreSQL-canonical; no schema switching needed
+echo "📄 Using canonical PostgreSQL schema (prisma/schema.prisma)"
 
 # Generate Prisma client
 echo "⚡ Generating Prisma client..."
 npx prisma generate
 
-# Push schema to database (creates tables)
-echo "📊 Pushing schema to PostgreSQL..."
-npx prisma db push --accept-data-loss
+# Apply migrations (creates tables)
+echo "📊 Applying migrations to PostgreSQL..."
+npx prisma migrate deploy
 
 # Seed default data
 echo "🌱 Seeding default data..."

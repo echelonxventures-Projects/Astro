@@ -4,6 +4,7 @@ import { Check, Sparkles, Star } from 'lucide-react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
+import { BrandLogo, BrandName } from '@/components/BrandProvider'
 import { logger } from '@/lib/logger'
 import { CURRENCY_CONFIG, formatPrice } from '@/lib/plans'
 
@@ -66,9 +67,9 @@ export default function PricingPage() {
     setLoading(true)
     try {
       const [plansRes, featuresRes, regionsRes] = await Promise.all([
-        fetch('/api/admin/plans'),
-        fetch('/api/admin/plans?type=features'),
-        fetch('/api/admin/plans?type=regions'),
+        fetch('/api/plans'),
+        fetch('/api/plans?type=features'),
+        fetch('/api/plans?type=regions'),
       ])
 
       const [plansData, featuresData, regionsData] = await Promise.all([
@@ -92,7 +93,14 @@ export default function PricingPage() {
       const matrix: Record<string, Record<string, { enabled: boolean; value: string | null }>> = {}
       for (const plan of plansData.plans || []) {
         matrix[plan.key] = {}
-        // We need to fetch the plan with featureAccess included
+        for (const access of plan.featureAccess || []) {
+          if (access?.feature?.key) {
+            matrix[plan.key][access.feature.key] = {
+              enabled: Boolean(access.enabled),
+              value: access.value ?? null,
+            }
+          }
+        }
       }
       setAccessMatrix(matrix)
     } catch (err) {
@@ -141,8 +149,10 @@ export default function PricingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2">
-              <Sparkles className="w-8 h-8 text-purple-400" />
-              <span className="text-xl font-bold gradient-text">StarPath Astrology</span>
+              <BrandLogo className="w-8 h-8 text-[var(--primary-light)]" />
+              <span className="text-xl font-bold gradient-text">
+                <BrandName />
+              </span>
             </Link>
             <div className="flex items-center gap-4">
               {status === 'authenticated' ? (
@@ -193,6 +203,7 @@ export default function PricingPage() {
               <div className="inline-flex items-center gap-3 px-6 py-3 bg-purple-600/20 rounded-xl border border-purple-500/30">
                 <span className="text-purple-200 text-sm">Region:</span>
                 <select
+                  data-testid="region-select"
                   value={selectedRegion}
                   onChange={e => setSelectedRegion(e.target.value)}
                   className="bg-purple-600/30 border border-purple-500/30 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -219,6 +230,7 @@ export default function PricingPage() {
               return (
                 <div
                   key={plan.id}
+                  data-testid="plan-card"
                   className={`glass rounded-3xl p-8 ${
                     isPopular
                       ? 'border-2 border-purple-500 relative'
@@ -265,6 +277,7 @@ export default function PricingPage() {
                         <input type="hidden" name="plan" value={plan.key} />
                         <button
                           type="submit"
+                          data-testid="plan-cta"
                           className={`w-full py-3 rounded-xl font-semibold transition ${
                             isPopular
                               ? 'bg-purple-600 hover:bg-purple-500 text-white pulse-glow'
@@ -283,6 +296,7 @@ export default function PricingPage() {
                   ) : (
                     <Link
                       href="/signup"
+                      data-testid="plan-cta"
                       className={`block w-full text-center py-3 rounded-xl font-semibold transition ${
                         isPopular
                           ? 'bg-purple-600 hover:bg-purple-500 text-white pulse-glow'
@@ -389,7 +403,9 @@ export default function PricingPage() {
       {/* Footer */}
       <footer className="py-12 px-4 border-t border-purple-500/20 mt-16">
         <div className="max-w-7xl mx-auto text-center text-purple-400">
-          <p>© {new Date().getFullYear()} StarPath Astrology. All rights reserved.</p>
+          <p>
+            © {new Date().getFullYear()} <BrandName />. All rights reserved.
+          </p>
         </div>
       </footer>
     </>

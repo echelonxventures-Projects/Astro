@@ -1,5 +1,6 @@
 import { Search, Home, Star, Sparkles, Compass, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
+import { BrandName } from '@/components/BrandProvider'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -11,7 +12,7 @@ import {
 } from '@/components/ui/card'
 
 export const metadata = {
-  title: '404 - Page Not Found | StarPath Astrology',
+  title: '404 - Page Not Found',
   description: 'The page you are looking for could not be found. Explore our astrology services.',
 }
 
@@ -124,7 +125,7 @@ export default function NotFound() {
           <Button asChild className="w-full bg-[#7C3AED] hover:bg-[#5B21B6] text-white pulse-glow">
             <Link href="/">
               <ArrowRight className="w-4 h-4 mr-2" />
-              Return to StarPath Home
+              Return to <BrandName short /> Home
             </Link>
           </Button>
 

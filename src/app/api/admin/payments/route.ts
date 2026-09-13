@@ -7,8 +7,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { logError } from '@/lib/logger'
+import { getScopedDb } from '@/lib/tenant'
 
-async function checkAdmin() {
+async function checkAdmin(): Promise<Awaited<ReturnType<typeof auth>>> {
   const session = await auth()
   if (!session?.user) {
     throw new Error('Unauthorized')
@@ -18,7 +19,7 @@ async function checkAdmin() {
     where: { id: session.user.id },
   })
 
-  if (user?.role !== 'admin') {
+  if (user?.role !== 'admin' && user?.role !== 'superadmin') {
     throw new Error('Admin access required')
   }
 
@@ -27,13 +28,15 @@ async function checkAdmin() {
 
 export async function GET(req: NextRequest) {
   try {
-    await checkAdmin()
+    const session = await checkAdmin()
+    if (!session?.user) throw new Error('Unauthorized')
+    const db = getScopedDb(session.user.tenantId!)
 
     const url = new URL(req.url)
     const type = url.searchParams.get('type')
 
     if (type === 'gateways') {
-      const gateways = await prisma.paymentGateway.findMany({
+      const gateways = await db.paymentGateway.findMany({
         include: {
           paymentMethods: {
             orderBy: { sortOrder: 'asc' },
@@ -45,7 +48,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (type === 'plans') {
-      const plans = await prisma.gatewayPlan.findMany({
+      const plans = await db.gatewayPlan.findMany({
         include: {
           gateway: {
             select: { name: true, key: true },
@@ -57,7 +60,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (type === 'transactions') {
-      const transactions = await prisma.paymentTransaction.findMany({
+      const transactions = await db.paymentTransaction.findMany({
         include: {
           user: {
             select: { email: true, name: true },
@@ -73,7 +76,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Default: return all gateways with methods
-    const gateways = await prisma.paymentGateway.findMany({
+    const gateways = await db.paymentGateway.findMany({
       include: {
         paymentMethods: {
           orderBy: { sortOrder: 'asc' },
@@ -94,14 +97,16 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await checkAdmin()
+    const session = await checkAdmin()
+    if (!session?.user) throw new Error('Unauthorized')
+    const db = getScopedDb(session.user.tenantId!)
 
     const body = await req.json()
     const { action, ...data } = body
 
     switch (action) {
       case 'toggleGateway': {
-        const gateway = await prisma.paymentGateway.update({
+        const gateway = await db.paymentGateway.update({
           where: { id: data.id },
           data: { isEnabled: data.isEnabled },
         })
@@ -110,13 +115,13 @@ export async function POST(req: NextRequest) {
 
       case 'setDefaultGateway': {
         // First unset all defaults
-        await prisma.paymentGateway.updateMany({
+        await db.paymentGateway.updateMany({
           where: { isDefault: true },
           data: { isDefault: false },
         })
 
         // Then set the new default
-        const gateway = await prisma.paymentGateway.update({
+        const gateway = await db.paymentGateway.update({
           where: { id: data.id },
           data: { isDefault: true },
         })
@@ -126,6 +131,7 @@ export async function POST(req: NextRequest) {
       case 'createGateway':
       case 'updateGateway': {
         const gatewayData = {
+          tenantId: session.user.tenantId!,
           name: data.name,
           key: data.key,
           description: data.description,
@@ -144,14 +150,14 @@ export async function POST(req: NextRequest) {
 
         if (data.id) {
           // Update existing
-          const gateway = await prisma.paymentGateway.update({
+          const gateway = await db.paymentGateway.update({
             where: { id: data.id },
             data: gatewayData,
           })
           return NextResponse.json({ gateway })
         } else {
           // Create new
-          const gateway = await prisma.paymentGateway.create({
+          const gateway = await db.paymentGateway.create({
             data: gatewayData,
           })
           return NextResponse.json({ gateway })
@@ -159,7 +165,7 @@ export async function POST(req: NextRequest) {
       }
 
       case 'togglePaymentMethod': {
-        const method = await prisma.paymentMethod.update({
+        const method = await db.paymentMethod.update({
           where: { id: data.methodId },
           data: { isEnabled: data.isEnabled },
         })
@@ -167,7 +173,7 @@ export async function POST(req: NextRequest) {
       }
 
       case 'createPaymentMethod': {
-        const method = await prisma.paymentMethod.create({
+        const method = await db.paymentMethod.create({
           data: {
             gatewayId: data.gatewayId,
             name: data.name,
@@ -184,7 +190,7 @@ export async function POST(req: NextRequest) {
       }
 
       case 'updateGatewayPlan': {
-        const plan = await prisma.gatewayPlan.update({
+        const plan = await db.gatewayPlan.update({
           where: { id: data.id },
           data: {
             name: data.name,
@@ -200,7 +206,7 @@ export async function POST(req: NextRequest) {
       }
 
       case 'createGatewayPlan': {
-        const plan = await prisma.gatewayPlan.create({
+        const plan = await db.gatewayPlan.create({
           data: {
             gatewayId: data.gatewayId,
             planId: data.planId,

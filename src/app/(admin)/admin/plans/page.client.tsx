@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { BrandName } from '@/components/BrandProvider'
 
 interface _User {
   email: string
@@ -382,7 +383,9 @@ export default function AdminPlansClient() {
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2">
               <Sparkles className="w-8 h-8 text-purple-400" />
-              <span className="text-xl font-bold gradient-text">StarPath Astrology Admin</span>
+              <span className="text-xl font-bold gradient-text">
+                <BrandName /> Admin
+              </span>
             </Link>
             <div className="flex items-center gap-4">
               <Link href="/settings" className="text-purple-200 hover:text-white transition">

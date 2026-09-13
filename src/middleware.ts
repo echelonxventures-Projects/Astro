@@ -187,8 +187,8 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return createForbiddenResponse(requestId)
   }
 
-  // Check rate limit for this request
-  if (!isRateLimitExempt(path)) {
+  // Check rate limit for this request (disabled only in CI e2e via RATE_LIMIT_DISABLED)
+  if (process.env.RATE_LIMIT_DISABLED !== 'true' && !isRateLimitExempt(path)) {
     const identifier = getUserIdentifier(request)
     const rateLimitResult = await checkRateLimitForPath(identifier, path)
 
@@ -256,7 +256,9 @@ async function processRequest(
   // Clone headers and add request ID
   const headers = new Headers(request.headers)
   headers.set('x-request-id', requestId)
-  headers.set('x-csp-nonce', nonce)
+  // Next.js reads the CSP from the request headers to extract the nonce
+  // and inject it into its own <script> tags (documented pattern)
+  headers.set('content-security-policy', generateCspHeader(nonce))
 
   // Create modified request
   const modifiedRequest = new NextRequest(request.url, {

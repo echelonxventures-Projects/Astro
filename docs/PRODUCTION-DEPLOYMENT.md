@@ -1,3 +1,11 @@
+<!--
+  HISTORY NOTE (documentation consolidation): PostgreSQL is now the only
+  supported database and the app is multi-tenant (hostname -> platform).
+  Steps below referencing SQLite, single-tenant flows, or `prisma migrate dev`
+  are outdated. See PROJECT_DOCUMENTATION.md section 11 for the current runbook
+  (migrate deploy + seeds, standalone build or Docker Compose).
+-->
+
 # StarPath Astrology - Production Deployment Guide
 
 ## Prerequisites
@@ -58,6 +66,7 @@ npm run db:seed
 ```
 
 This will:
+
 - Switch from SQLite schema to PostgreSQL schema
 - Generate Prisma client
 - Create all tables
@@ -78,6 +87,7 @@ openssl rand -base64 32
 ```
 
 Add to `.env.production`:
+
 ```
 NEXTAUTH_SECRET="your-generated-secret"
 ENCRYPTION_KEY="your-encryption-key"
@@ -103,6 +113,7 @@ NEXTAUTH_URL="https://your-domain.com"
    ```
 
 Free models work without API key (rate limited):
+
 - `meta-llama/llama-3.2-3b-instruct:free`
 - `google/gemma-3-1b-it:free`
 
@@ -116,6 +127,7 @@ Free models work without API key (rate limited):
    ```
 
 Popular models:
+
 - `meta/llama-3.1-8b-instruct`
 - `meta/llama-3.2-3b-instruct`
 
@@ -124,12 +136,14 @@ Popular models:
 OpenCode provides free AI via local server (no API key needed):
 
 1. Install OpenCode CLI:
+
    ```bash
    # Via npm
    npm install -g @opencode-ai/cli
    ```
 
 2. Start server:
+
    ```bash
    opencode serve --port 8080
    ```
@@ -140,6 +154,7 @@ OpenCode provides free AI via local server (no API key needed):
    ```
 
 Free models available:
+
 - `opencode/minimax-m2.5-free`
 - `opencode/nemotron-3-super-free`
 - `opencode/hy3-preview-free`
@@ -282,6 +297,7 @@ pm2 startup
 ### Change Admin Password
 
 Default admin credentials should be changed immediately:
+
 - Email: `admin@starpath.com`
 - Password: `admin123`
 
@@ -308,26 +324,26 @@ Login and update via profile settings.
 
 The PostgreSQL schema includes:
 
-| Model | Purpose |
-|-------|---------|
-| User | User accounts and profiles |
-| Account | OAuth provider accounts |
-| Session | User sessions |
-| BirthChart | Saved birth charts |
-| Reading | Generated readings |
-| ChatSession | AI chat history |
-| Subscription | User subscriptions |
-| Payment | Payment records |
-| PaymentGateway | Gateway configurations |
-| PaymentMethod | Payment methods per gateway |
-| GatewayPlan | Gateway-specific plan IDs |
+| Model              | Purpose                     |
+| ------------------ | --------------------------- |
+| User               | User accounts and profiles  |
+| Account            | OAuth provider accounts     |
+| Session            | User sessions               |
+| BirthChart         | Saved birth charts          |
+| Reading            | Generated readings          |
+| ChatSession        | AI chat history             |
+| Subscription       | User subscriptions          |
+| Payment            | Payment records             |
+| PaymentGateway     | Gateway configurations      |
+| PaymentMethod      | Payment methods per gateway |
+| GatewayPlan        | Gateway-specific plan IDs   |
 | PaymentTransaction | Unified transaction records |
-| SubscriptionPlan | Configurable plans |
-| PlanFeature | Feature definitions |
-| PlanFeatureAccess | Plan-feature mappings |
-| Region | Regional configurations |
-| AIProviderConfig | AI provider settings |
-| AppSettings | Application settings |
+| SubscriptionPlan   | Configurable plans          |
+| PlanFeature        | Feature definitions         |
+| PlanFeatureAccess  | Plan-feature mappings       |
+| Region             | Regional configurations     |
+| AIProviderConfig   | AI provider settings        |
+| AppSettings        | Application settings        |
 
 ---
 
@@ -363,16 +379,16 @@ npm run build
 
 ## Environment Variables Checklist
 
-| Variable | Required | Source |
-|----------|----------|--------|
-| DATABASE_URL | Yes | PostgreSQL provider |
-| DIRECT_URL | Yes | PostgreSQL provider |
-| NEXTAUTH_URL | Yes | Your domain |
-| NEXTAUTH_SECRET | Yes | Generated |
-| ENCRYPTION_KEY | Yes | Generated |
-| OPENROUTER_API_KEY | Recommended | OpenRouter |
-| STRIPE_SECRET_KEY | Payments | Stripe |
-| RAZORPAY_KEY_ID | India | Razorpay |
-| GOOGLE_CLIENT_ID | OAuth | Google Cloud |
-| CLOUDINARY_CLOUD_NAME | Images | Cloudinary |
-| RESEND_API_KEY | Email | Resend |
+| Variable              | Required    | Source              |
+| --------------------- | ----------- | ------------------- |
+| DATABASE_URL          | Yes         | PostgreSQL provider |
+| DIRECT_URL            | Yes         | PostgreSQL provider |
+| NEXTAUTH_URL          | Yes         | Your domain         |
+| NEXTAUTH_SECRET       | Yes         | Generated           |
+| ENCRYPTION_KEY        | Yes         | Generated           |
+| OPENROUTER_API_KEY    | Recommended | OpenRouter          |
+| STRIPE_SECRET_KEY     | Payments    | Stripe              |
+| RAZORPAY_KEY_ID       | India       | Razorpay            |
+| GOOGLE_CLIENT_ID      | OAuth       | Google Cloud        |
+| CLOUDINARY_CLOUD_NAME | Images      | Cloudinary          |
+| RESEND_API_KEY        | Email       | Resend              |

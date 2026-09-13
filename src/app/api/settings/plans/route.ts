@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
+import { listCatalog } from '@/lib/ai/catalog'
 import { getAllAIPlanConfigs, updateAIPlanConfig } from '@/lib/ai/plan-config'
 import { auth } from '@/lib/auth'
 import { logError } from '@/lib/logger'
@@ -18,11 +19,11 @@ export async function GET(_req: NextRequest) {
 
   try {
     // Check if user is admin
-    if (session.user.role !== 'admin') {
+    if (session.user.role !== 'admin' && session.user.role !== 'superadmin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const configs = await getAllAIPlanConfigs()
+    const configs = await getAllAIPlanConfigs(session.user.tenantId!)
     return NextResponse.json(configs)
   } catch (error) {
     logError('Error fetching plan configs', error, { userId: session.user.id })
@@ -42,7 +43,7 @@ export async function POST(_req: NextRequest) {
 
   try {
     // Check if user is admin
-    if (session.user.role !== 'admin') {
+    if (session.user.role !== 'admin' && session.user.role !== 'superadmin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -57,9 +58,21 @@ export async function POST(_req: NextRequest) {
       enabled: boolean
     }>
 
+    const catalog = await listCatalog(session.user.tenantId!)
+    const knownKeys = new Set(catalog.map(c => c.key))
+    for (const plan of plans) {
+      if (plan.provider && !knownKeys.has(plan.provider)) {
+        return NextResponse.json(
+          {
+            error: `Unknown AI provider "${plan.provider}". Add it in Settings - Providers first.`,
+          },
+          { status: 400 }
+        )
+      }
+    }
     // Save each plan configuration
     for (const plan of plans) {
-      await updateAIPlanConfig(plan.plan, {
+      await updateAIPlanConfig(session.user.tenantId!, plan.plan, {
         provider: plan.provider,
         model: plan.model,
         apiKey: plan.apiKey,

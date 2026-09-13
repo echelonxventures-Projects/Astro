@@ -1,5 +1,5 @@
 /**
- * Seed script to initialize payment gateway configuration
+ * Seed script to initialize payment gateway configuration (per tenant)
  * Run: npx tsx prisma/seed-payment-gateways.ts
  */
 
@@ -7,15 +7,14 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-async function main() {
-  console.log('🌱 Seeding payment gateway configuration...')
-
+async function seedForTenant(tenantId: string, tenantName: string) {
   // Create Stripe gateway
   const stripeGateway = await prisma.paymentGateway.upsert({
-    where: { key: 'stripe' },
+    where: { tenantId_key: { tenantId, key: 'stripe' } },
     update: {},
     create: {
-      id: 'stripe_1',
+      id: `${tenantId}_stripe`,
+      tenantId,
       name: 'Stripe',
       key: 'stripe',
       description: 'International payments via Stripe',
@@ -24,19 +23,30 @@ async function main() {
       isEnabled: true,
       isDefault: true,
       supportedCurrencies: JSON.stringify(['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'INR', 'SGD', 'AED']),
-      supportedCountries: JSON.stringify(['US', 'GB', 'CA', 'AU', 'IN', 'SG', 'AE', 'FR', 'DE', 'NL']),
+      supportedCountries: JSON.stringify([
+        'US',
+        'GB',
+        'CA',
+        'AU',
+        'IN',
+        'SG',
+        'AE',
+        'FR',
+        'DE',
+        'NL',
+      ]),
       testMode: false,
       sortOrder: 1,
     },
   })
-  console.log('✅ Stripe gateway configured')
 
   // Create Razorpay gateway
   const razorpayGateway = await prisma.paymentGateway.upsert({
-    where: { key: 'razorpay' },
+    where: { tenantId_key: { tenantId, key: 'razorpay' } },
     update: {},
     create: {
-      id: 'razorpay_1',
+      id: `${tenantId}_razorpay`,
+      tenantId,
       name: 'Razorpay',
       key: 'razorpay',
       description: 'Indian payments via Razorpay (UPI, Cards, Netbanking, Wallets)',
@@ -51,7 +61,6 @@ async function main() {
       sortOrder: 2,
     },
   })
-  console.log('✅ Razorpay gateway configured')
 
   // Create Stripe payment methods
   const stripeMethods = [
@@ -65,7 +74,7 @@ async function main() {
       where: { gatewayId_key: { gatewayId: stripeGateway.id, key: method.key } },
       update: {},
       create: {
-        id: `stripe_${method.key}`,
+        id: `${tenantId}_stripe_${method.key}`,
         gatewayId: stripeGateway.id,
         name: method.name,
         key: method.key,
@@ -75,7 +84,6 @@ async function main() {
       },
     })
   }
-  console.log('✅ Stripe payment methods configured')
 
   // Create Razorpay payment methods (Indian market)
   const razorpayMethods = [
@@ -92,7 +100,7 @@ async function main() {
       where: { gatewayId_key: { gatewayId: razorpayGateway.id, key: method.key } },
       update: {},
       create: {
-        id: `razorpay_${method.key}`,
+        id: `${tenantId}_razorpay_${method.key}`,
         gatewayId: razorpayGateway.id,
         name: method.name,
         key: method.key,
@@ -105,70 +113,41 @@ async function main() {
       },
     })
   }
-  console.log('✅ Razorpay payment methods configured (UPI, Cards, Netbanking, Wallets, PayLater, EMI)')
 
-  // Create subscription plans if they don't exist
+  // Ensure subscription plans exist for gateway plan links
   const plans = [
-    {
-      key: 'free',
-      name: 'Free',
-      description: 'Basic features with limited access',
-      price: 0,
-      currency: 'USD',
-      interval: null,
-      isActive: true,
-      isPopular: false,
-      sortOrder: 1,
-      features: JSON.stringify(['Daily Horoscope', 'Basic Chat', 'Limited AI Readings']),
-    },
-    {
-      key: 'monthly',
-      name: 'Premium Monthly',
-      description: 'Full access with monthly billing',
-      price: 99900, // $9.99 in cents
-      currency: 'USD',
-      interval: 'monthly',
-      isActive: true,
-      isPopular: true,
-      sortOrder: 2,
-      features: JSON.stringify(['Unlimited AI Readings', 'Priority Support', 'All Reports', 'No Ads']),
-    },
-    {
-      key: 'yearly',
-      name: 'Premium Yearly',
-      description: 'Full access with annual billing (save 20%)',
-      price: 95900, // $95.90 in cents (equivalent to $7.99/month)
-      currency: 'USD',
-      interval: 'yearly',
-      isActive: true,
-      isPopular: false,
-      sortOrder: 3,
-      features: JSON.stringify(['Unlimited AI Readings', 'Priority Support', 'All Reports', 'No Ads', 'Early Access']),
-    },
+    { key: 'free', name: 'Free', price: 0, interval: null as string | null, sortOrder: 1 },
+    { key: 'monthly', name: 'Premium Monthly', price: 99900, interval: 'monthly', sortOrder: 2 },
+    { key: 'yearly', name: 'Premium Yearly', price: 95900, interval: 'yearly', sortOrder: 3 },
   ]
 
   for (const plan of plans) {
     await prisma.subscriptionPlan.upsert({
-      where: { key: plan.key },
+      where: { tenantId_key: { tenantId, key: plan.key } },
       update: {},
       create: {
-        id: `plan_${plan.key}`,
-        ...plan,
+        id: `${tenantId}_plan_${plan.key}`,
+        tenantId,
+        key: plan.key,
+        name: plan.name,
+        description: `${plan.name} subscription`,
+        price: plan.price,
+        currency: 'USD',
+        interval: plan.interval,
+        isActive: true,
+        isPopular: plan.key === 'monthly',
+        sortOrder: plan.sortOrder,
+        features: JSON.stringify([]),
       },
     })
   }
-  console.log('✅ Subscription plans configured')
 
-  // Create gateway plans (linking subscription plans to gateway-specific plan IDs)
-  // For Stripe, you would use Stripe Price IDs
-  // For Razorpay, you would use Razorpay Plan IDs
-  // These are placeholders - update with actual IDs from your payment gateway dashboards
-
+  // Gateway plans (placeholder external IDs - update via admin UI)
   const gatewayPlans = [
     {
       gatewayId: stripeGateway.id,
       planKey: 'monthly',
-      gatewayPlanId: 'price_stripe_monthly_id', // Replace with actual Stripe Price ID
+      gatewayPlanId: 'price_stripe_monthly_id',
       price: 99900,
       currency: 'USD',
       interval: 'monthly',
@@ -176,7 +155,7 @@ async function main() {
     {
       gatewayId: stripeGateway.id,
       planKey: 'yearly',
-      gatewayPlanId: 'price_stripe_yearly_id', // Replace with actual Stripe Price ID
+      gatewayPlanId: 'price_stripe_yearly_id',
       price: 95900,
       currency: 'USD',
       interval: 'yearly',
@@ -184,16 +163,16 @@ async function main() {
     {
       gatewayId: razorpayGateway.id,
       planKey: 'monthly',
-      gatewayPlanId: 'plan_razorpay_monthly_id', // Replace with actual Razorpay Plan ID
-      price: 82900, // ₹829 in paise
+      gatewayPlanId: 'plan_razorpay_monthly_id',
+      price: 82900,
       currency: 'INR',
       interval: 'monthly',
     },
     {
       gatewayId: razorpayGateway.id,
       planKey: 'yearly',
-      gatewayPlanId: 'plan_razorpay_yearly_id', // Replace with actual Razorpay Plan ID
-      price: 799900, // ₹7,999 in paise
+      gatewayPlanId: 'plan_razorpay_yearly_id',
+      price: 799900,
       currency: 'INR',
       interval: 'yearly',
     },
@@ -201,7 +180,9 @@ async function main() {
 
   for (const gp of gatewayPlans) {
     await prisma.gatewayPlan.upsert({
-      where: { gatewayId_gatewayPlanId: { gatewayId: gp.gatewayId, gatewayPlanId: gp.gatewayPlanId } },
+      where: {
+        gatewayId_gatewayPlanId: { gatewayId: gp.gatewayId, gatewayPlanId: gp.gatewayPlanId },
+      },
       update: {},
       create: {
         id: `gp_${gp.gatewayId}_${gp.planKey}`,
@@ -209,7 +190,7 @@ async function main() {
         planId: gp.planKey,
         gatewayPlanId: gp.gatewayPlanId,
         name: `${gp.planKey === 'monthly' ? 'Monthly' : 'Yearly'} Plan`,
-        description: `${gp.planKey === 'monthly' ? 'Monthly' : 'Yearly'} subscription via ${gp.gatewayId === stripeGateway.id ? 'Stripe' : 'Razorpay'}`,
+        description: `${gp.planKey === 'monthly' ? 'Monthly' : 'Yearly'} subscription for ${tenantName}`,
         price: gp.price,
         currency: gp.currency,
         interval: gp.interval,
@@ -219,19 +200,33 @@ async function main() {
       },
     })
   }
-  console.log('✅ Gateway plans configured')
+
+  console.log(`✅ Payment gateways + methods + gateway plans configured for ${tenantName}`)
+}
+
+async function main() {
+  console.log('🌱 Seeding payment gateway configuration (all active tenants)...')
+
+  const tenants = await prisma.tenant.findMany({ where: { status: 'active' } })
+  if (tenants.length === 0) {
+    console.error('No tenants found. Run the main seed first: npx prisma db seed')
+    process.exit(1)
+  }
+
+  for (const t of tenants) {
+    await seedForTenant(t.id, t.name)
+  }
 
   console.log('\n🎉 Payment gateway seeding completed!')
   console.log('\n📝 Next steps:')
-  console.log('1. Update Stripe Price IDs in GatewayPlan table')
-  console.log('2. Update Razorpay Plan IDs in GatewayPlan table')
-  console.log('3. Configure webhook URLs in Stripe and Razorpay dashboards:')
-  console.log('   - Stripe: https://astro.echelonxventures.org/api/payment/webhook/stripe')
-  console.log('   - Razorpay: https://astro.echelonxventures.org/api/payment/webhook/razorpay')
+  console.log('1. Update Stripe Price IDs / Razorpay Plan IDs per tenant in the admin UI')
+  console.log('2. Configure webhook URLs per tenant (append ?t=<tenant-slug>):')
+  console.log('   - https://<tenant-domain>/api/payment/webhook/stripe?t=<slug>')
+  console.log('   - https://<tenant-domain>/api/payment/webhook/razorpay?t=<slug>')
 }
 
 main()
-  .catch((e) => {
+  .catch(e => {
     console.error(e)
     process.exit(1)
   })

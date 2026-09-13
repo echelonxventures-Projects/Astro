@@ -17,6 +17,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
+import { BrandName } from '@/components/BrandProvider'
 import { logger } from '@/lib/logger'
 
 interface Device {
@@ -122,7 +123,9 @@ export default function DevicesPage() {
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2">
               <Sparkles className="w-8 h-8 text-purple-400" />
-              <span className="text-xl font-bold gradient-text">StarPath</span>
+              <span className="text-xl font-bold gradient-text">
+                <BrandName short />
+              </span>
             </Link>
             <Link href="/dashboard" className="text-purple-200 hover:text-white transition">
               Dashboard

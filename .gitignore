@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+/playwright-report/
+/test-results/
 
 # next.js
 /.next/
@@ -66,3 +68,4 @@ logs/
 
 # Uploads
 /uploads/
+/public/uploads/

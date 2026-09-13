@@ -38,7 +38,7 @@ export async function POST(_req: NextRequest) {
           )
         }
 
-        const gw = await getGateway(gateway)
+        const gw = await getGateway(user.tenantId, gateway)
         if (!gw) {
           return NextResponse.json({ error: 'Invalid gateway' }, { status: 400 })
         }
@@ -51,6 +51,7 @@ export async function POST(_req: NextRequest) {
         // Update local subscription record
         await prisma.subscription.updateMany({
           where: {
+            tenantId: user.tenantId,
             OR: [{ id: subscriptionId }, { stripeSubscriptionId: subscriptionId }],
           },
           data: {
@@ -85,7 +86,7 @@ export async function POST(_req: NextRequest) {
           )
         }
 
-        const gw = await getGateway(gateway)
+        const gw = await getGateway(user.tenantId, gateway)
         if (!gw) {
           return NextResponse.json({ error: 'Invalid gateway' }, { status: 400 })
         }
@@ -122,7 +123,7 @@ export async function POST(_req: NextRequest) {
         }
 
         // Reactivate subscription
-        const gw = await getGateway(gateway)
+        const gw = await getGateway(user.tenantId, gateway)
         if (!gw) {
           return NextResponse.json({ error: 'Invalid gateway' }, { status: 400 })
         }
@@ -130,6 +131,7 @@ export async function POST(_req: NextRequest) {
         // Resume by updating subscription (gateway-specific)
         await prisma.subscription.updateMany({
           where: {
+            tenantId: user.tenantId,
             OR: [{ id: subscriptionId }, { stripeSubscriptionId: subscriptionId }],
           },
           data: {

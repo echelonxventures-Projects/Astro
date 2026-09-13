@@ -1,207 +1,289 @@
 'use client'
 
 import {
-  Sparkles,
+  CheckCircle,
+  Cpu,
   Loader2,
+  Plus,
   Save,
   Settings,
-  RotateCcw,
-  CheckCircle,
-  XCircle,
+  ShieldCheck,
   Star,
+  Trash2,
+  XCircle,
   Zap,
-  Crown,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { BrandName } from '@/components/BrandProvider'
 import { logger } from '@/lib/logger'
 
-interface ProviderConfig {
-  provider: string
-  model: string
-  ollamaUrl: string
-  anthropicApiKey: string
-  geminiApiKey: string
+interface ProviderEntry {
+  id: string
+  key: string
+  label: string
+  kind: string
+  baseUrl: string | null
+  apiKey: string | null
+  models: string[]
+  capabilities: string[]
+  options: {
+    extraHeaders?: Record<string, string>
+    noAuth?: boolean
+    checkUrl?: string
+    priority?: number
+  }
+  enabled: boolean
+  isDefault: boolean
+  sortOrder: number
+  usable?: boolean
 }
 
-interface AIPlanConfig {
-  plan: 'free' | 'monthly' | 'yearly'
+interface PlanDef {
+  key: string
+  name: string
+  tier: string
+}
+
+interface PlanBinding {
+  plan: string
   provider: string
   model: string
-  apiKey?: string | null
-  ollamaUrl?: string | null
   maxTokens: number
+  enabled: boolean
+  apiKey?: string | null
+}
+
+interface ProviderForm {
+  id?: string
+  key: string
+  label: string
+  kind: string
+  baseUrl: string
+  apiKey: string
+  models: string
+  noAuth: boolean
+  vision: boolean
+  priority: number
   enabled: boolean
 }
 
-export default function SettingsClient() {
-  const [loading, setLoading] = useState(false)
-  const [saved, setSaved] = useState(false)
-  const [testingConnection, setTestingConnection] = useState(false)
-  const [connectionStatus, setConnectionStatus] = useState<'success' | '_error' | null>(null)
-  const [activeTab, setActiveTab] = useState<'global' | 'plans'>('plans')
-  const [planConfigs, setPlanConfigs] = useState<Record<string, AIPlanConfig>>({
-    free: { plan: 'free', provider: 'ollama', model: 'llama3.2', maxTokens: 512, enabled: true },
-    monthly: {
-      plan: 'monthly',
-      provider: 'anthropic',
-      model: 'claude-sonnet-4-20250514',
-      maxTokens: 2048,
-      enabled: true,
-    },
-    yearly: {
-      plan: 'yearly',
-      provider: 'anthropic',
-      model: 'claude-opus-4-20250514',
-      maxTokens: 4096,
-      enabled: true,
-    },
-  })
-  const [globalConfig, setGlobalConfig] = useState<ProviderConfig>({
-    provider: 'ollama',
-    model: 'llama3.2',
-    ollamaUrl: 'http://localhost:5566',
-    anthropicApiKey: '',
-    geminiApiKey: '',
-  })
+const EMPTY_FORM: ProviderForm = {
+  key: '',
+  label: '',
+  kind: 'openai-compatible',
+  baseUrl: '',
+  apiKey: '',
+  models: '',
+  noAuth: false,
+  vision: false,
+  priority: 25,
+  enabled: true,
+}
 
-  // Server already authenticated, just load settings
-  useEffect(() => {
-    loadSettings()
-  }, [])
+export default function SettingsClient(): React.ReactElement {
+  const [tab, setTab] = useState<'plans' | 'providers' | 'default'>('plans')
+  const [providers, setProviders] = useState<ProviderEntry[]>([])
+  const [kinds, setKinds] = useState<string[]>([])
+  const [planDefs, setPlanDefs] = useState<PlanDef[]>([])
+  const [bindings, setBindings] = useState<Record<string, PlanBinding>>({})
+  const [defaultKey, setDefaultKey] = useState('')
+  const [defaultModel, setDefaultModel] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [flash, setFlash] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [form, setForm] = useState<ProviderForm>(EMPTY_FORM)
+  const [testingId, setTestingId] = useState<string | null>(null)
+  const [testResults, setTestResults] = useState<Record<string, 'ok' | 'fail'>>({})
 
-  const loadSettings = async () => {
+  const refresh = useCallback(async (): Promise<void> => {
     try {
-      const res = await fetch('/api/settings')
-      if (res.ok) {
-        const data = await res.json()
-        setGlobalConfig(data)
+      const [setRes, provRes, planRes] = await Promise.all([
+        fetch('/api/settings'),
+        fetch('/api/settings/providers'),
+        fetch('/api/plans'),
+      ])
+      if (setRes.ok) {
+        const d = await setRes.json()
+        setDefaultKey(d.defaultKey ?? '')
+        setDefaultModel(d.defaultModel ?? '')
       }
-      const planRes = await fetch('/api/settings/plans')
+      if (provRes.ok) {
+        const d = await provRes.json()
+        setProviders(d.providers ?? [])
+        setKinds(d.kinds ?? [])
+      }
       if (planRes.ok) {
-        const plans = await planRes.json()
-        const planMap: Record<string, AIPlanConfig> = {}
-        plans.forEach((p: AIPlanConfig) => {
-          planMap[p.plan] = p
-        })
-        setPlanConfigs(planMap)
-      }
-    } catch (_error) {
-      logger.warn({ _error }, 'Failed to load settings')
-    }
-  }
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    try {
-      if (activeTab === 'global') {
-        const res = await fetch('/api/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(globalConfig),
-        })
-        if (res.ok) {
-          setSaved(true)
-          setTimeout(() => setSaved(false), 3000)
+        const d = await planRes.json()
+        const defs: PlanDef[] = (d.plans ?? []).map(
+          (p: { key: string; name: string; tier?: string }) => ({
+            key: p.key,
+            name: p.name,
+            tier: p.tier ?? (p.key === 'free' ? 'free' : 'paid'),
+          })
+        )
+        setPlanDefs(defs)
+        const bindRes = await fetch('/api/settings/plans')
+        const map: Record<string, PlanBinding> = {}
+        const existing: Array<Record<string, unknown>> = bindRes.ok ? await bindRes.json() : []
+        for (const p of defs) {
+          const found = existing.find((e: Record<string, unknown>) => e.plan === p.key)
+          map[p.key] = found
+            ? {
+                plan: p.key,
+                provider: String(found.provider ?? ''),
+                model: String(found.model ?? ''),
+                maxTokens: Number(found.maxTokens ?? 512),
+                enabled: Boolean(found.enabled ?? true),
+                apiKey: (found.apiKey as string | null) ?? '',
+              }
+            : {
+                plan: p.key,
+                provider:
+                  d.providers && (d.providers as ProviderEntry[]).length
+                    ? (d.providers as ProviderEntry[])[0].key
+                    : '',
+                model: '',
+                maxTokens: p.tier === 'free' ? 512 : 2048,
+                enabled: true,
+                apiKey: '',
+              }
         }
-      } else {
-        const res = await fetch('/api/settings/plans', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(Object.values(planConfigs)),
-        })
-        if (res.ok) {
-          setSaved(true)
-          setTimeout(() => setSaved(false), 3000)
-        }
+        setBindings(map)
       }
-    } catch (_error) {
-      logger.warn({ _error }, 'Failed to save settings')
-      alert('Failed to save settings')
+    } catch (err) {
+      logger.warn({ err }, 'Failed to load AI settings')
+      setError('Failed to load settings')
     } finally {
       setLoading(false)
     }
+  }, [])
+
+  useEffect(() => {
+    void refresh()
+  }, [refresh])
+
+  const notify = (msg: string): void => {
+    setFlash(msg)
+    setError(null)
+    setTimeout(() => setFlash(null), 3000)
   }
 
-  const updatePlanConfig = (
-    plan: 'free' | 'monthly' | 'yearly',
-    updates: Partial<AIPlanConfig>
-  ) => {
-    setPlanConfigs(prev => ({
-      ...prev,
-      [plan]: { ...prev[plan], ...updates },
-    }))
-  }
-
-  const testConnection = async () => {
-    setTestingConnection(true)
-    setConnectionStatus(null)
+  const saveDefault = async (): Promise<void> => {
+    setSaving(true)
     try {
-      const res = await fetch('/api/settings/test', {
+      const res = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(globalConfig),
+        body: JSON.stringify({ providerKey: defaultKey, model: defaultModel }),
       })
-      const data = await res.json()
-      if (res.ok && data.success) {
-        setConnectionStatus('success')
-      } else {
-        setConnectionStatus('_error')
-      }
-    } catch (_error) {
-      setConnectionStatus('_error')
+      const d = await res.json()
+      if (!res.ok) setError(d.error ?? 'Save failed')
+      else notify('Default provider saved')
+      await refresh()
     } finally {
-      setTestingConnection(false)
+      setSaving(false)
     }
   }
 
-  const resetToDefaults = () => {
-    if (activeTab === 'global') {
-      setGlobalConfig({
-        provider: 'ollama',
-        model: 'llama3.2',
-        ollamaUrl: 'http://localhost:5566',
-        anthropicApiKey: '',
-        geminiApiKey: '',
+  const saveBindings = async (): Promise<void> => {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/settings/plans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.values(bindings)),
       })
-    } else {
-      setPlanConfigs({
-        free: {
-          plan: 'free',
-          provider: 'ollama',
-          model: 'llama3.2',
-          maxTokens: 512,
-          enabled: true,
-        },
-        monthly: {
-          plan: 'monthly',
-          provider: 'anthropic',
-          model: 'claude-sonnet-4-20250514',
-          maxTokens: 2048,
-          enabled: true,
-        },
-        yearly: {
-          plan: 'yearly',
-          provider: 'anthropic',
-          model: 'claude-opus-4-20250514',
-          maxTokens: 4096,
-          enabled: true,
-        },
-      })
+      const d = await res.json()
+      if (!res.ok) setError(d.error ?? 'Save failed')
+      else notify('Plan AI bindings saved')
+    } finally {
+      setSaving(false)
     }
   }
+
+  const submitProvider = async (): Promise<void> => {
+    setSaving(true)
+    setError(null)
+    try {
+      const payload = {
+        action: form.id ? 'update' : 'create',
+        id: form.id,
+        key: form.key.trim(),
+        label: form.label.trim(),
+        kind: form.kind,
+        baseUrl: form.baseUrl.trim() || null,
+        apiKey: form.apiKey.trim() || null,
+        models: form.models
+          .split(',')
+          .map(m => m.trim())
+          .filter(Boolean),
+        capabilities: form.vision ? ['vision'] : [],
+        options: { noAuth: form.noAuth, priority: form.priority },
+        enabled: form.enabled,
+      }
+      const res = await fetch('/api/settings/providers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const d = await res.json()
+      if (!res.ok) {
+        setError(d.error ?? 'Provider save failed')
+        return
+      }
+      setForm(EMPTY_FORM)
+      notify(form.id ? 'Provider updated' : 'Provider added')
+      await refresh()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const providerAction = async (action: string, p: ProviderEntry): Promise<void> => {
+    setError(null)
+    if (action === 'test') setTestingId(p.id)
+    try {
+      const res = await fetch('/api/settings/providers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, id: p.id }),
+      })
+      const d = await res.json()
+      if (!res.ok) {
+        setError(d.error ?? 'Action failed')
+      } else if (action === 'test') {
+        setTestResults(prev => ({ ...prev, [p.id]: d.ok ? 'ok' : 'fail' }))
+        if (!d.ok) setError(`${p.label}: ${d.error}`)
+      } else {
+        notify(
+          action === 'delete'
+            ? 'Provider removed'
+            : action === 'setDefault'
+              ? `${p.label} is now the default`
+              : 'Provider updated'
+        )
+        await refresh()
+      }
+    } finally {
+      setTestingId(null)
+    }
+  }
+
+  const modelsFor = (key: string): string[] => providers.find(p => p.key === key)?.models ?? []
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-purple-500/20">
+      <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-[var(--border)]/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2">
-              <Sparkles className="w-8 h-8 text-purple-400" />
-              <span className="text-xl font-bold gradient-text">StarPath Astrology</span>
+              <span className="text-xl font-bold gradient-text">
+                <BrandName />
+              </span>
             </Link>
-            <Link href="/dashboard" className="text-purple-200 hover:text-white transition">
+            <Link href="/dashboard" className="text-gray-300 hover:text-white transition">
               Back to Dashboard
             </Link>
           </div>
@@ -210,381 +292,472 @@ export default function SettingsClient() {
 
       <div className="pt-24 pb-12 px-4">
         <div className="max-w-5xl mx-auto">
-          <h1 className="text-4xl font-bold mb-2 gradient-text">AI Provider Settings</h1>
-          <p className="text-purple-200 mb-8">Configure AI models for each subscription tier</p>
+          <h1 className="text-4xl font-bold mb-2 gradient-text">AI Settings</h1>
+          <p className="text-gray-400 mb-8">
+            Every provider, model and tier binding lives in the database. No code edits needed.
+          </p>
 
-          <div className="flex gap-2 mb-6">
-            <button
-              onClick={() => setActiveTab('plans')}
-              className={`px-4 py-2 rounded-xl font-semibold transition ${
-                activeTab === 'plans'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-white/10 text-purple-200 hover:bg-white/20'
-              }`}
-            >
-              <Star className="w-4 h-4 inline mr-2" />
-              By Subscription Plan
-            </button>
-            <button
-              onClick={() => setActiveTab('global')}
-              className={`px-4 py-2 rounded-xl font-semibold transition ${
-                activeTab === 'global'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-white/10 text-purple-200 hover:bg-white/20'
-              }`}
-            >
-              <Settings className="w-4 h-4 inline mr-2" />
-              Global Settings
-            </button>
-          </div>
-
-          {activeTab === 'plans' && (
-            <form onSubmit={handleSave} className="space-y-6">
-              <div className="text-purple-200 mb-4">
-                Configure different AI models for each subscription tier. Premium users get better
-                models.
-              </div>
-
-              <PlanConfigCard
-                title="Free Plan"
-                icon={Zap}
-                config={planConfigs.free}
-                onChange={updates => updatePlanConfig('free', updates)}
-              />
-
-              <PlanConfigCard
-                title="Premium Monthly"
-                icon={Star}
-                config={planConfigs.monthly}
-                onChange={updates => updatePlanConfig('monthly', updates)}
-              />
-
-              <PlanConfigCard
-                title="Premium Yearly (VIP)"
-                icon={Crown}
-                config={planConfigs.yearly}
-                onChange={updates => updatePlanConfig('yearly', updates)}
-              />
-
-              <div className="flex items-center gap-4">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-700 text-white px-6 py-3 rounded-xl font-semibold transition"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" /> Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-5 h-5" /> Save Settings
-                    </>
-                  )}
-                </button>
-                {saved && <span className="text-green-400">Settings saved successfully!</span>}
-              </div>
-            </form>
+          {flash && (
+            <div className="mb-6 p-4 bg-emerald-500/20 border border-emerald-500/50 rounded-xl text-emerald-200">
+              {flash}
+            </div>
+          )}
+          {error && (
+            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-200">
+              {error}
+            </div>
           )}
 
-          {activeTab === 'global' && (
-            <form onSubmit={handleSave} className="space-y-6">
-              <div className="text-purple-200 mb-4">
-                Global fallback settings (used when plan-based configuration is disabled).
-              </div>
+          <div className="flex gap-2 mb-6">
+            {(
+              [
+                ['plans', 'Plan Binding', Star],
+                ['providers', 'Providers', Cpu],
+                ['default', 'Default', Zap],
+              ] as const
+            ).map(([key, label, Icon]) => (
+              <button
+                key={key}
+                onClick={() => setTab(key)}
+                className={`px-4 py-2 rounded-xl font-semibold transition flex items-center gap-2 ${
+                  tab === key
+                    ? 'bg-[var(--primary)] text-white'
+                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                }`}
+              >
+                <Icon className="w-4 h-4" /> {label}
+              </button>
+            ))}
+          </div>
 
-              <div className="glass rounded-2xl p-6">
-                <h2 className="text-xl font-semibold mb-4">AI Provider</h2>
-                <div>
-                  <label className="block text-sm font-medium text-purple-200 mb-2">
-                    Select Provider
-                  </label>
-                  <select
-                    value={globalConfig.provider}
-                    onChange={e =>
-                      setGlobalConfig({
-                        ...globalConfig,
-                        provider: e.target.value,
-                        model: getDefaultModel(e.target.value),
-                      })
-                    }
-                    className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
+          {loading && (
+            <div className="flex justify-center py-16">
+              <Loader2 className="w-8 h-8 animate-spin text-[var(--primary-light)]" />
+            </div>
+          )}
+
+          {/* ============ PROVIDERS TAB ============ */}
+          {!loading && tab === 'providers' && (
+            <div className="space-y-6">
+              <div className="space-y-3">
+                {providers.length === 0 && (
+                  <div className="glass rounded-2xl p-6 text-gray-400">
+                    No providers yet - add one below.
+                  </div>
+                )}
+                {providers.map(p => (
+                  <div
+                    key={p.id}
+                    className="glass rounded-2xl p-5 flex flex-col md:flex-row md:items-center gap-4"
                   >
-                    <option value="ollama">Ollama (Free, Local)</option>
-                    <option value="anthropic">Anthropic Claude (Paid)</option>
-                    <option value="gemini">Google Gemini (Paid, Free Tier)</option>
-                  </select>
-                </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-bold">{p.label}</span>
+                        <code className="text-xs px-2 py-0.5 rounded bg-white/10">{p.key}</code>
+                        <code className="text-xs px-2 py-0.5 rounded bg-[var(--primary)]/25 text-[var(--primary-glow)]">
+                          {p.kind}
+                        </code>
+                        {p.isDefault && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300">
+                            default
+                          </span>
+                        )}
+                        {!p.enabled && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-500/20 text-gray-400">
+                            disabled
+                          </span>
+                        )}
+                        {p.usable ? (
+                          <CheckCircle className="w-4 h-4 text-emerald-400" aria-label="usable" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-red-400" aria-label="no api key" />
+                        )}
+                        {testResults[p.id] === 'ok' && (
+                          <span className="text-xs text-emerald-300">reachable</span>
+                        )}
+                        {testResults[p.id] === 'fail' && (
+                          <span className="text-xs text-red-300">test failed</span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-400">
+                        {p.baseUrl || '(provider SDK default)'} · {p.models.length} model
+                        {p.models.length === 1 ? '' : 's'}
+                        {p.capabilities.includes('vision') ? ' · vision' : ''}
+                        {p.options.noAuth ? ' · no auth' : ''}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!p.isDefault && (
+                        <button
+                          onClick={() => providerAction('setDefault', p)}
+                          className="text-xs px-3 py-1.5 rounded-full border border-white/15 hover:bg-white/10 transition"
+                        >
+                          Make default
+                        </button>
+                      )}
+                      <button
+                        onClick={() => providerAction('test', p)}
+                        className="text-xs px-3 py-1.5 rounded-full border border-white/15 hover:bg-white/10 transition inline-flex items-center gap-1"
+                      >
+                        {testingId === p.id ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <ShieldCheck className="w-3 h-3" />
+                        )}{' '}
+                        Test
+                      </button>
+                      <button
+                        onClick={() =>
+                          setForm({
+                            id: p.id,
+                            key: p.key,
+                            label: p.label,
+                            kind: p.kind,
+                            baseUrl: p.baseUrl ?? '',
+                            apiKey: p.apiKey ?? '',
+                            models: p.models.join(', '),
+                            noAuth: Boolean(p.options.noAuth),
+                            vision: p.capabilities.includes('vision'),
+                            priority: p.options.priority ?? 25,
+                            enabled: p.enabled,
+                          })
+                        }
+                        className="text-xs px-3 py-1.5 rounded-full border border-white/15 hover:bg-white/10 transition"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => providerAction('delete', p)}
+                        className="p-1.5 rounded-full border border-red-500/40 text-red-300 hover:bg-red-500/10 transition"
+                        aria-label={`Delete ${p.label}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
 
+              {/* add / edit form */}
               <div className="glass rounded-2xl p-6">
-                <h2 className="text-xl font-semibold mb-4">Model Configuration</h2>
-                <div className="space-y-4">
+                <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+                  <Plus className="w-5 h-5 text-[var(--primary-light)]" />{' '}
+                  {form.id ? 'Edit provider' : 'Add provider'}
+                </h2>
+                <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-purple-200 mb-2">
-                      Model Name
+                    <label className="block text-sm text-gray-400 mb-1">
+                      Key (used by plan bindings)
                     </label>
                     <input
-                      type="text"
-                      value={globalConfig.model}
-                      onChange={e => setGlobalConfig({ ...globalConfig, model: e.target.value })}
-                      className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-                      placeholder={getModelPlaceholder(globalConfig.provider)}
+                      value={form.key}
+                      disabled={Boolean(form.id)}
+                      onChange={e => setForm({ ...form, key: e.target.value })}
+                      placeholder="openai / groq / lmstudio"
+                      className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-[var(--primary)] outline-none disabled:opacity-50"
                     />
                   </div>
-                  {globalConfig.provider === 'ollama' && (
-                    <div>
-                      <label className="block text-sm font-medium text-purple-200 mb-2">
-                        Ollama Server URL
-                      </label>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Display name</label>
+                    <input
+                      value={form.label}
+                      onChange={e => setForm({ ...form, label: e.target.value })}
+                      placeholder="OpenAI"
+                      className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-[var(--primary)] outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Protocol kind</label>
+                    <select
+                      value={form.kind}
+                      onChange={e => setForm({ ...form, kind: e.target.value })}
+                      className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-[var(--primary)] outline-none"
+                    >
+                      {(kinds.length ? kinds : ['openai-compatible']).map(k => (
+                        <option key={k} value={k}>
+                          {k}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">
+                      Base URL (openai-compatible / ollama / opencode)
+                    </label>
+                    <input
+                      value={form.baseUrl}
+                      onChange={e => setForm({ ...form, baseUrl: e.target.value })}
+                      placeholder="https://api.openai.com/v1"
+                      className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-[var(--primary)] outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">API key</label>
+                    <input
+                      type="password"
+                      value={form.apiKey}
+                      onChange={e => setForm({ ...form, apiKey: e.target.value })}
+                      placeholder="sk-..."
+                      className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-[var(--primary)] outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">
+                      Models (comma separated; first = default)
+                    </label>
+                    <input
+                      value={form.models}
+                      onChange={e => setForm({ ...form, models: e.target.value })}
+                      placeholder="gpt-4o-mini, gpt-4o"
+                      className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-[var(--primary)] outline-none"
+                    />
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <label className="flex items-center gap-2 text-sm text-gray-300">
                       <input
-                        type="url"
-                        value={globalConfig.ollamaUrl}
-                        onChange={e =>
-                          setGlobalConfig({ ...globalConfig, ollamaUrl: e.target.value })
-                        }
-                        className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-                        placeholder="http://localhost:5566"
-                      />
-                    </div>
-                  )}
-                  {globalConfig.provider === 'anthropic' && (
-                    <div>
-                      <label className="block text-sm font-medium text-purple-200 mb-2">
-                        Anthropic API Key
-                      </label>
+                        type="checkbox"
+                        checked={form.noAuth}
+                        onChange={e => setForm({ ...form, noAuth: e.target.checked })}
+                        className="w-4 h-4"
+                      />{' '}
+                      No auth (local)
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-300">
                       <input
-                        type="password"
-                        value={globalConfig.anthropicApiKey}
-                        onChange={e =>
-                          setGlobalConfig({ ...globalConfig, anthropicApiKey: e.target.value })
-                        }
-                        className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-                        placeholder="sk-ant-..."
-                      />
-                    </div>
-                  )}
-                  {globalConfig.provider === 'gemini' && (
-                    <div>
-                      <label className="block text-sm font-medium text-purple-200 mb-2">
-                        Google Gemini API Key
-                      </label>
+                        type="checkbox"
+                        checked={form.vision}
+                        onChange={e => setForm({ ...form, vision: e.target.checked })}
+                        className="w-4 h-4"
+                      />{' '}
+                      Vision
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-300">
                       <input
-                        type="password"
-                        value={globalConfig.geminiApiKey}
-                        onChange={e =>
-                          setGlobalConfig({ ...globalConfig, geminiApiKey: e.target.value })
-                        }
-                        className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-                        placeholder="AIza..."
-                      />
-                    </div>
-                  )}
+                        type="checkbox"
+                        checked={form.enabled}
+                        onChange={e => setForm({ ...form, enabled: e.target.checked })}
+                        className="w-4 h-4"
+                      />{' '}
+                      Enabled
+                    </label>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">
+                      Priority (lower = preferred)
+                    </label>
+                    <input
+                      type="number"
+                      value={form.priority}
+                      onChange={e => setForm({ ...form, priority: Number(e.target.value) })}
+                      className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-[var(--primary)] outline-none"
+                    />
+                  </div>
                 </div>
-              </div>
-
-              <div className="glass rounded-2xl p-6">
-                <h2 className="text-xl font-semibold mb-4">Test Connection</h2>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 mt-5">
                   <button
-                    type="button"
-                    onClick={testConnection}
-                    disabled={testingConnection}
-                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-700 text-white px-6 py-3 rounded-xl font-semibold transition"
+                    onClick={submitProvider}
+                    disabled={saving || !form.key || !form.label}
+                    className="inline-flex items-center gap-2 bg-[var(--primary)] hover:bg-[var(--primary-dark)] disabled:opacity-50 text-white px-6 py-2.5 rounded-full font-semibold transition"
                   >
-                    {testingConnection ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" /> Testing...
-                      </>
+                    {saving ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
-                      'Test Connection'
+                      <Save className="w-4 h-4" />
                     )}
+                    {form.id ? 'Update Provider' : 'Add Provider'}
                   </button>
-                  {connectionStatus === 'success' && (
-                    <span className="flex items-center gap-2 text-green-400">
-                      <CheckCircle className="w-5 h-5" /> Connection successful!
-                    </span>
-                  )}
-                  {connectionStatus === '_error' && (
-                    <span className="flex items-center gap-2 text-red-400">
-                      <XCircle className="w-5 h-5" /> Connection failed
-                    </span>
+                  {form.id && (
+                    <button
+                      onClick={() => setForm(EMPTY_FORM)}
+                      className="px-4 py-2.5 rounded-full border border-white/15 hover:bg-white/10 text-sm transition"
+                    >
+                      Cancel edit
+                    </button>
                   )}
                 </div>
               </div>
+            </div>
+          )}
 
-              <div className="flex items-center gap-4">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-700 text-white px-6 py-3 rounded-xl font-semibold transition"
+          {/* ============ PLANS TAB ============ */}
+          {!loading && tab === 'plans' && (
+            <div className="space-y-6">
+              <p className="text-sm text-gray-400">
+                Bind each subscription plan (managed in{' '}
+                <Link className="underline" href="/admin/plans">
+                  Plans admin
+                </Link>
+                ) to a provider and model.
+              </p>
+              {planDefs.map(def => {
+                const b = bindings[def.key]
+                if (!b) return null
+                return (
+                  <div key={def.key} className="glass rounded-2xl p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xl font-semibold">{def.name}</h2>
+                      <label className="flex items-center gap-2 text-sm text-gray-300">
+                        <input
+                          type="checkbox"
+                          checked={b.enabled}
+                          onChange={e =>
+                            setBindings({
+                              ...bindings,
+                              [def.key]: { ...b, enabled: e.target.checked },
+                            })
+                          }
+                          className="w-4 h-4"
+                        />
+                        Active
+                      </label>
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-1">Provider</label>
+                        <select
+                          value={b.provider}
+                          onChange={e =>
+                            setBindings({
+                              ...bindings,
+                              [def.key]: { ...b, provider: e.target.value, model: '' },
+                            })
+                          }
+                          className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-[var(--primary)] outline-none"
+                        >
+                          {providers
+                            .filter(p => p.enabled)
+                            .map(p => (
+                              <option key={p.key} value={p.key}>
+                                {p.label}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-1">Model</label>
+                        <input
+                          list={`models-${def.key}`}
+                          value={b.model}
+                          onChange={e =>
+                            setBindings({ ...bindings, [def.key]: { ...b, model: e.target.value } })
+                          }
+                          placeholder="(provider default)"
+                          className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-[var(--primary)] outline-none"
+                        />
+                        <datalist id={`models-${def.key}`}>
+                          {modelsFor(b.provider).map(m => (
+                            <option key={m} value={m} />
+                          ))}
+                        </datalist>
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-1">Max tokens</label>
+                        <input
+                          type="number"
+                          value={b.maxTokens}
+                          onChange={e =>
+                            setBindings({
+                              ...bindings,
+                              [def.key]: { ...b, maxTokens: Number(e.target.value) },
+                            })
+                          }
+                          className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-[var(--primary)] outline-none"
+                        />
+                      </div>
+                      <div className="md:col-span-3">
+                        <label className="block text-sm text-gray-400 mb-1">
+                          API key override (optional — uses provider key when empty)
+                        </label>
+                        <input
+                          type="password"
+                          value={b.apiKey ?? ''}
+                          onChange={e =>
+                            setBindings({
+                              ...bindings,
+                              [def.key]: { ...b, apiKey: e.target.value },
+                            })
+                          }
+                          className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-[var(--primary)] outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+              <button
+                onClick={saveBindings}
+                disabled={saving}
+                className="inline-flex items-center gap-2 bg-[var(--primary)] hover:bg-[var(--primary-dark)] disabled:opacity-50 text-white px-6 py-3 rounded-full font-semibold transition"
+              >
+                {saving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-5 h-5" />
+                )}{' '}
+                Save Plan Bindings
+              </button>
+            </div>
+          )}
+
+          {/* ============ DEFAULT TAB ============ */}
+          {!loading && tab === 'default' && (
+            <div className="glass rounded-2xl p-6 space-y-4 max-w-xl">
+              <p className="text-sm text-gray-400">
+                Fallback provider used whenever a plan binding is inactive.
+              </p>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Provider</label>
+                <select
+                  value={defaultKey}
+                  onChange={e => {
+                    setDefaultKey(e.target.value)
+                    setDefaultModel('')
+                  }}
+                  className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-[var(--primary)] outline-none"
                 >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" /> Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-5 h-5" /> Save Settings
-                    </>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={resetToDefaults}
-                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl font-semibold transition"
-                >
-                  <RotateCcw className="w-5 h-5" /> Reset to Defaults
-                </button>
-                {saved && <span className="text-green-400">Settings saved successfully!</span>}
+                  <option value="">(auto: lowest priority usable)</option>
+                  {providers
+                    .filter(p => p.enabled)
+                    .map(p => (
+                      <option key={p.key} value={p.key}>
+                        {p.label}
+                      </option>
+                    ))}
+                </select>
               </div>
-            </form>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Default model</label>
+                <input
+                  list="default-models"
+                  value={defaultModel}
+                  onChange={e => setDefaultModel(e.target.value)}
+                  placeholder="(first model of the provider)"
+                  className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-[var(--primary)] outline-none"
+                />
+                <datalist id="default-models">
+                  {modelsFor(defaultKey).map(m => (
+                    <option key={m} value={m} />
+                  ))}
+                </datalist>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={saveDefault}
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 bg-[var(--primary)] hover:bg-[var(--primary-dark)] disabled:opacity-50 text-white px-6 py-3 rounded-full font-semibold transition"
+                >
+                  {saving ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Settings className="w-5 h-5" />
+                  )}{' '}
+                  Save Default
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>
     </>
   )
-}
-
-interface PlanConfigCardProps {
-  title: string
-  icon: React.ElementType
-  config: AIPlanConfig
-  onChange: (updates: Partial<AIPlanConfig>) => void
-}
-
-function PlanConfigCard({ title, icon: Icon, config, onChange }: PlanConfigCardProps) {
-  return (
-    <div className="glass rounded-2xl p-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-purple-600/30 rounded-xl">
-          <Icon className="w-6 h-6 text-purple-400" />
-        </div>
-        <div>
-          <h2 className="text-xl font-semibold">{title}</h2>
-          <p className="text-sm text-purple-300">AI Model Configuration</p>
-        </div>
-        <label className="ml-auto flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={config.enabled}
-            onChange={e => onChange({ enabled: e.target.checked })}
-            className="sr-only"
-          />
-          <div
-            className={`w-12 h-6 rounded-full transition ${config.enabled ? 'bg-purple-600' : 'bg-white/10'}`}
-          >
-            <div
-              className={`w-4 h-4 rounded-full bg-white transition ${config.enabled ? 'translate-x-7' : 'translate-x-1'} transform mt-1`}
-            />
-          </div>
-          <span className="text-sm text-purple-200">{config.enabled ? 'Enabled' : 'Disabled'}</span>
-        </label>
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-purple-200 mb-2">AI Provider</label>
-          <select
-            value={config.provider}
-            onChange={e =>
-              onChange({ provider: e.target.value, model: getDefaultModel(e.target.value) })
-            }
-            className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-          >
-            <option value="ollama">Ollama (Free)</option>
-            <option value="anthropic">Anthropic Claude (Paid)</option>
-            <option value="gemini">Google Gemini (Paid)</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-purple-200 mb-2">Model Name</label>
-          <input
-            type="text"
-            value={config.model}
-            onChange={e => onChange({ model: e.target.value })}
-            className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-          />
-        </div>
-
-        {config.provider === 'ollama' && (
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-purple-200 mb-2">
-              Ollama Server URL
-            </label>
-            <input
-              type="url"
-              value={config.ollamaUrl || 'http://localhost:5566'}
-              onChange={e => onChange({ ollamaUrl: e.target.value })}
-              className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-            />
-          </div>
-        )}
-
-        {config.provider === 'anthropic' && (
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-purple-200 mb-2">
-              Anthropic API Key
-            </label>
-            <input
-              type="password"
-              value={config.apiKey || ''}
-              onChange={e => onChange({ apiKey: e.target.value })}
-              className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-            />
-          </div>
-        )}
-
-        {config.provider === 'gemini' && (
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-purple-200 mb-2">
-              Google Gemini API Key
-            </label>
-            <input
-              type="password"
-              value={config.apiKey || ''}
-              onChange={e => onChange({ apiKey: e.target.value })}
-              className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-            />
-          </div>
-        )}
-
-        <div>
-          <label className="block text-sm font-medium text-purple-200 mb-2">Max Tokens</label>
-          <input
-            type="number"
-            value={config.maxTokens}
-            onChange={e => onChange({ maxTokens: parseInt(e.target.value) })}
-            className="w-full px-4 py-3 bg-white/5 border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-          />
-          <p className="text-xs text-purple-400 mt-1">
-            Higher = longer readings (more tokens = higher cost)
-          </p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function getDefaultModel(provider: string): string {
-  switch (provider) {
-    case 'anthropic':
-      return 'claude-sonnet-4-20250514'
-    case 'gemini':
-      return 'gemini-2.0-flash'
-    default:
-      return 'llama3.2'
-  }
-}
-
-function getModelPlaceholder(provider: string): string {
-  switch (provider) {
-    case 'anthropic':
-      return 'claude-sonnet-4-20250514'
-    case 'gemini':
-      return 'gemini-2.0-flash'
-    default:
-      return 'llama3.2'
-  }
 }

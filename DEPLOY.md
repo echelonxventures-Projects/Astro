@@ -1,3 +1,11 @@
+<!--
+  HISTORY NOTE (documentation consolidation): PostgreSQL is now the only
+  supported database and the app is multi-tenant (hostname -> platform).
+  Steps below referencing SQLite, single-tenant flows, or `prisma migrate dev`
+  are outdated. See PROJECT_DOCUMENTATION.md section 11 for the current runbook
+  (migrate deploy + seeds, standalone build or Docker Compose).
+-->
+
 # Deployment Guide - StarPath Astrology
 
 ## Deployment to OCI Always Free Instance
@@ -14,17 +22,19 @@
 
 After deployment, access the admin panels at:
 
-| Panel | URL | Description |
-|-------|-----|-------------|
-| Payment Gateways | `/admin/payments` | Manage Stripe, Razorpay, payment methods, transactions |
-| Subscription Plans | `/admin/plans` | Configure pricing plans and features |
-| AI Settings | `/settings` | AI provider configuration |
+| Panel              | URL               | Description                                            |
+| ------------------ | ----------------- | ------------------------------------------------------ |
+| Payment Gateways   | `/admin/payments` | Manage Stripe, Razorpay, payment methods, transactions |
+| Subscription Plans | `/admin/plans`    | Configure pricing plans and features                   |
+| AI Settings        | `/settings`       | AI provider configuration                              |
 
 **Note:** All admin routes require:
+
 - Valid login (redirects to `/login` if not authenticated)
 - User role = `admin` (redirects to dashboard if not admin)
 
 To set a user as admin after deployment:
+
 ```bash
 sqlite3 prisma/prod.db
 UPDATE "User" SET role = 'admin' WHERE email = 'your-email@example.com';
@@ -138,10 +148,12 @@ pm2 startup
 Configure webhook URLs in your payment gateway dashboards:
 
 **Razorpay:**
+
 - Webhook URL: `https://astro.echelonxventures.org/api/payment/webhook/razorpay`
 - Events: payment.authorized, payment.captured, payment.failed, subscription.activated, subscription.cancelled
 
 **Stripe:**
+
 - Webhook URL: `https://astro.echelonxventures.org/api/payment/webhook/stripe`
 - Events: checkout.session.completed, customer.subscription.updated, customer.subscription.deleted, invoice.payment_succeeded, invoice.payment_failed
 
@@ -165,6 +177,7 @@ After deployment, you need to configure the payment gateways in the database:
 ### Option 1: Using Admin Panel (if available)
 
 Navigate to `/admin/payments` and configure:
+
 - Enable Stripe and Razorpay gateways
 - Add API keys and secrets
 - Set default gateway
@@ -212,17 +225,20 @@ VALUES ('wallet_1', 'razorpay_1', 'Wallets', 'wallet', 1, 4, datetime('now'), da
 ## Troubleshooting
 
 ### Application won't start
+
 ```bash
 pm2 logs starpath-astrology --lines 100
 ```
 
 ### Database errors
+
 ```bash
 npx prisma db check
 npx prisma db push
 ```
 
 ### Port 3000 already in use
+
 ```bash
 # Find process using port 3000
 sudo lsof -i :3000
@@ -232,6 +248,7 @@ sudo kill -9 <PID>
 ```
 
 ### SSL Certificate issues
+
 ```bash
 # If using Cloudflare SSL, ensure DNS is pointed correctly
 # A record: astro.echelonxventures.org -> <SERVER_IP>
@@ -240,6 +257,7 @@ sudo kill -9 <PID>
 ## Monitoring
 
 ### PM2 Commands
+
 ```bash
 pm2 status              # Check app status
 pm2 logs                # View logs
@@ -250,6 +268,7 @@ pm2 monit               # Real-time monitoring
 ```
 
 ### Database Backup
+
 ```bash
 # Backup SQLite database
 cp prisma/prod.db prisma/prod.db.backup.$(date +%Y%m%d)

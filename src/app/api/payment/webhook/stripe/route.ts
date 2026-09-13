@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { logger } from '@/lib/logger'
 import { getGateway } from '@/lib/payment'
+import { getWebhookTenant } from '@/lib/tenant'
 
 const _isDev = process.env.NODE_ENV === 'development'
 
@@ -21,7 +22,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
     }
 
-    const gateway = await getGateway('stripe')
+    const ctx = await getWebhookTenant(req)
+    const gateway = await getGateway(ctx.tenantId, 'stripe')
     if (!gateway) {
       return NextResponse.json({ error: 'Stripe gateway not configured' }, { status: 503 })
     }
@@ -87,7 +89,7 @@ export async function POST(req: NextRequest) {
         const subscription = eventData
 
         await prisma.user.updateMany({
-          where: { stripeSubscriptionId: subscription.id },
+          where: { tenantId: ctx.tenantId, stripeSubscriptionId: subscription.id },
           data: {
             subscriptionStatus: 'cancelled',
             currentPeriodEnd: new Date(),
@@ -102,8 +104,11 @@ export async function POST(req: NextRequest) {
 
         await prisma.paymentTransaction.create({
           data: {
+            tenantId: ctx.tenantId,
             userId: invoice.customer,
-            gatewayId: (await prisma.paymentGateway.findUnique({ where: { key: 'stripe' } }))!.id,
+            gatewayId: (await prisma.paymentGateway.findUnique({
+              where: { tenantId_key: { tenantId: ctx.tenantId, key: 'stripe' } },
+            }))!.id,
             amount: invoice.amount_paid,
             currency: invoice.currency,
             gatewayTransactionId: invoice.payment_intent as string,

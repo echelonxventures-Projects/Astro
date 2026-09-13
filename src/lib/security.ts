@@ -176,6 +176,15 @@ export function getRateLimitTierForPath(path: string): RateLimitTier {
   // Normalize path
   const normalizedPath = path.toLowerCase()
 
+  // Session polling (frequent, by design) uses the general API tier
+  if (
+    normalizedPath === '/api/auth/session' ||
+    normalizedPath === '/api/auth/csrf' ||
+    normalizedPath === '/api/auth/providers'
+  ) {
+    return 'api'
+  }
+
   // Authentication endpoints
   if (
     normalizedPath.includes('/api/auth/') ||

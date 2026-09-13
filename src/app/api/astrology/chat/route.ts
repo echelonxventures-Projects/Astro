@@ -38,6 +38,7 @@ export async function POST(_req: NextRequest) {
       // Create new session
       chatSession = await prisma.chatSession.create({
         data: {
+          tenantId: session.user.tenantId!,
           userId: session.user.id,
           title: message.slice(0, 50) + (message.length > 50 ? '...' : ''),
           messages: [],

@@ -16,6 +16,7 @@ export type RelationshipType =
   | 'other'
 
 export interface AstroProfileInput {
+  tenantId: string
   userId: string
   name: string
   relationship?: RelationshipType
@@ -59,6 +60,7 @@ export async function createAstroProfile(input: AstroProfileInput): Promise<Astr
 
   const profile = await prisma.astroProfile.create({
     data: {
+      tenantId: input.tenantId,
       userId: input.userId,
       name: input.name,
       relationship: input.relationship || 'other',
@@ -86,6 +88,7 @@ export async function createAstroProfile(input: AstroProfileInput): Promise<Astr
 
   await prisma.birthChart.create({
     data: {
+      tenantId: input.tenantId,
       userId: input.userId,
       profileId: profile.id,
       name: `${input.name}'s Birth Chart`,
@@ -321,6 +324,7 @@ export async function createProfileFromUserData(userId: string): Promise<AstroPr
   }
 
   return createAstroProfile({
+    tenantId: user.tenantId,
     userId,
     name: user.name || 'My Profile',
     relationship: 'self',

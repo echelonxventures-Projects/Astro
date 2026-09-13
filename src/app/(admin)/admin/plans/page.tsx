@@ -22,7 +22,7 @@ export default async function AdminPlansPage() {
     select: { role: true, email: true },
   })
 
-  if (!user || user.role !== 'admin') {
+  if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
     redirect('/dashboard?error=Admin access required')
   }
 

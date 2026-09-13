@@ -12,8 +12,11 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { BrandName } from '@/components/BrandProvider'
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { getScopedDb } from '@/lib/tenant'
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -34,6 +37,13 @@ export default async function DashboardPage() {
     redirect('/signup')
   }
 
+  const db = getScopedDb(user.tenantId)
+  const activePlans = await db.subscriptionPlan.findMany({ where: { isActive: true } })
+  const currentPlan =
+    activePlans.find(p => p.key === user.subscriptionPlan && p.tier !== 'free') ??
+    activePlans.find(p => p.tier !== 'free') ??
+    null
+
   const hasChart = user.birthCharts.length > 0
 
   return (
@@ -44,7 +54,9 @@ export default async function DashboardPage() {
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2">
               <Sparkles className="w-8 h-8 text-purple-400" />
-              <span className="text-xl font-bold gradient-text">StarPath Astrology</span>
+              <span className="text-xl font-bold gradient-text">
+                <BrandName />
+              </span>
             </Link>
             <div className="hidden md:flex items-center gap-6">
               <Link href="/dashboard" className="text-purple-200 hover:text-white transition">
@@ -70,9 +82,29 @@ export default async function DashboardPage() {
               </Link>
             </div>
             <div className="flex items-center gap-4">
-              {user.role === 'admin' && (
-                <Link href="/settings" className="text-purple-300 hover:text-white transition">
-                  Settings
+              <LanguageSwitcher compact />
+              {(user.role === 'admin' || user.role === 'superadmin') && (
+                <>
+                  <Link href="/settings" className="text-purple-300 hover:text-white transition">
+                    Settings
+                  </Link>
+                  <Link
+                    href="/admin/branding"
+                    className="text-purple-300 hover:text-white transition"
+                  >
+                    Branding
+                  </Link>
+                  <Link
+                    href="/admin/localization"
+                    className="text-purple-300 hover:text-white transition"
+                  >
+                    Localization
+                  </Link>
+                </>
+              )}
+              {user.role === 'superadmin' && (
+                <Link href="/admin/tenants" className="text-purple-300 hover:text-white transition">
+                  Tenants
                 </Link>
               )}
               <Link
@@ -83,7 +115,9 @@ export default async function DashboardPage() {
                     : 'bg-purple-600 hover:bg-purple-500 text-white'
                 }`}
               >
-                {user.subscriptionStatus === 'premium' ? 'Premium' : 'Upgrade'}
+                {user.subscriptionStatus === 'premium'
+                  ? (currentPlan?.name ?? 'Premium')
+                  : 'Upgrade'}
               </Link>
               <Link href="/profile" className="text-purple-200 hover:text-white transition">
                 {user.name || 'Profile'}

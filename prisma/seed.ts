@@ -1,107 +1,219 @@
+/**
+ * Multi-tenant seed script
+ * Run: npx prisma db seed   (or: npx tsx prisma/seed.ts)
+ *
+ * Creates tenants (default StarPath + LunaAstro demo), tenant domains,
+ * per-tenant admin users (proving per-tenant email uniqueness), settings,
+ * AI plan configs and subscription plans.
+ */
+
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { ensureDefaultCatalog } from '../src/lib/ai/catalog'
+import { initializeDefaultAIPlanConfigs } from '../src/lib/ai/plan-config'
 import { initializeDefaultPlans } from '../src/lib/plans'
 
 const prisma = new PrismaClient()
 
-async function main() {
-  // Create a test admin user
-  const password = 'admin123'
-  const passwordHash = await bcrypt.hash(password, 12)
+const LUNA_BRANDING = {
+  name: 'LunaAstro',
+  shortName: 'Luna',
+  tagline: 'Illuminating Your Path',
+  logoUrl: null,
+  faviconUrl: null,
+  colors: {
+    background: '#03151E',
+    foreground: '#F8FAFC',
+    primary: '#14B8A6',
+    primaryDark: '#0F766E',
+    primaryLight: '#5EEAD4',
+    primaryGlow: '#99F6E4',
+    secondary: '#E2E8F0',
+    secondaryDark: '#64748B',
+    secondaryLight: '#F1F5F9',
+    silver: '#CBD5E1',
+    silverLight: '#E2E8F0',
+    silverDark: '#94A3B8',
+    accentPink: '#FB7185',
+    accentCyan: '#38BDF8',
+    accentAmber: '#FBBF24',
+    accentEmerald: '#34D399',
+    muted: '#0A2230',
+    card: '#0A2230',
+    border: '#14B8A6',
+  },
+  seo: {
+    title: 'LunaAstro - Illuminating Your Path',
+    description:
+      'Personalized astrology readings, birth charts and cosmic guidance, beautifully simple. Powered by LunaAstro.',
+    siteName: 'LunaAstro',
+  },
+}
 
-  const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@localhost' },
+interface TenantSeed {
+  id: string
+  slug: string
+  name: string
+  isDefault: boolean
+  branding: object | null
+  domains: string[]
+  adminName: string
+  locales: { supportedLanguages: string[]; defaultLanguage: string; currencyRegion: string }
+  parentId?: string
+  master?: Record<string, unknown>
+}
+
+const TENANTS: TenantSeed[] = [
+  {
+    id: 'tenant_starpath_default',
+    slug: 'starpath',
+    name: 'StarPath Astrology',
+    isDefault: true,
+    branding: null,
+    domains: ['localhost', '127.0.0.1', 'starpath.localhost'],
+    adminName: 'Admin User',
+    locales: {
+      supportedLanguages: ['en', 'es', 'fr', 'de', 'hi'],
+      defaultLanguage: 'en',
+      currencyRegion: 'us',
+    },
+  },
+  {
+    id: 'tenant_luna_demo',
+    slug: 'luna',
+    name: 'LunaAstro',
+    isDefault: false,
+    branding: LUNA_BRANDING,
+    domains: ['luna.localhost'],
+    adminName: 'Luna Admin',
+    locales: { supportedLanguages: ['en', 'hi'], defaultLanguage: 'en', currencyRegion: 'in' },
+    parentId: 'tenant_starpath_default',
+    master: {
+      allowedLanguages: ['en', 'hi'],
+      allowedRegions: ['us', 'in'],
+      allowedGateways: ['razorpay'],
+      allowedAiProviders: ['openrouter', 'ollama', 'gemini'],
+      canCreateChildren: true,
+      maxChildren: 5,
+      childDefaults: { language: 'en', region: 'in', aiProvider: 'openrouter' },
+    },
+  },
+]
+
+async function seedTenant(t: TenantSeed, passwordHash: string) {
+  await prisma.tenant.upsert({
+    where: { id: t.id },
     update: {
-      passwordHash,
-      name: 'Admin User',
-      emailVerified: new Date(),
-      role: 'admin',
+      name: t.name,
+      slug: t.slug,
+      branding: t.branding ?? undefined,
+      isDefault: t.isDefault,
     },
     create: {
+      id: t.id,
+      slug: t.slug,
+      name: t.name,
+      isDefault: t.isDefault,
+      branding: t.branding ?? undefined,
+    },
+  })
+
+  for (const [i, host] of t.domains.entries()) {
+    await prisma.tenantDomain.upsert({
+      where: { host },
+      update: { tenantId: t.id },
+      create: { id: `domain_${t.slug}_${i}`, host, tenantId: t.id, isPrimary: i === 0 },
+    })
+  }
+
+  // Same email across tenants on purpose: demonstrates per-tenant uniqueness
+  await prisma.user.upsert({
+    where: { tenantId_email: { tenantId: t.id, email: 'admin@localhost' } },
+    update: { passwordHash, name: t.adminName, emailVerified: new Date(), role: 'admin' },
+    create: {
+      tenantId: t.id,
       email: 'admin@localhost',
       passwordHash,
-      name: 'Admin User',
+      name: t.adminName,
       emailVerified: new Date(),
       role: 'admin',
     },
   })
 
-  console.log('Created/updated admin user:', adminUser.email, '(role:', adminUser.role + ')')
-  console.log('Password: admin123')
+  // Platform superadmin (lives in the default tenant)
+  if (t.isDefault) {
+    await prisma.user.upsert({
+      where: { tenantId_email: { tenantId: t.id, email: 'super@localhost' } },
+      update: {
+        passwordHash,
+        name: 'Platform Owner',
+        emailVerified: new Date(),
+        role: 'superadmin',
+      },
+      create: {
+        tenantId: t.id,
+        email: 'super@localhost',
+        passwordHash,
+        name: 'Platform Owner',
+        emailVerified: new Date(),
+        role: 'superadmin',
+      },
+    })
+  }
 
-  // Create default app settings
   const defaultSettings = [
-    { key: 'AI_PROVIDER', value: 'ollama', description: 'AI provider: anthropic, ollama, or gemini' },
+    {
+      key: 'AI_PROVIDER',
+      value: 'ollama',
+      description: 'AI provider: anthropic, ollama, or gemini',
+    },
     { key: 'OLLAMA_URL', value: 'http://localhost:5566', description: 'Ollama server URL' },
     { key: 'AI_MODEL', value: 'llama3.2', description: 'Model name to use' },
-    { key: 'ANTHROPIC_API_KEY', value: '', description: 'Anthropic API key (required if using Anthropic)' },
-    { key: 'GEMINI_API_KEY', value: '', description: 'Google Gemini API key (required if using Gemini)' },
+    {
+      key: 'ANTHROPIC_API_KEY',
+      value: '',
+      description: 'Anthropic API key (required if using Anthropic)',
+    },
+    {
+      key: 'GEMINI_API_KEY',
+      value: '',
+      description: 'Google Gemini API key (required if using Gemini)',
+    },
   ]
 
   for (const setting of defaultSettings) {
     await prisma.appSettings.upsert({
-      where: { key: setting.key },
+      where: { tenantId_key: { tenantId: t.id, key: setting.key } },
       update: { value: setting.value },
-      create: setting,
+      create: { tenantId: t.id, ...setting },
     })
   }
 
-  console.log('Created default app settings')
+  await initializeDefaultAIPlanConfigs(t.id)
+  await initializeDefaultPlans(t.id)
+  await ensureDefaultCatalog(t.id, t.name)
 
-  // Create AI provider configs for each subscription plan
-  const aiConfigs = [
-    {
-      id: 'free',
-      name: 'Free Plan AI',
-      plan: 'free',
-      provider: 'ollama',
-      model: 'llama3.2',
-      ollamaUrl: 'http://localhost:5566',
-      maxTokens: 512,
-      enabled: true,
-      isDefault: true,
-      description: 'Free tier - Uses local Ollama with llama3.2',
-    },
-    {
-      id: 'monthly',
-      name: 'Premium Monthly AI',
-      plan: 'monthly',
-      provider: 'anthropic',
-      model: 'claude-sonnet-4-20250514',
-      maxTokens: 2048,
-      enabled: true,
-      isDefault: false,
-      description: 'Premium Monthly - Uses Claude Sonnet',
-    },
-    {
-      id: 'yearly',
-      name: 'Premium Yearly AI',
-      plan: 'yearly',
-      provider: 'anthropic',
-      model: 'claude-opus-4-20250514',
-      maxTokens: 4096,
-      enabled: true,
-      isDefault: false,
-      description: 'Premium Yearly - Uses Claude Opus (most powerful)',
-    },
-  ]
+  console.log(`Seeded tenant: ${t.name} (${t.slug})`)
+}
 
-  for (const config of aiConfigs) {
-    await prisma.aIProviderConfig.upsert({
-      where: { id: config.id },
-      update: config,
-      create: config,
-    })
-    console.log(`Created AI config for: ${config.plan}`)
+async function main() {
+  const password = 'admin123'
+  const passwordHash = await bcrypt.hash(password, 12)
+
+  for (const t of TENANTS) {
+    await seedTenant(t, passwordHash)
   }
 
-  // Initialize default subscription plans and features
-  await initializeDefaultPlans()
-  console.log('Created default subscription plans and features')
+  console.log('\nDone. Logins (password: admin123):')
+  console.log('  starpath : http://localhost:3001  -> admin@localhost (admin)')
+  console.log(
+    '  luna     : http://luna.localhost:3001 -> admin@localhost (admin, same email, different tenant)'
+  )
+  console.log('  platform : super@localhost (superadmin - tenant management)')
 }
 
 main()
-  .catch((e) => {
+  .catch(e => {
     console.error(e)
     process.exit(1)
   })

@@ -2,6 +2,10 @@
 
 # StarPath Astrology - Docker Deployment Guide
 
+> Current architecture: multi-tenant white-label platform (PostgreSQL only).
+> See `PROJECT_DOCUMENTATION.md` + `docs/MULTI_TENANCY.md` before deploying.
+> Hosts `TENANT_ROOT_DOMAIN` / `NEXTAUTH_TRUST_HOST` are required env vars.
+
 ## Quick Start
 
 ### 1. Setup Environment

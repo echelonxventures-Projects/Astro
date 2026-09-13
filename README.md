@@ -18,18 +18,19 @@ A full-featured AI-powered astrology platform built with modern technologies. Na
 
 - **Frontend**: Next.js 16, TypeScript, Tailwind CSS v4, Framer Motion
 - **Backend**: Next.js Server Actions & API Routes
-- **Database**: SQLite (dev) / PostgreSQL (production) with Prisma ORM
-- **Authentication**: NextAuth.js (Auth.js)
+- **Database**: PostgreSQL with Prisma ORM (multi-tenant)
+- **Authentication**: NextAuth.js (Auth.js) - tenant-scoped, per-tenant OAuth
 - **Payments**: Stripe with multi-region/multi-currency support
 - **AI**: Configurable providers - Ollama (free/local), Anthropic Claude, Google Gemini
 - **Astrology**: Custom calculation engine
 
-## Quick Start (SQLite - Recommended for Local Dev)
+## Quick Start (Local Dev)
 
 ### Prerequisites
 
 - Node.js 18+
 - npm or yarn
+- Docker (for the PostgreSQL + Redis dev services)
 
 ### Installation
 
@@ -46,7 +47,9 @@ npm install
 cp .env.example .env
 ```
 
-The default `.env` is already configured for SQLite local development.
+`.env.example` shows the expected variables. Start the database services (PostgreSQL on
+`15433`, Redis on `16380` in this setup) with `docker-compose -f docker-compose.dev.yml up -d`
+(or your own instances) and point `DATABASE_URL` / `DIRECT_URL` / `REDIS_URL` at them.
 
 3. **Set up the database**
 
@@ -54,14 +57,15 @@ The default `.env` is already configured for SQLite local development.
 # Generate Prisma client
 npx prisma generate
 
-# Run migrations (creates SQLite database)
-npx prisma migrate dev --name init
+# Apply migrations
+npx prisma migrate deploy
 ```
 
-4. **Seed default data** (creates admin user and default plans)
+4. **Seed default data** (tenants, admins, plans, AI configs, gateways)
 
 ```bash
 npx tsx prisma/seed.ts
+npx tsx prisma/seed-payment-gateways.ts
 ```
 
 5. **Start the development server**
@@ -74,35 +78,35 @@ Open [http://localhost:3000](http://localhost:3000) to see the app.
 
 ### Default Admin Credentials
 
-After seeding, log in as admin:
-- Email: `admin@localhost`
-- Password: `admin123`
+After seeding, two demo tenants exist:
 
-**Important**: Change the admin password in production!
+- **StarPath** (default): http://localhost:3000 - `admin@localhost` / `admin123`
+- **LunaAstro** (white-label demo): http://luna.localhost:3000 - `admin@localhost` / `admin123`
+- **Platform superadmin**: `super@localhost` / `admin123` (manages tenants)
+
+**Important**: Change all passwords in production!
 
 ## Production Setup (PostgreSQL)
 
-### 1. Update Environment Variables
+### 1. Environment Variables
 
-Edit `.env` to use PostgreSQL:
+PostgreSQL is the only supported backend. Required variables:
 
 ```bash
-# Comment out SQLite
-# DATABASE_URL="file:./dev.db"
-
-# Enable PostgreSQL
-DATABASE_URL="postgresql://user:password@host:port/database"
-DIRECT_URL="postgresql://user:password@host:port/database"
+DATABASE_URL="postgresql://user:password@host:port/database?schema=public"
+DIRECT_URL="postgresql://user:password@host:port/database?schema=public"
 ```
 
 ### 2. Recommended: Use Managed PostgreSQL
 
 **Neon (Serverless PostgreSQL)**
+
 1. Go to [neon.tech](https://neon.tech)
 2. Create a new project
 3. Copy the connection string to `.env`
 
 **Supabase**
+
 1. Go to [supabase.com](https://supabase.com)
 2. Create a new project
 3. Copy the "Connection string" (URI mode) to `.env`
@@ -115,38 +119,49 @@ npx prisma migrate deploy
 
 ## Environment Variables Reference
 
+Multi-tenant additions (see docs/MULTI_TENANCY.md):
+
+| Var                   | Purpose                                                                          |
+| --------------------- | -------------------------------------------------------------------------------- |
+| `TENANT_ROOT_DOMAIN`  | Subdomain root mapped to tenant slugs (e.g. `starpath.app` -> acme.starpath.app) |
+| `NEXTAUTH_TRUST_HOST` | `true` - required: browsers sign in on arbitrary tenant hostnames                |
+| `DIRECT_URL`          | Prisma migration/admin connection (schema stays `postgresql://...`)              |
+
 See `.env.example` for all available options:
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `DATABASE_URL` | Database connection string | Yes |
-| `NEXTAUTH_URL` | Your app URL | Yes |
-| `NEXTAUTH_SECRET` | Auth secret (generate with `openssl rand -base64 32`) | Yes |
-| `ANTHROPIC_API_KEY` | Claude API key (leave empty if using Ollama) | For Anthropic |
-| `STRIPE_SECRET_KEY` | Stripe secret key | For payments |
-| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret | For payments |
-| `STRIPE_PRICE_ID_MONTHLY` | Monthly subscription price ID | For payments |
-| `STRIPE_PRICE_ID_YEARLY` | Yearly subscription price ID | For payments |
-| `GOOGLE_CLIENT_ID` | Google OAuth client ID | Optional |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | Optional |
-| `CLOUDINARY_*` | Cloudinary credentials | For image uploads |
+| Variable                  | Description                                           | Required          |
+| ------------------------- | ----------------------------------------------------- | ----------------- |
+| `DATABASE_URL`            | Database connection string                            | Yes               |
+| `NEXTAUTH_URL`            | Your app URL                                          | Yes               |
+| `NEXTAUTH_SECRET`         | Auth secret (generate with `openssl rand -base64 32`) | Yes               |
+| `ANTHROPIC_API_KEY`       | Claude API key (leave empty if using Ollama)          | For Anthropic     |
+| `STRIPE_SECRET_KEY`       | Stripe secret key                                     | For payments      |
+| `STRIPE_WEBHOOK_SECRET`   | Stripe webhook signing secret                         | For payments      |
+| `STRIPE_PRICE_ID_MONTHLY` | Monthly subscription price ID                         | For payments      |
+| `STRIPE_PRICE_ID_YEARLY`  | Yearly subscription price ID                          | For payments      |
+| `GOOGLE_CLIENT_ID`        | Google OAuth client ID                                | Optional          |
+| `GOOGLE_CLIENT_SECRET`    | Google OAuth client secret                            | Optional          |
+| `CLOUDINARY_*`            | Cloudinary credentials                                | For image uploads |
 
 ## Configuring AI Providers
 
 StarPath supports multiple AI providers. Configure via Admin UI at `/settings`:
 
 ### Option 1: Ollama (Free, Local)
+
 - Default provider for free tier
 - Runs locally at `http://localhost:5566`
 - Models: llama3.2, mistral, etc.
 - No API key required
 
 ### Option 2: Anthropic Claude (Premium)
+
 - Higher quality readings
 - Required for premium tiers
 - Get API key from [console.anthropic.com](https://console.anthropic.com)
 
 ### Option 3: Google Gemini (Premium)
+
 - Alternative premium provider
 - Get API key from [makersuite.google.com](https://makersuite.google.com)
 
@@ -155,7 +170,7 @@ StarPath supports multiple AI providers. Configure via Admin UI at `/settings`:
 ```
 starpath-astrology/
 ├── prisma/
-│   ├── schema.prisma        # SQLite schema (default)
+│   ├── schema.prisma        # PostgreSQL schema (multi-tenant)
 │   ├── schema.prisma.postgresql  # PostgreSQL schema
 │   └── seed.ts              # Database seeding
 ├── src/
@@ -180,33 +195,35 @@ starpath-astrology/
 
 ## Available Pages/Routes
 
-| Route | Description |
-|-------|-------------|
-| `/` | Homepage with features |
-| `/login` | User login |
-| `/signup` | User registration |
-| `/dashboard` | User dashboard |
-| `/chart` | Create birth chart |
-| `/horoscope/daily` | Daily horoscope |
-| `/horoscope/love` | Love horoscope |
-| `/horoscope/career` | Career horoscope |
-| `/compatibility` | Relationship compatibility |
-| `/chat/horoscope` | AI astrologer chat |
-| `/palmistry` | Palm reading |
-| `/face-reading` | Face reading |
-| `/pricing` | Subscription plans |
-| `/profile` | User profile settings |
-| `/subscription` | Manage subscription |
-| `/settings` | Admin AI provider settings |
-| `/admin/plans` | Admin plan management |
+| Route               | Description                |
+| ------------------- | -------------------------- |
+| `/`                 | Homepage with features     |
+| `/login`            | User login                 |
+| `/signup`           | User registration          |
+| `/dashboard`        | User dashboard             |
+| `/chart`            | Create birth chart         |
+| `/horoscope/daily`  | Daily horoscope            |
+| `/horoscope/love`   | Love horoscope             |
+| `/horoscope/career` | Career horoscope           |
+| `/compatibility`    | Relationship compatibility |
+| `/chat/horoscope`   | AI astrologer chat         |
+| `/palmistry`        | Palm reading               |
+| `/face-reading`     | Face reading               |
+| `/pricing`          | Subscription plans         |
+| `/profile`          | User profile settings      |
+| `/subscription`     | Manage subscription        |
+| `/settings`         | Admin AI provider settings |
+| `/admin/plans`      | Admin plan management      |
 
 ## API Endpoints
 
 ### Authentication
+
 - `POST /api/auth/signup` - Create new account
 - `GET/POST /api/auth/[...nextauth]` - NextAuth endpoints
 
 ### Astrology
+
 - `GET/POST /api/astrology/chart` - Manage birth charts
 - `POST /api/astrology/generate` - Generate AI readings
 - `GET/POST /api/astrology/chat` - AI chat sessions
@@ -214,11 +231,13 @@ starpath-astrology/
 - `POST /api/astrology/face-reading` - Face image analysis
 
 ### Admin & Settings
+
 - `GET/POST /api/settings` - AI provider configuration
 - `GET/POST /api/settings/plans` - Plan AI configuration
 - `GET/POST /api/admin/plans` - Subscription plan management
 
 ### Stripe
+
 - `POST /api/stripe/checkout` - Create checkout session
 - `GET /api/stripe/portal` - Create portal session
 - `POST /api/stripe/webhook` - Handle Stripe webhooks
@@ -240,16 +259,16 @@ starpath-astrology/
 
 ## Subscription Plans
 
-| Feature | Free | Monthly | Yearly |
-|---------|------|---------|--------|
-| Daily Horoscope | ✓ | ✓ | ✓ |
-| Basic Birth Chart | ✓ | ✓ | ✓ |
-| AI Readings/Month | 3 | Unlimited | Unlimited |
-| Love Horoscope | - | ✓ | ✓ |
-| Career Horoscope | - | ✓ | ✓ |
-| Compatibility | - | ✓ | ✓ |
-| AI Chat | - | ✓ | ✓ |
-| Priority Support | - | ✓ | ✓ |
+| Feature           | Free | Monthly   | Yearly    |
+| ----------------- | ---- | --------- | --------- |
+| Daily Horoscope   | ✓    | ✓         | ✓         |
+| Basic Birth Chart | ✓    | ✓         | ✓         |
+| AI Readings/Month | 3    | Unlimited | Unlimited |
+| Love Horoscope    | -    | ✓         | ✓         |
+| Career Horoscope  | -    | ✓         | ✓         |
+| Compatibility     | -    | ✓         | ✓         |
+| AI Chat           | -    | ✓         | ✓         |
+| Priority Support  | -    | ✓         | ✓         |
 
 ## Development
 
@@ -268,8 +287,7 @@ npm run lint
 
 # Database commands
 npx prisma generate        # Generate Prisma client
-npx prisma migrate dev     # Create and apply migration
-npx prisma migrate deploy  # Apply migrations in production
+npx prisma migrate deploy     # Apply migrations
 npx prisma studio          # Open database GUI
 npx tsx prisma/seed.ts     # Seed database
 ```
@@ -316,6 +334,16 @@ Before deploying to production:
 - [ ] Add Stripe keys if accepting payments
 - [ ] Update privacy policy contact email
 - [ ] Run `npx prisma migrate deploy` in production
+
+## Multi-Tenancy (White-Label SaaS)
+
+This codebase serves many independent customer platforms from one deployment.
+Each tenant has its own domains, users, branding (colors/logo/SEO), plans, AI
+configuration and payment gateways, enforced at the database and request layers.
+
+See **[docs/MULTI_TENANCY.md](docs/MULTI_TENANCY.md)** for the architecture,
+host-resolution rules, admin portals (`/admin/tenants`, `/admin/branding`) and the
+customer onboarding flow.
 
 ## Multi-Region Pricing
 

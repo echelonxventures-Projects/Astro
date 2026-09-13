@@ -12,6 +12,8 @@ import {
   Eye,
 } from 'lucide-react'
 import Link from 'next/link'
+import { BrandLogo, BrandName, BrandTagline } from '@/components/BrandProvider'
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 
 export default function HomePage() {
   return (
@@ -21,8 +23,10 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2">
-              <Sparkles className="w-8 h-8 text-[#A78BFA]" />
-              <span className="text-xl font-bold gradient-text">StarPath Astrology</span>
+              <BrandLogo className="w-8 h-8 text-[var(--primary-light)]" />
+              <span className="text-xl font-bold gradient-text">
+                <BrandName />
+              </span>
             </Link>
             <div className="hidden md:flex items-center gap-6">
               <Link href="/chart" className="text-gray-300 hover:text-white transition">
@@ -48,12 +52,13 @@ export default function HomePage() {
               </Link>
             </div>
             <div className="flex items-center gap-4">
+              <LanguageSwitcher compact />
               <Link href="/login" className="text-gray-300 hover:text-white transition">
                 Login
               </Link>
               <Link
                 href="/signup"
-                className="bg-[#7C3AED] hover:bg-[#5B21B6] text-white px-4 py-2 rounded-full transition pulse-glow"
+                className="bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white px-4 py-2 rounded-full transition pulse-glow"
               >
                 Get Started
               </Link>
@@ -77,7 +82,9 @@ export default function HomePage() {
           </div>
 
           <h1 className="text-5xl md:text-7xl font-bold mb-6">
-            <span className="gradient-text">Navigate Your Cosmic Journey</span>
+            <span className="gradient-text">
+              <BrandTagline />
+            </span>
           </h1>
           <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto mb-10">
             Discover personalized astrology readings, birth charts, and celestial guidance powered
@@ -86,13 +93,13 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/signup"
-              className="bg-[#7C3AED] hover:bg-[#5B21B6] text-white px-8 py-4 rounded-full text-lg font-semibold transition flex items-center justify-center gap-2 pulse-glow"
+              className="bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white px-8 py-4 rounded-full text-lg font-semibold transition flex items-center justify-center gap-2 pulse-glow"
             >
               Get Your Free Reading <ArrowRight className="w-5 h-5" />
             </Link>
             <Link
               href="/chart"
-              className="glass hover:bg-[#7C3AED]/30 text-white px-8 py-4 rounded-full text-lg font-semibold transition flex items-center justify-center gap-2"
+              className="glass hover:bg-[var(--primary)]/30 text-white px-8 py-4 rounded-full text-lg font-semibold transition flex items-center justify-center gap-2"
             >
               Create Birth Chart
             </Link>
@@ -101,7 +108,7 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 px-4 bg-gradient-to-b from-[#1A1025]/50 to-transparent">
+      <section className="py-20 px-4 bg-gradient-to-b from-[var(--muted)]/50 to-transparent">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-4xl font-bold text-center mb-4 gradient-text">
             Explore Your Cosmic Blueprint
@@ -113,10 +120,10 @@ export default function HomePage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Birth Chart */}
             <Link href="/chart" className="glass p-6 rounded-2xl card-hover group">
-              <div className="w-14 h-14 rounded-xl bg-[#7C3AED]/30 flex items-center justify-center mb-4">
-                <Star className="w-8 h-8 text-[#A78BFA]" />
+              <div className="w-14 h-14 rounded-xl bg-[var(--primary)]/30 flex items-center justify-center mb-4">
+                <Star className="w-8 h-8 text-[var(--primary-light)]" />
               </div>
-              <h3 className="text-xl font-semibold mb-2 group-hover:text-[#C4B5FD] transition">
+              <h3 className="text-xl font-semibold mb-2 group-hover:text-[var(--primary-glow)] transition">
                 Birth Chart Analysis
               </h3>
               <p className="text-gray-300">
@@ -127,10 +134,10 @@ export default function HomePage() {
 
             {/* Daily Horoscope */}
             <Link href="/horoscope/daily" className="glass p-6 rounded-2xl card-hover group">
-              <div className="w-14 h-14 rounded-xl bg-[#7C3AED]/30 flex items-center justify-center mb-4">
-                <Sparkles className="w-8 h-8 text-[#A78BFA]" />
+              <div className="w-14 h-14 rounded-xl bg-[var(--primary)]/30 flex items-center justify-center mb-4">
+                <Sparkles className="w-8 h-8 text-[var(--primary-light)]" />
               </div>
-              <h3 className="text-xl font-semibold mb-2 group-hover:text-[#C4B5FD] transition">
+              <h3 className="text-xl font-semibold mb-2 group-hover:text-[var(--primary-glow)] transition">
                 Daily Horoscope
               </h3>
               <p className="text-gray-300">
@@ -140,8 +147,8 @@ export default function HomePage() {
 
             {/* Love Horoscope */}
             <Link href="/horoscope/love" className="glass p-6 rounded-2xl card-hover group">
-              <div className="w-14 h-14 rounded-xl bg-[#EC4899]/30 flex items-center justify-center mb-4">
-                <Heart className="w-8 h-8 text-[#EC4899]" />
+              <div className="w-14 h-14 rounded-xl bg-[var(--accent-pink)]/30 flex items-center justify-center mb-4">
+                <Heart className="w-8 h-8 text-[var(--accent-pink)]" />
               </div>
               <h3 className="text-xl font-semibold mb-2 group-hover:text-[#F472B6] transition">
                 Love & Relationships
@@ -154,8 +161,8 @@ export default function HomePage() {
 
             {/* Career Horoscope */}
             <Link href="/horoscope/career" className="glass p-6 rounded-2xl card-hover group">
-              <div className="w-14 h-14 rounded-xl bg-[#06B6D4]/30 flex items-center justify-center mb-4">
-                <Briefcase className="w-8 h-8 text-[#06B6D4]" />
+              <div className="w-14 h-14 rounded-xl bg-[var(--accent-cyan)]/30 flex items-center justify-center mb-4">
+                <Briefcase className="w-8 h-8 text-[var(--accent-cyan)]" />
               </div>
               <h3 className="text-xl font-semibold mb-2 group-hover:text-[#22D3EE] transition">
                 Career Guidance
@@ -168,8 +175,8 @@ export default function HomePage() {
 
             {/* Compatibility */}
             <Link href="/compatibility" className="glass p-6 rounded-2xl card-hover group">
-              <div className="w-14 h-14 rounded-xl bg-[#EC4899]/30 flex items-center justify-center mb-4">
-                <Users className="w-8 h-8 text-[#EC4899]" />
+              <div className="w-14 h-14 rounded-xl bg-[var(--accent-pink)]/30 flex items-center justify-center mb-4">
+                <Users className="w-8 h-8 text-[var(--accent-pink)]" />
               </div>
               <h3 className="text-xl font-semibold mb-2 group-hover:text-[#F472B6] transition">
                 Compatibility Reading
@@ -181,8 +188,8 @@ export default function HomePage() {
 
             {/* AI Chat */}
             <Link href="/chat/horoscope" className="glass p-6 rounded-2xl card-hover group">
-              <div className="w-14 h-14 rounded-xl bg-[#06B6D4]/30 flex items-center justify-center mb-4">
-                <MessageCircle className="w-8 h-8 text-[#06B6D4]" />
+              <div className="w-14 h-14 rounded-xl bg-[var(--accent-cyan)]/30 flex items-center justify-center mb-4">
+                <MessageCircle className="w-8 h-8 text-[var(--accent-cyan)]" />
               </div>
               <h3 className="text-xl font-semibold mb-2 group-hover:text-[#22D3EE] transition">
                 AI Astrologer Chat
@@ -194,8 +201,8 @@ export default function HomePage() {
 
             {/* Palmistry */}
             <Link href="/palmistry" className="glass p-6 rounded-2xl card-hover group">
-              <div className="w-14 h-14 rounded-xl bg-[#F59E0B]/30 flex items-center justify-center mb-4">
-                <Hand className="w-8 h-8 text-[#F59E0B]" />
+              <div className="w-14 h-14 rounded-xl bg-[var(--accent-amber)]/30 flex items-center justify-center mb-4">
+                <Hand className="w-8 h-8 text-[var(--accent-amber)]" />
               </div>
               <h3 className="text-xl font-semibold mb-2 group-hover:text-[#FBBF24] transition">
                 Palm Reading
@@ -208,10 +215,10 @@ export default function HomePage() {
 
             {/* Face Reading */}
             <Link href="/face-reading" className="glass p-6 rounded-2xl card-hover group">
-              <div className="w-14 h-14 rounded-xl bg-[#7C3AED]/30 flex items-center justify-center mb-4">
-                <Eye className="w-8 h-8 text-[#A78BFA]" />
+              <div className="w-14 h-14 rounded-xl bg-[var(--primary)]/30 flex items-center justify-center mb-4">
+                <Eye className="w-8 h-8 text-[var(--primary-light)]" />
               </div>
-              <h3 className="text-xl font-semibold mb-2 group-hover:text-[#C4B5FD] transition">
+              <h3 className="text-xl font-semibold mb-2 group-hover:text-[var(--primary-glow)] transition">
                 Face Reading
               </h3>
               <p className="text-gray-300">
@@ -233,7 +240,7 @@ export default function HomePage() {
 
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center">
-              <div className="w-16 h-16 rounded-full bg-[#7C3AED] flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+              <div className="w-16 h-16 rounded-full bg-[var(--primary)] flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
                 1
               </div>
               <h3 className="text-xl font-semibold mb-2">Create Your Profile</h3>
@@ -243,7 +250,7 @@ export default function HomePage() {
             </div>
 
             <div className="text-center">
-              <div className="w-16 h-16 rounded-full bg-[#7C3AED] flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+              <div className="w-16 h-16 rounded-full bg-[var(--primary)] flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
                 2
               </div>
               <h3 className="text-xl font-semibold mb-2">Get Your Birth Chart</h3>
@@ -253,7 +260,7 @@ export default function HomePage() {
             </div>
 
             <div className="text-center">
-              <div className="w-16 h-16 rounded-full bg-[#7C3AED] flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+              <div className="w-16 h-16 rounded-full bg-[var(--primary)] flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
                 3
               </div>
               <h3 className="text-xl font-semibold mb-2">Receive Insights</h3>
@@ -266,17 +273,15 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 bg-gradient-to-r from-[#7C3AED]/30 to-[#5B21B6]/30">
+      <section className="py-20 px-4 bg-gradient-to-r from-[var(--primary)]/30 to-[var(--primary-dark)]/30">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl font-bold mb-6 gradient-text">
-            Ready to Navigate Your Cosmic Journey?
-          </h2>
+          <h2 className="text-4xl font-bold mb-6 gradient-text">Ready to Begin Your Journey?</h2>
           <p className="text-xl text-gray-300 mb-8">
-            Join thousands of seekers who trust StarPath Astrology for their daily cosmic guidance.
+            Join thousands of seekers who trust <BrandName /> for their daily cosmic guidance.
           </p>
           <Link
             href="/signup"
-            className="inline-flex items-center gap-2 bg-[#7C3AED] hover:bg-[#5B21B6] text-white px-8 py-4 rounded-full text-lg font-semibold transition pulse-glow"
+            className="inline-flex items-center gap-2 bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white px-8 py-4 rounded-full text-lg font-semibold transition pulse-glow"
           >
             Start Your Free Journey <ArrowRight className="w-5 h-5" />
           </Link>
@@ -284,12 +289,14 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-4 border-t border-[#7C3AED]/30">
+      <footer className="py-12 px-4 border-t border-[var(--primary)]/30">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <Link href="/" className="flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-[#A78BFA]" />
-              <span className="font-bold gradient-text">StarPath Astrology</span>
+              <BrandLogo className="w-6 h-6 text-[var(--primary-light)]" />
+              <span className="font-bold gradient-text">
+                <BrandName />
+              </span>
             </Link>
             <div className="flex gap-6">
               <Link href="/privacy" className="text-gray-400 hover:text-white transition">
@@ -303,7 +310,7 @@ export default function HomePage() {
               </Link>
             </div>
             <p className="text-purple-400 text-sm">
-              © {new Date().getFullYear()} StarPath Astrology. All rights reserved.
+              © {new Date().getFullYear()} <BrandName />. All rights reserved.
             </p>
           </div>
         </div>

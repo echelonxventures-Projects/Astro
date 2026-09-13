@@ -1,90 +1,70 @@
+/**
+ * POST /api/settings/test
+ * Test an AI provider by catalog key (or the tenant default). No hardcoded providers.
+ */
+
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
+import { buildProviderFromEntry, getDefaultEntry, getEntry } from '@/lib/ai/catalog'
 import { auth } from '@/lib/auth'
 import { logError } from '@/lib/logger'
+import { getTenantContext, TenantNotFoundError } from '@/lib/tenant'
 
-/**
- * POST /api/settings/test
- * Test connection to the configured AI provider
- */
 export async function POST(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  // Check admin role
-  const { prisma } = await import('@/lib/db')
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-  })
-
-  if (user?.role !== 'admin') {
-    return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-  }
-
   try {
-    const body = await req.json()
-    const { provider, model, ollamaUrl, anthropicApiKey, geminiApiKey } = body
-
-    // Create a test provider instance
-    let testProvider
-    switch (provider) {
-      case 'anthropic':
-        if (!anthropicApiKey) {
-          return NextResponse.json({ success: false, error: 'API key required' }, { status: 400 })
-        }
-        const { AnthropicProvider } = await import('@/lib/ai/anthropic-provider')
-        testProvider = new AnthropicProvider({
-          provider: 'anthropic',
-          apiKey: anthropicApiKey,
-          model: model || 'claude-sonnet-4-20250514',
-        })
-        break
-      case 'gemini':
-        if (!geminiApiKey) {
-          return NextResponse.json({ success: false, error: 'API key required' }, { status: 400 })
-        }
-        const { GeminiProvider } = await import('@/lib/ai/gemini-provider')
-        testProvider = new GeminiProvider({
-          provider: 'gemini',
-          apiKey: geminiApiKey,
-          model: model || 'gemini-2.0-flash',
-        })
-        break
-      case 'ollama':
-      default:
-        const { OllamaProvider } = await import('@/lib/ai/ollama-provider')
-        testProvider = new OllamaProvider({
-          provider: 'ollama',
-          ollamaUrl: ollamaUrl || 'http://localhost:5566',
-          model: model || 'llama3.2',
-        })
+    const session = await auth()
+    if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (session.user.role !== 'admin' && session.user.role !== 'superadmin') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+    }
+    const ctx = await getTenantContext()
+    if (session.user.tenantId !== ctx.tenantId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Test with a simple prompt
-    const testResponse = await testProvider.complete({
-      messages: [{ role: 'user', content: 'Reply with just "OK" to confirm you are working.' }],
-      maxTokens: 10,
-    })
+    const body = await req.json().catch(() => ({}))
+    const providerKey = typeof body.providerKey === 'string' ? body.providerKey : null
 
-    if (testResponse) {
-      return NextResponse.json({ success: true, message: 'Connection successful' })
-    } else {
+    const entry = providerKey
+      ? await getEntry(ctx.tenantId, providerKey)
+      : await getDefaultEntry(ctx.tenantId)
+
+    if (!entry) {
       return NextResponse.json(
-        { success: false, error: 'Empty response from provider' },
-        { status: 500 }
+        { success: false, error: 'Provider not found in catalog' },
+        { status: 404 }
       )
     }
-  } catch (error) {
-    logError('Connection test failed', error, { userId: user?.id })
+
+    const provider = await buildProviderFromEntry(entry, {
+      model: typeof body.model === 'string' ? body.model : undefined,
+      maxTokens: 16,
+    })
+    const testResponse = await provider.complete({
+      messages: [{ role: 'user', content: 'Reply with just "OK" to confirm you are working.' }],
+      maxTokens: 16,
+    })
+
+    if (testResponse && testResponse.trim().length > 0) {
+      return NextResponse.json({
+        success: true,
+        message: 'Connection successful',
+        provider: entry.label,
+      })
+    }
     return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      },
+      { success: false, error: 'Empty response from provider' },
+      { status: 500 }
+    )
+  } catch (error: unknown) {
+    if (error instanceof TenantNotFoundError) {
+      return NextResponse.json({ error: 'Unknown tenant' }, { status: 404 })
+    }
+    logError('Connection test failed', error)
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

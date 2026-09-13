@@ -144,6 +144,7 @@ export async function POST(req: NextRequest) {
     // Save the reading
     const reading = await prisma.reading.create({
       data: {
+        tenantId: session.user.tenantId!,
         userId: session.user.id,
         type,
         title,
