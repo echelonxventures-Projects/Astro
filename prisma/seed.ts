@@ -108,13 +108,17 @@ async function seedTenant(t: TenantSeed, passwordHash: string) {
       slug: t.slug,
       branding: t.branding ?? undefined,
       isDefault: t.isDefault,
+      parentId: t.parentId ?? null,
+      settings: { locales: t.locales, master: t.master },
     },
     create: {
       id: t.id,
       slug: t.slug,
       name: t.name,
       isDefault: t.isDefault,
+      parentId: t.parentId ?? null,
       branding: t.branding ?? undefined,
+      settings: { locales: t.locales, master: t.master },
     },
   })
 
