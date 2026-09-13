@@ -12,6 +12,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { SUPPORTED_LANGUAGES } from '@/lib/i18n'
 import { logError } from '@/lib/logger'
+import { effectiveMaster } from '@/lib/master-config'
 import { getTenantContext, TenantNotFoundError } from '@/lib/tenant'
 import { mergeLocale } from '@/lib/tenant-defaults'
 
@@ -68,7 +69,16 @@ export async function PATCH(req: NextRequest) {
     const body = (await req.json()) as LocalizationBody
 
     const validCodes: Set<string> = new Set(SUPPORTED_LANGUAGES.map(l => l.code))
-    const supported: string[] = (body.supportedLanguages ?? []).filter(c => validCodes.has(c))
+    const requested = body.supportedLanguages ?? []
+    const eff = await effectiveMaster(ctx.tenantId)
+    const overreach = requested.filter(c => validCodes.has(c) && !eff.allowedLanguages.includes(c))
+    if (overreach.length > 0) {
+      return NextResponse.json(
+        { error: `Languages not permitted by your parent platform: ${overreach.join(', ')}` },
+        { status: 403 }
+      )
+    }
+    const supported: string[] = requested.filter(c => validCodes.has(c))
     const defaultLanguage: string =
       body.defaultLanguage && validCodes.has(body.defaultLanguage) ? body.defaultLanguage : 'en'
     if (supported.length > 0 && !supported.includes(defaultLanguage)) {
@@ -113,6 +123,9 @@ export async function PATCH(req: NextRequest) {
     const message = error instanceof Error ? error.message : 'Unknown error'
     if (message === 'Unauthorized' || message === 'Admin access required') {
       return NextResponse.json({ error: message }, { status: 401 })
+    }
+    if (message.includes('not permitted by your parent')) {
+      return NextResponse.json({ error: message }, { status: 403 })
     }
     logError('Localization PATCH error', error)
     return NextResponse.json({ error: 'Failed to save localization' }, { status: 500 })
