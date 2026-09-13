@@ -74,6 +74,8 @@ Next.js route handlers / RSC
 | Platform config | `SubscriptionPlan` (`@@unique([tenantId,key])`, `tier` free/paid, regionalPricing), `PlanFeature`, `PlanFeatureAccess`, `AppSettings` (`@@unique([tenantId,key])`), `AIProviderConfig` (plan bindings), `AIProviderCatalog` (`@@unique([tenantId,key])`) |
 | Global          | `Region` is **per tenant** (unique per tenant); `Region`-adjacent reference: none — everything customer-facing is tenant-scoped                                                                                                                          |
 
+Runbooks: docs/PAYMENT_TESTING.md (test-mode payments, webhook routing) · docs/DOMAIN_ONBOARDING.md (custom domains).
+
 Migrations: `init_postgresql` → `add_payment_audit_log` → `add_multi_tenancy` → `ai_provider_catalog` → `region_per_tenant` → `platform_hierarchy` (all applied by `npx prisma migrate deploy`).
 
 ## 5. Branding & theming

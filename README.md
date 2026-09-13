@@ -353,6 +353,12 @@ The app supports regional pricing with automatic currency conversion:
 2. Users see prices in their local currency on `/pricing`
 3. Regional price multipliers adjust for purchasing power
 
+## Payment Testing & Domain Onboarding
+
+- docs/PAYMENT_TESTING.md - Stripe/Razorpay/PayPal test-mode flows, per-tenant webhook routing
+- docs/DOMAIN_ONBOARDING.md - custom domain checklist (DNS, TLS, OAuth & payment callbacks)
+- docs/MULTI_TENANCY.md - platform hierarchy and master configuration
+
 ## License
 
 MIT

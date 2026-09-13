@@ -21,13 +21,13 @@ export const SUPPORTED_LANGUAGES = [
   { code: 'pl', name: 'Polish', nativeName: 'Polski', locale: 'pl-PL' },
 ] as const
 
-export type LanguageCode = typeof SUPPORTED_LANGUAGES[number]['code']
+export type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code']
 
 // Translation dictionaries
 export const translations: Record<LanguageCode, Record<string, string>> = {
   en: {
     // Common
-    'app.name': 'StarPath Astrology',
+    'app.name': 'Astrology Platform',
     'app.tagline': 'Discover Your Cosmic Path',
     'nav.home': 'Home',
     'nav.dashboard': 'Dashboard',
@@ -47,7 +47,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     'auth.forgotPassword': 'Forgot Password?',
     'auth.orContinueWith': 'or continue with',
     'auth.alreadyHaveAccount': 'Already have an account?',
-    'auth.dontHaveAccount': 'Don\'t have an account?',
+    'auth.dontHaveAccount': "Don't have an account?",
 
     // Birth Chart
     'chart.title': 'Birth Chart',
@@ -73,7 +73,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     // Chat
     'chat.title': 'Chat with AI Astrologer',
     'chat.placeholder': 'Ask me anything about astrology...',
-    'chat.welcome': 'Welcome! I\'m your personal AI astrologer.',
+    'chat.welcome': "Welcome! I'm your personal AI astrologer.",
     'chat.askBirthDetails': 'Please share your birth details for a personalized reading.',
 
     // Pricing
@@ -129,8 +129,8 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
   },
 
   es: {
-    'app.name': 'StarPath Astrología',
-    'app.tagline': 'Descubre Tu Camino Cósmico',
+    'app.name': 'Astrology Platform',
+    'app.tagline': 'Discover Your Cosmic Path',
     'nav.home': 'Inicio',
     'nav.dashboard': 'Panel',
     'nav.chart': 'Carta Natal',
@@ -162,15 +162,15 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
   },
 
   fr: {
-    'app.name': 'StarPath Astrologie',
-    'app.tagline': 'Découvrez Votre Chemin Cosmique',
+    'app.name': 'Astrology Platform',
+    'app.tagline': 'Discover Your Cosmic Path',
     'nav.home': 'Accueil',
     'nav.dashboard': 'Tableau de Bord',
     'nav.chart': 'Carte Natal',
     'nav.horoscope': 'Horoscope',
     'nav.chat': 'Astrologue IA',
     'auth.login': 'Connexion',
-    'auth.signup': 'S\'inscrire',
+    'auth.signup': "S'inscrire",
     'auth.email': 'Email',
     'auth.password': 'Mot de passe',
     'chart.title': 'Carte Natal',
@@ -183,8 +183,8 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
   },
 
   de: {
-    'app.name': 'StarPath Astrologie',
-    'app.tagline': 'Entdecke Deinen Kosmischen Weg',
+    'app.name': 'Astrology Platform',
+    'app.tagline': 'Discover Your Cosmic Path',
     'nav.home': 'Startseite',
     'nav.dashboard': 'Dashboard',
     'nav.chart': 'Geburtschart',
@@ -204,8 +204,8 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
   },
 
   hi: {
-    'app.name': 'StarPath ज्योतिष',
-    'app.tagline': 'अपना ब्रह्मांडीय मार्ग खोजें',
+    'app.name': 'Astrology Platform',
+    'app.tagline': 'Discover Your Cosmic Path',
     'nav.home': 'होम',
     'nav.dashboard': 'डैशबोर्ड',
     'nav.chart': 'जन्म पत्र',
@@ -235,8 +235,8 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
   },
 
   zh: {
-    'app.name': '星道占星',
-    'app.tagline': '探索你的宇宙之路',
+    'app.name': 'Astrology Platform',
+    'app.tagline': 'Discover Your Cosmic Path',
     'nav.home': '首页',
     'nav.dashboard': '仪表板',
     'nav.chart': '出生图',
@@ -266,8 +266,8 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
   },
 
   ja: {
-    'app.name': 'スターパス占星術',
-    'app.tagline': 'あなたの宇宙の道を発見',
+    'app.name': 'Astrology Platform',
+    'app.tagline': 'Discover Your Cosmic Path',
     'nav.home': 'ホーム',
     'nav.dashboard': 'ダッシュボード',
     'nav.chart': '出生図',
@@ -315,7 +315,10 @@ export function t(key: string, language: LanguageCode = 'en'): string {
 /**
  * Get user's preferred language from Accept-Language header or stored preference
  */
-export function getPreferredLanguage(acceptLanguage?: string, storedLanguage?: LanguageCode): LanguageCode {
+export function getPreferredLanguage(
+  acceptLanguage?: string,
+  storedLanguage?: LanguageCode
+): LanguageCode {
   if (storedLanguage && SUPPORTED_LANGUAGES.some(l => l.code === storedLanguage)) {
     return storedLanguage
   }
