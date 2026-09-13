@@ -6,7 +6,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { logError } from '@/lib/logger'
 import { getGateway, getDefaultGateway, getEnabledGateways } from '@/lib/payment'
-import { getTenantContext } from '@/lib/tenant'
+import { getTenantBaseUrl, getTenantContext } from '@/lib/tenant'
 
 /**
  * POST /api/payment/checkout
@@ -113,8 +113,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No payment gateway configured' }, { status: 503 })
     }
 
-    const successUrl = `${process.env.NEXTAUTH_URL}/subscription?success=true&session_id={CHECKOUT_SESSION_ID}`
-    const cancelUrl = `${process.env.NEXTAUTH_URL}/pricing?canceled=true`
+    const tenantBase = await getTenantBaseUrl()
+    const successUrl = `${tenantBase}/subscription?success=true&session_id={CHECKOUT_SESSION_ID}`
+    const cancelUrl = `${tenantBase}/pricing?canceled=true`
 
     // Create checkout _session
     const checkoutResult = await gateway.createCheckoutSession({

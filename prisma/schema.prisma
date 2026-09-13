@@ -61,17 +61,25 @@ model Tenant {
   @@index([parentId])
 }
 
-// Hostnames owned by a tenant (primary subdomain, vanity domains)
+// Hostnames served by a tenant. Two ownership classes:
+//  - in_house: <slug>.TENANT_ROOT_DOMAIN (or *.localhost in dev) - ours, auto-verified
+//  - custom:   tenant-owned vanity domains - must pass DNS verification before serving
 model TenantDomain {
-  id        String   @id @default(cuid())
-  host      String   @unique // lowercase, no port: "luna.starpath.app"
-  tenantId  String
-  isPrimary Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id                String    @id @default(cuid())
+  host              String    @unique // lowercase, no port: "astro.customer.com"
+  tenantId          String
+  type              String    @default("in_house") // in_house | custom
+  status            String    @default("verified") // pending | verified
+  verificationToken String? // expected value of TXT record _starpath-verify.<host>
+  verifiedAt        DateTime?
+  isPrimary         Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
+  @@index([status])
 }
 
 // ===========================================

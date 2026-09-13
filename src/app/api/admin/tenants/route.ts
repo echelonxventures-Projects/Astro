@@ -11,12 +11,11 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { logError } from '@/lib/logger'
 import { clampGrants, descendantIds, effectiveMaster, type MasterConfig } from '@/lib/master-config'
+import { validateSlug } from '@/lib/tenant'
 import { provisionTenant } from '@/lib/tenant-provision'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-
-const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/
 
 interface Actor {
   userId: string
@@ -118,11 +117,12 @@ export async function POST(req: NextRequest) {
     if (!name || !name.trim()) {
       return NextResponse.json({ error: 'Tenant name is required' }, { status: 400 })
     }
-    if (!slug || !SLUG_RE.test(slug)) {
-      return NextResponse.json(
-        { error: 'Slug must be 3-40 chars: lowercase letters, digits, hyphens' },
-        { status: 400 }
-      )
+    if (!slug) {
+      return NextResponse.json({ error: 'Slug is required' }, { status: 400 })
+    }
+    const slugProblem = validateSlug(slug)
+    if (slugProblem) {
+      return NextResponse.json({ error: slugProblem }, { status: 400 })
     }
     if (await prisma.tenant.findUnique({ where: { slug } })) {
       return NextResponse.json({ error: 'A tenant with this slug already exists' }, { status: 409 })

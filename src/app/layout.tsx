@@ -7,7 +7,7 @@ import { BrandProvider } from '@/components/BrandProvider'
 import { LocaleProvider } from '@/components/LocaleProvider'
 import MonitoringProvider from '@/components/MonitoringProvider'
 import { brandToCssRules, DEFAULT_BRANDING, type BrandConfig } from '@/lib/branding'
-import { getTenantContext, TenantNotActiveError } from '@/lib/tenant'
+import { getTenantBaseUrl, getTenantContext, TenantNotActiveError } from '@/lib/tenant'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -56,7 +56,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const title = brand.seo.title ?? `${brand.name} - ${brand.tagline}`
   const description = brand.seo.description ?? brand.tagline
   return {
-    metadataBase: new URL(process.env.NEXTAUTH_URL ?? 'http://localhost:3000'),
+    metadataBase: new URL(await getTenantBaseUrl()),
     title,
     description,
     keywords:
