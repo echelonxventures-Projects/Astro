@@ -6,49 +6,55 @@ test.describe('Pricing Page', () => {
   })
 
   test('should display pricing page', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: /pricing|choose your/i })).toBeVisible()
-    await expect(page.getByText(/cosmic path|plans/i)).toBeVisible()
+    await expect(page.getByRole('heading', { name: /choose your cosmic path/i })).toBeVisible()
+    // plans load async from /api/plans
+    await expect(page.getByTestId('plan-card').first()).toBeVisible({ timeout: 20000 })
   })
 
   test('should show pricing plans', async ({ page }) => {
-    // Should have at least 2-3 plan cards
-    const planCards = page.locator('[class*="card"], [class*="plan"], article').filter({ hasText: /\$|free|monthly|yearly/i })
-    const count = await planCards.count()
-    expect(count).toBeGreaterThanOrEqual(1)
+    // Seeded tenant has free/monthly/yearly
+    await expect(page.getByTestId('plan-card').first()).toBeVisible({ timeout: 20000 })
+    const count = await page.getByTestId('plan-card').count()
+    expect(count).toBeGreaterThanOrEqual(2)
   })
 
   test('should show free plan', async ({ page }) => {
-    const freePlan = page.locator('text=/free|basic/i').first()
-    await expect(freePlan).toBeVisible()
+    const freePlan = page.getByTestId('plan-card').filter({ hasText: /free/i }).first()
+    await expect(freePlan).toBeVisible({ timeout: 20000 })
   })
 
   test('should show premium plans', async ({ page }) => {
-    const premiumPlan = page.locator('text=/premium|pro|monthly|yearly/i').first()
-    await expect(premiumPlan).toBeVisible()
+    const premiumPlan = page
+      .getByTestId('plan-card')
+      .filter({ hasText: /premium/i })
+      .first()
+    await expect(premiumPlan).toBeVisible({ timeout: 20000 })
   })
 
   test('should show plan features', async ({ page }) => {
     // Features are typically shown with checkmarks
-    const features = page.locator('[class*="feature"], li, [class*="check"]').filter({ hasText: /reading|chart|horoscope|access/i })
+    await expect(page.getByTestId('plan-card').first()).toBeVisible({ timeout: 20000 })
+    const features = page.locator('li').filter({ hasText: /reading|chart|horoscope|access/i })
     const count = await features.count()
     expect(count).toBeGreaterThanOrEqual(1)
   })
 
   test('should show pricing amounts', async ({ page }) => {
     // Look for price displays
-    const prices = page.locator('text=/\\$\\d+|\\$\\d+\\.\\d+/i')
+    await expect(page.getByTestId('plan-card').first()).toBeVisible({ timeout: 20000 })
+    const prices = page.getByTestId('plan-card').locator('text=/[$₹€£]\\s?\\d|free/i')
     const count = await prices.count()
     expect(count).toBeGreaterThanOrEqual(1)
   })
 
   test('should have CTA buttons', async ({ page }) => {
-    const ctas = page.getByRole('button').filter({ hasText: /get started|subscribe|upgrade|start/i })
-    const count = await ctas.count()
-    expect(count).toBeGreaterThanOrEqual(1)
+    await expect(page.getByTestId('plan-cta').first()).toBeVisible({ timeout: 20000 })
+    const count = await page.getByTestId('plan-cta').count()
+    expect(count).toBeGreaterThanOrEqual(2)
   })
 
   test('should redirect to signup for unauthenticated users clicking CTA', async ({ page }) => {
-    const ctaButton = page.getByRole('button').filter({ hasText: /get started|start free trial/i }).first()
+    const ctaButton = page.getByTestId('plan-cta').filter({ hasText: /start/i }).first()
 
     if (await ctaButton.isVisible().catch(() => false)) {
       // Click a non-free plan CTA
@@ -60,7 +66,7 @@ test.describe('Pricing Page', () => {
   })
 
   test('should show region selector', async ({ page }) => {
-    const regionSelect = page.locator('select[name*="region"], select[id*="region"]').first()
+    const regionSelect = page.getByTestId('region-select').first()
 
     if (await regionSelect.isVisible().catch(() => false)) {
       await expect(regionSelect).toBeVisible()
@@ -72,7 +78,7 @@ test.describe('Pricing Page', () => {
   })
 
   test('should update prices when region changes', async ({ page }) => {
-    const regionSelect = page.locator('select[name*="region"], select[id*="region"]').first()
+    const regionSelect = page.getByTestId('region-select').first()
 
     if (await regionSelect.isVisible().catch(() => false)) {
       // Get initial price
@@ -97,7 +103,9 @@ test.describe('Pricing Page', () => {
       await expect(faqHeading).toBeVisible()
 
       // Should have FAQ items
-      const faqItems = page.locator('[class*="faq"], details, [class*="accordion"]').filter({ hasText: /\\?/ })
+      const faqItems = page
+        .locator('[class*="faq"], details, [class*="accordion"]')
+        .filter({ hasText: /\\?/ })
       const count = await faqItems.count()
       expect(count).toBeGreaterThanOrEqual(1)
     }
@@ -134,7 +142,10 @@ test.describe('Pricing Page', () => {
 
   test('should have working header navigation', async ({ page }) => {
     // Check home link
-    const homeLink = page.getByRole('link').filter({ hasText: /starpath|home/i }).first()
+    const homeLink = page
+      .getByRole('link')
+      .filter({ hasText: /starpath|home/i })
+      .first()
     await expect(homeLink).toBeVisible()
 
     // Navigate to home
@@ -152,8 +163,8 @@ test.describe('Pricing - Authenticated User', () => {
       data: {
         name: 'Pricing Test User',
         email: testEmail,
-        password: testPassword
-      }
+        password: testPassword,
+      },
     })
 
     await page.goto('/login')
@@ -168,8 +179,7 @@ test.describe('Pricing - Authenticated User', () => {
     await createAndLoginUser(page)
     await page.goto('/pricing')
 
-    const dashboardLink = page.getByRole('link', { name: /dashboard/i })
-    await expect(dashboardLink).toBeVisible()
+    await expect(page.getByRole('link', { name: /dashboard/i }).first()).toBeVisible()
   })
 
   test('should show subscription link for authenticated users', async ({ page }) => {

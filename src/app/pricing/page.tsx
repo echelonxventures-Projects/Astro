@@ -203,6 +203,7 @@ export default function PricingPage() {
               <div className="inline-flex items-center gap-3 px-6 py-3 bg-purple-600/20 rounded-xl border border-purple-500/30">
                 <span className="text-purple-200 text-sm">Region:</span>
                 <select
+                  data-testid="region-select"
                   value={selectedRegion}
                   onChange={e => setSelectedRegion(e.target.value)}
                   className="bg-purple-600/30 border border-purple-500/30 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -229,6 +230,7 @@ export default function PricingPage() {
               return (
                 <div
                   key={plan.id}
+                  data-testid="plan-card"
                   className={`glass rounded-3xl p-8 ${
                     isPopular
                       ? 'border-2 border-purple-500 relative'
@@ -275,6 +277,7 @@ export default function PricingPage() {
                         <input type="hidden" name="plan" value={plan.key} />
                         <button
                           type="submit"
+                          data-testid="plan-cta"
                           className={`w-full py-3 rounded-xl font-semibold transition ${
                             isPopular
                               ? 'bg-purple-600 hover:bg-purple-500 text-white pulse-glow'
@@ -293,6 +296,7 @@ export default function PricingPage() {
                   ) : (
                     <Link
                       href="/signup"
+                      data-testid="plan-cta"
                       className={`block w-full text-center py-3 rounded-xl font-semibold transition ${
                         isPopular
                           ? 'bg-purple-600 hover:bg-purple-500 text-white pulse-glow'

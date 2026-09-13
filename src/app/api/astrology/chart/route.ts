@@ -44,6 +44,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    // The creation form submits DD-MM-YYYY; tolerate ISO and JS-parsable variants.
+    const parseBirthDate = (value: string): Date => {
+      const dmy = /^(\d{1,2})-(\d{1,2})-(\d{4})$/.exec(value.trim())
+      if (dmy) {
+        const [, d, mo, y] = dmy
+        return new Date(Number(y), Number(mo) - 1, Number(d))
+      }
+      return new Date(value)
+    }
+    const parsedBirthDate = parseBirthDate(String(birthDate))
+    if (Number.isNaN(parsedBirthDate.getTime())) {
+      return NextResponse.json({ error: 'Invalid birth date' }, { status: 400 })
+    }
+
     // Create a hash for cache lookup
     const calculationKey = generateInputHash({
       birthDate,
@@ -66,7 +80,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     } else {
       // Generate birth chart
       chartData = generateBirthChart(
-        new Date(birthDate),
+        parsedBirthDate,
         birthTime,
         birthPlace || 'Unknown',
         latitude,
@@ -85,7 +99,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         tenantId: session.user.tenantId!,
         userId: session.user.id,
         name,
-        birthDate: new Date(birthDate),
+        birthDate: parsedBirthDate,
         birthTime,
         birthPlace: birthPlace || 'Unknown',
         latitude,

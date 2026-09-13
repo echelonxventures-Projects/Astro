@@ -191,7 +191,7 @@ test.describe('Authentication Flows', () => {
       await page.getByRole('button', { name: 'Sign In' }).click()
 
       await expect(page).toHaveURL('/dashboard')
-      await expect(page.getByText(/dashboard|welcome/i)).toBeVisible()
+      await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible()
     })
   })
 
