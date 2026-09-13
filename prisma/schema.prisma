@@ -23,6 +23,12 @@ model Tenant {
   status    String  @default("active") // active, suspended, pending
   isDefault Boolean @default(false)
 
+  // Platform hierarchy: null = root (super platform). Children may only be
+  // configured within their parent's MasterConfig grants.
+  parentId  String?
+  parent    Tenant?  @relation("TenantHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children  Tenant[] @relation("TenantHierarchy")
+
   // JSON BrandConfig (colors, tagline, logoUrl, faviconUrl, seo, social) - see src/lib/branding.ts
   branding  Json?
   // JSON TenantSettings (email from-name, per-tenant OAuth keys, analytics id, feature flags)
@@ -52,6 +58,7 @@ model Tenant {
   regions               Region[]
 
   @@index([status])
+  @@index([parentId])
 }
 
 // Hostnames owned by a tenant (primary subdomain, vanity domains)

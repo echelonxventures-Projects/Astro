@@ -24,6 +24,7 @@ export const DEFAULT_TENANT_ID = 'tenant_starpath_default'
 
 export interface TenantSettings {
   locales?: { supportedLanguages?: string[]; defaultLanguage?: string; currencyRegion?: string }
+  master?: import('./master-config').MasterConfig
   oauth?: Record<string, { clientId?: string; clientSecret?: string }>
   emailFrom?: string
   supportEmail?: string

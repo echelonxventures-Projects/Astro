@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import NewTenantClient from './page.client'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { effectiveMaster } from '@/lib/master-config'
 
 export default async function NewTenantPage() {
   const session = await auth()
@@ -16,8 +17,12 @@ export default async function NewTenantPage() {
     where: { id: session.user.id },
     select: { role: true },
   })
-  if (!user || user.role !== 'superadmin') {
-    redirect('/dashboard?error=Superadmin+access+required')
+  const isSuper = user?.role === 'superadmin'
+  if (!isSuper) {
+    const eff = session.user.tenantId ? await effectiveMaster(session.user.tenantId) : null
+    if (!eff?.canCreateChildren) {
+      redirect('/dashboard?error=Your+platform+cannot+create+sub-platforms')
+    }
   }
-  return <NewTenantClient />
+  return <NewTenantClient isSuper={isSuper} />
 }

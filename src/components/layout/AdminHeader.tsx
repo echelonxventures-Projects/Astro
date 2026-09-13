@@ -6,14 +6,15 @@ import Link from 'next/link'
 export default function AdminHeader({
   active,
 }: {
-  active: 'tenants' | 'branding' | 'localization' | 'payments' | 'plans'
+  active: 'tenants' | 'master' | 'branding' | 'localization' | 'payments' | 'plans'
 }): React.ReactElement {
   const links: Array<{
     href: string
     label: string
-    key: 'tenants' | 'branding' | 'localization' | 'payments' | 'plans'
+    key: 'tenants' | 'master' | 'branding' | 'localization' | 'payments' | 'plans'
   }> = [
-    { href: '/admin/tenants', label: 'Tenants', key: 'tenants' },
+    { href: '/admin/tenants', label: 'Platforms', key: 'tenants' },
+    { href: '/admin/master', label: 'Master Config', key: 'master' },
     { href: '/admin/branding', label: 'Branding', key: 'branding' },
     { href: '/admin/localization', label: 'Localization', key: 'localization' },
     { href: '/admin/payments', label: 'Payments', key: 'payments' },

@@ -9,11 +9,19 @@
 import { Check, ChevronLeft, ChevronRight, Globe, Loader2, Rocket, ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import AdminHeader from '@/components/layout/AdminHeader'
 import { SUPPORTED_LANGUAGES } from '@/lib/i18n'
 import { logger } from '@/lib/logger'
 import { DEFAULT_REGION_TEMPLATE } from '@/lib/tenant-defaults'
+
+interface Eff {
+  allowedLanguages: string[]
+  allowedRegions: string[]
+  allowedGateways: string[]
+  allowedAiProviders: string[]
+  childDefaults: { language?: string; region?: string; aiProvider?: string }
+}
 
 interface PlanRow {
   key: string
@@ -93,9 +101,62 @@ function genPassword(): string {
 const inputCls =
   'w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-[var(--primary)] outline-none'
 
-export default function NewTenantClient(): React.ReactElement {
+export default function NewTenantClient({
+  isSuper = true,
+}: {
+  isSuper?: boolean
+}): React.ReactElement {
   const router = useRouter()
   const [step, setStep] = useState(0)
+  const [eff, setEff] = useState<Eff | null>(null)
+  const [parentOptions, setParentOptions] = useState<
+    Array<{ id: string; slug: string; name: string }>
+  >([])
+  const [parentId, setParentId] = useState('')
+
+  useEffect(() => {
+    fetch('/api/admin/master-config')
+      .then(r => (r.ok ? r.json() : Promise.reject(new Error('master'))))
+      .then(d => {
+        setEff({
+          allowedLanguages: d.effective.allowedLanguages,
+          allowedRegions: d.effective.allowedRegions,
+          allowedGateways: d.effective.allowedGateways,
+          allowedAiProviders: d.effective.allowedAiProviders,
+          childDefaults: d.effective.childDefaults ?? {},
+        })
+        setSupported(prev =>
+          prev.some(c => !d.effective.allowedLanguages.includes(c))
+            ? d.effective.allowedLanguages.filter((c: string) => prev.includes(c)).length
+              ? d.effective.allowedLanguages.filter((c: string) => prev.includes(c))
+              : [d.effective.childDefaults?.language ?? 'en']
+            : prev
+        )
+        setRegionKeys(prev =>
+          prev.filter(k => d.effective.allowedRegions.includes(k)).length
+            ? prev.filter(k => d.effective.allowedRegions.includes(k))
+            : [d.effective.childDefaults?.region ?? 'us']
+        )
+        setAiDefault(
+          d.effective.allowedAiProviders.includes('openrouter')
+            ? 'openrouter'
+            : (d.effective.allowedAiProviders[0] ?? 'openrouter')
+        )
+        const flat: Array<{ id: string; slug: string; name: string }> = []
+        const walk = (
+          nodes: Array<{ id: string; slug: string; name: string; children?: unknown[] }>
+        ) => {
+          for (const n of nodes) {
+            flat.push({ id: n.id, slug: n.slug, name: n.name })
+            if (Array.isArray(n.children)) walk(n.children as never)
+          }
+        }
+        walk(d.tree ?? [])
+        setParentOptions(flat)
+        if (!d.isSuper && d.self) setParentId(d.self.id)
+      })
+      .catch(err => logger.warn({ err }, 'master-config unavailable'))
+  }, [])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<{
@@ -200,11 +261,18 @@ export default function NewTenantClient(): React.ReactElement {
               isPopular: p.isPopular,
             })),
           gateways: [
-            ...(gwStripe ? [{ key: 'stripe' }] : []),
-            ...(gwRazorpay ? [{ key: 'razorpay' }] : []),
-            ...(gwPaypal ? [{ key: 'paypal' }] : []),
+            ...(gwStripe && (!eff || eff.allowedGateways.includes('stripe'))
+              ? [{ key: 'stripe' }]
+              : []),
+            ...(gwRazorpay && (!eff || eff.allowedGateways.includes('razorpay'))
+              ? [{ key: 'razorpay' }]
+              : []),
+            ...(gwPaypal && (!eff || eff.allowedGateways.includes('paypal'))
+              ? [{ key: 'paypal' }]
+              : []),
           ],
           aiDefault,
+          ...(isSuper && parentId ? { parentId } : {}),
           adminUser: { email: adminEmail, name: adminName || undefined, password: adminPassword },
         }),
       })
@@ -276,7 +344,9 @@ export default function NewTenantClient(): React.ReactElement {
     <div className="min-h-screen pt-24 pb-16 px-4">
       <AdminHeader active="tenants" />
       <main className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold gradient-text mb-2">New Platform</h1>
+        <h1 className="text-3xl font-bold gradient-text mb-2">
+          {isSuper ? 'New Platform' : 'New Sub-platform'}
+        </h1>
         <p className="text-gray-400 mb-6">
           Everything the customer needs, configured in one pass. All of it stays editable later.
         </p>
@@ -392,6 +462,26 @@ export default function NewTenantClient(): React.ReactElement {
                     placeholder="aurum-astro.com, app.aurum.com"
                     className={inputCls}
                   />
+
+                  {isSuper && (
+                    <div className="md:col-span-2">
+                      <label className="block text-sm text-gray-400 mb-1">
+                        Parent platform (optional)
+                      </label>
+                      <select
+                        value={parentId}
+                        onChange={e => setParentId(e.target.value)}
+                        className={inputCls}
+                      >
+                        <option value="">None - root / super platform</option>
+                        {parentOptions.map(p => (
+                          <option key={p.id} value={p.id}>
+                            Under {p.name} ({p.slug})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="rounded-xl border border-white/10 p-4 text-sm text-gray-400">
@@ -420,30 +510,32 @@ export default function NewTenantClient(): React.ReactElement {
                 <h2 className="text-lg font-bold">Languages this platform offers</h2>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4">
-                {SUPPORTED_LANGUAGES.map(l => (
-                  <label
-                    key={l.code}
-                    className={`flex items-center gap-2 rounded-xl border px-3 py-2 cursor-pointer text-sm ${supported.includes(l.code) ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-white' : 'border-white/10 text-gray-400'}`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={supported.includes(l.code)}
-                      onChange={() => {
-                        setSupported(prev => {
-                          const next = prev.includes(l.code)
-                            ? prev.filter(c => c !== l.code)
-                            : [...prev, l.code]
-                          if (!next.length) return prev
-                          if (!next.includes(defaultLang)) setDefaultLang(next[0])
-                          return next
-                        })
-                      }}
-                      className="w-4 h-4"
-                    />
-                    {l.nativeName}{' '}
-                    <span className="text-xs text-gray-500 ml-auto">{l.code.toUpperCase()}</span>
-                  </label>
-                ))}
+                {SUPPORTED_LANGUAGES.filter(l => !eff || eff.allowedLanguages.includes(l.code)).map(
+                  l => (
+                    <label
+                      key={l.code}
+                      className={`flex items-center gap-2 rounded-xl border px-3 py-2 cursor-pointer text-sm ${supported.includes(l.code) ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-white' : 'border-white/10 text-gray-400'}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={supported.includes(l.code)}
+                        onChange={() => {
+                          setSupported(prev => {
+                            const next = prev.includes(l.code)
+                              ? prev.filter(c => c !== l.code)
+                              : [...prev, l.code]
+                            if (!next.length) return prev
+                            if (!next.includes(defaultLang)) setDefaultLang(next[0])
+                            return next
+                          })
+                        }}
+                        className="w-4 h-4"
+                      />
+                      {l.nativeName}{' '}
+                      <span className="text-xs text-gray-500 ml-auto">{l.code.toUpperCase()}</span>
+                    </label>
+                  )
+                )}
               </div>
               <label className="block text-sm text-gray-400 mb-1">Default language</label>
               <select
@@ -469,7 +561,9 @@ export default function NewTenantClient(): React.ReactElement {
                 Markets, currency &amp; pricing multipliers
               </h2>
               <div className="space-y-2">
-                {DEFAULT_REGION_TEMPLATE.map(r => (
+                {DEFAULT_REGION_TEMPLATE.filter(
+                  r => !eff || eff.allowedRegions.includes(r.key)
+                ).map(r => (
                   <label
                     key={r.key}
                     className={`flex items-center gap-4 rounded-xl border px-4 py-3 cursor-pointer text-sm ${regionKeys.includes(r.key) ? 'border-[var(--primary)]/60 bg-[var(--primary)]/5' : 'border-white/10'}`}

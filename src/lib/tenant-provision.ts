@@ -8,6 +8,12 @@
 import bcrypt from 'bcryptjs'
 import { ensureDefaultCatalog } from './ai/catalog'
 import { mergeBranding, type BrandConfigInput } from './branding'
+import {
+  effectiveMaster,
+  validateAgainstMaster,
+  ROOT_EFFECTIVE,
+  type MasterConfig,
+} from './master-config'
 import { initializeDefaultPlans } from './plans'
 import type { TenantSettings } from './tenant'
 import { invalidateTenantHostCache } from './tenant'
@@ -40,6 +46,8 @@ export interface PlanSpec {
 export interface ProvisionOptions {
   slug: string
   name: string
+  parentId?: string | null
+  master?: MasterConfig
   branding?: BrandConfigInput | null
   domains?: string[]
   locales?: TenantSettings['locales']
@@ -78,6 +86,36 @@ const GATEWAY_LABELS: Record<string, { name: string; envKeys: Record<string, str
 }
 
 export async function provisionTenant(opts: ProvisionOptions): Promise<ProvisionResult> {
+  // Hierarchy: children are bound to a parent and restricted by its effective master
+  const regions =
+    opts.regions === 'default' || opts.regions === undefined
+      ? DEFAULT_REGION_TEMPLATE
+      : opts.regions
+  let eff = ROOT_EFFECTIVE
+  if (opts.parentId) {
+    const parent = await prisma.tenant.findUnique({
+      where: { id: opts.parentId },
+      select: { id: true, status: true },
+    })
+    if (!parent) throw new Error('Parent platform not found')
+    if (parent.status !== 'active') throw new Error('Parent platform is not active')
+    eff = await effectiveMaster(parent.id)
+  }
+
+  const violations = validateAgainstMaster(eff, {
+    languages: opts.locales?.supportedLanguages,
+    defaultLanguage: opts.locales?.defaultLanguage,
+    regions:
+      opts.regions === 'default' || opts.regions === undefined
+        ? undefined
+        : (regions as Array<{ key: string }>).map(r => r.key),
+    gateways: opts.gateways?.map(g => g.key),
+    aiDefault: opts.aiDefault,
+  })
+  if (violations.length > 0) {
+    throw new Error(violations.join('; '))
+  }
+
   const hosts = new Set<string>()
   const primary = `${opts.slug}.localhost`
   hosts.add(primary)
@@ -99,17 +137,14 @@ export async function provisionTenant(opts: ProvisionOptions): Promise<Provision
       slug: opts.slug,
       name: opts.name,
       branding: opts.branding ? (mergeBranding(opts.branding) as never) : undefined,
-      settings: settings as never,
+      settings: { ...(opts.master ? { ...settings, master: opts.master } : settings) } as never,
+      parentId: opts.parentId ?? null,
       domains: { create: Array.from(hosts).map((host, i) => ({ host, isPrimary: i === 0 })) },
     },
   })
 
   // Regions / currencies
-  const regions =
-    opts.regions === 'default' || opts.regions === undefined
-      ? DEFAULT_REGION_TEMPLATE
-      : opts.regions
-  for (const r of regions) {
+  for (const r of regions as RegionTemplate[]) {
     const existing = await prisma.region.findUnique({
       where: { tenantId_key: { tenantId: tenant.id, key: r.key } },
     })

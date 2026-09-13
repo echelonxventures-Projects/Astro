@@ -124,6 +124,22 @@ export async function POST(req: NextRequest) {
       }
 
       case 'createRegion': {
+        if (session.user.role !== 'superadmin') {
+          const { effectiveMaster } = await import('@/lib/master-config')
+          const eff = await effectiveMaster(session.user.tenantId!)
+          if (
+            data.key &&
+            !eff.allowedRegions.includes(data.key) &&
+            !eff.allowedRegions.includes('global')
+          ) {
+            return NextResponse.json(
+              {
+                error: `Market "${data.key}" is not within your platform's permitted markets (${eff.allowedRegions.join(', ')})`,
+              },
+              { status: 403 }
+            )
+          }
+        }
         const region = await createRegion({ ...data, tenantId })
         return NextResponse.json(region)
       }

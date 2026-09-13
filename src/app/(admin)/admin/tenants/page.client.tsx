@@ -17,6 +17,8 @@ interface TenantRow {
   name: string
   status: string
   isDefault: boolean
+  parentId: string | null
+  parent?: { slug: string; name: string } | null
   domains: TenantDomainRow[]
   _count: { users: number }
 }
@@ -29,7 +31,11 @@ const PRESETS = [
   { label: 'Forest', primary: '#16A34A' },
 ]
 
-export default function TenantsClient(): React.ReactElement {
+export default function TenantsClient({
+  isSuper = true,
+}: {
+  isSuper?: boolean
+}): React.ReactElement {
   const [tenants, setTenants] = useState<TenantRow[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -190,7 +196,9 @@ export default function TenantsClient(): React.ReactElement {
     <div className="min-h-screen pt-24 pb-16 px-4">
       <AdminHeader active="tenants" />
       <main className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold gradient-text mb-2">Tenants</h1>
+        <h1 className="text-3xl font-bold gradient-text mb-2">
+          {isSuper ? 'Platforms' : 'My Sub-platforms'}
+        </h1>
         <p className="text-gray-400 mb-8">
           Each tenant is an independent white-label platform served by this deployment.
         </p>
@@ -200,7 +208,7 @@ export default function TenantsClient(): React.ReactElement {
             href="/admin/tenants/new"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white font-semibold text-sm transition"
           >
-            <Plus className="w-4 h-4" /> New Platform (setup wizard)
+            <Plus className="w-4 h-4" /> New Platform / Sub-platform (wizard)
           </Link>
         </div>
 
@@ -328,6 +336,7 @@ export default function TenantsClient(): React.ReactElement {
                   </div>
                   <p className="text-sm text-gray-400 mb-2">
                     slug: {t.slug} · {t._count.users} users
+                    {t.parent ? ` · parent: ${t.parent.slug}` : ' · root platform'}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {t.domains.map(d => (

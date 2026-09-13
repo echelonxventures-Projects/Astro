@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import TenantsClient from './page.client'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { effectiveMaster } from '@/lib/master-config'
 
 export default async function AdminTenantsPage() {
   const session = await auth()
@@ -19,9 +20,13 @@ export default async function AdminTenantsPage() {
     select: { role: true },
   })
 
-  if (!user || user.role !== 'superadmin') {
-    redirect('/dashboard?error=Superadmin+access+required')
+  const isSuper = user?.role === 'superadmin'
+  if (!isSuper) {
+    const eff = session.user.tenantId ? await effectiveMaster(session.user.tenantId) : null
+    if (!eff?.canCreateChildren) {
+      redirect('/dashboard?error=Platform-admin+rights+required')
+    }
   }
 
-  return <TenantsClient />
+  return <TenantsClient isSuper={isSuper} />
 }

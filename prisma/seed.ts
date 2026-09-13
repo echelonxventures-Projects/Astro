@@ -59,6 +59,8 @@ interface TenantSeed {
   domains: string[]
   adminName: string
   locales: { supportedLanguages: string[]; defaultLanguage: string; currencyRegion: string }
+  parentId?: string
+  master?: Record<string, unknown>
 }
 
 const TENANTS: TenantSeed[] = [
@@ -85,6 +87,16 @@ const TENANTS: TenantSeed[] = [
     domains: ['luna.localhost'],
     adminName: 'Luna Admin',
     locales: { supportedLanguages: ['en', 'hi'], defaultLanguage: 'en', currencyRegion: 'in' },
+    parentId: 'tenant_starpath_default',
+    master: {
+      allowedLanguages: ['en', 'hi'],
+      allowedRegions: ['us', 'in'],
+      allowedGateways: ['razorpay'],
+      allowedAiProviders: ['openrouter', 'ollama', 'gemini'],
+      canCreateChildren: true,
+      maxChildren: 5,
+      childDefaults: { language: 'en', region: 'in', aiProvider: 'openrouter' },
+    },
   },
 ]
 

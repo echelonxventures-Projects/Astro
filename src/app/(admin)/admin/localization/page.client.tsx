@@ -28,8 +28,15 @@ export default function LocalizationClient(): React.ReactElement {
   const [saving, setSaving] = useState(false)
   const [flash, setFlash] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [allowedLangs, setAllowedLangs] = useState<string[] | null>(null)
 
   useEffect(() => {
+    fetch('/api/admin/master-config')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => {
+        if (d?.effective?.allowedLanguages) setAllowedLangs(d.effective.allowedLanguages)
+      })
+      .catch(() => {})
     fetch('/api/admin/localization')
       .then(async r => {
         const d = await r.json()
@@ -131,25 +138,27 @@ export default function LocalizationClient(): React.ReactElement {
             </select>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {SUPPORTED_LANGUAGES.map(l => (
-              <label
-                key={l.code}
-                className={`flex items-center gap-3 rounded-xl border px-3 py-2 cursor-pointer transition ${
-                  locale.supportedLanguages.includes(l.code)
-                    ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-white'
-                    : 'border-white/10 text-gray-400 hover:border-white/25'
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={locale.supportedLanguages.includes(l.code)}
-                  onChange={() => toggleLang(l.code)}
-                  className="w-4 h-4"
-                />
-                <span className="text-sm">{l.nativeName}</span>
-                <span className="text-xs text-gray-500 ml-auto">{l.code.toUpperCase()}</span>
-              </label>
-            ))}
+            {SUPPORTED_LANGUAGES.filter(l => !allowedLangs || allowedLangs.includes(l.code)).map(
+              l => (
+                <label
+                  key={l.code}
+                  className={`flex items-center gap-3 rounded-xl border px-3 py-2 cursor-pointer transition ${
+                    locale.supportedLanguages.includes(l.code)
+                      ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-white'
+                      : 'border-white/10 text-gray-400 hover:border-white/25'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={locale.supportedLanguages.includes(l.code)}
+                    onChange={() => toggleLang(l.code)}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">{l.nativeName}</span>
+                  <span className="text-xs text-gray-500 ml-auto">{l.code.toUpperCase()}</span>
+                </label>
+              )
+            )}
           </div>
         </div>
 

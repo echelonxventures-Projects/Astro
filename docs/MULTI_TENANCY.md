@@ -4,6 +4,34 @@ This deployment serves **many customer platforms ("tenants") from a single codeb
 Each tenant is fully white-labeled: branding, colors, SEO, domains, users, plans,
 AI configuration and payment gateways are isolated per tenant.
 
+## Platform hierarchy & master configuration
+
+Platforms form a tree. Each tenant may have a `parentId`; null = root (super)
+platform. A platform's **effective options** are its own grants intersected with
+every ancestor's (`src/lib/master-config.ts`):
+
+| Grant (MasterConfig, stored in `Tenant.settings.master`)                   | Meaning                                                         |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `allowedLanguages / allowedRegions / allowedGateways / allowedAiProviders` | The option universe this platform may offer / delegate          |
+| `canCreateChildren`                                                        | May it provision sub-platforms at all                           |
+| `maxChildren`                                                              | Cap on direct children (further capped by parent's allowance)   |
+| `childDefaults`                                                            | Default language / market / AI provider offered to its children |
+
+Enforcement:
+
+- A sub-platform admin sees only options within its effective set (wizard +
+  localization + master portal all read `GET /api/admin/master-config`).
+- Creating a platform as a granted admin attaches it under your tenant and
+  clamps requested languages/regions/gateways/AI to your effective set
+  (out-of-grant requests are rejected with an explicit message).
+- Grants on any platform are editable only by its parent (clamped to the
+  parent's effective set) or by a superadmin: `POST /api/admin/master-config`.
+- Rights only shrink down the tree; `effectiveMaster()` resolves the chain
+  (10-level cycle guard).
+
+Portals: **`/admin/master`** (Master Configuration: tree + grant editor, visible
+to superadmins and delegated platform admins), wizard at `/admin/tenants/new`.
+
 ## Core concepts
 
 | Concept          | Model                                     | Notes                                                                                                                                   |
