@@ -1,3 +1,9 @@
+<!--
+  HISTORY NOTE (documentation consolidation): this file describes an earlier
+  implementation phase (pre multi-tenancy / pre PostgreSQL migration).
+  Canonical current docs: README.md, PROJECT_DOCUMENTATION.md, docs/MULTI_TENANCY.md.
+-->
+
 # Security Documentation - StarPath Astrology
 
 ## Security Measures Implemented
@@ -5,6 +11,7 @@
 ### 1. Authentication & Authorization
 
 #### Admin Page Protection
+
 - **Server-Side Authentication**: All admin routes now use server components that check authentication before rendering
 - **Role-Based Access Control (RBAC)**: Admin pages require `user.role === 'admin'`
 - **Protected Routes**:
@@ -12,6 +19,7 @@
   - `/settings` - AI and system settings
 
 #### Implementation Pattern
+
 ```typescript
 // Server-side check in page.tsx
 const session = await auth()
@@ -22,20 +30,23 @@ if (user?.role !== 'admin') redirect('/dashboard?error=Admin access required')
 ```
 
 #### API Route Protection
+
 All admin API endpoints include server-side validation:
+
 ```typescript
 async function checkAdmin() {
   const session = await auth()
   if (!session?.user) throw new Error('Unauthorized')
-  
+
   const user = await prisma.user.findUnique({ where: { id: session.user.id } })
   if (user?.role !== 'admin') throw new Error('Admin access required')
-  
+
   return session
 }
 ```
 
 **Protected API Endpoints:**
+
 - `GET/POST /api/admin/plans` - Plan management
 - `GET/POST /api/settings` - System settings
 - `GET/POST /api/settings/plans` - AI plan configuration
@@ -43,6 +54,7 @@ async function checkAdmin() {
 ### 2. Payment Security
 
 #### API Key Encryption
+
 - Sensitive data (API keys, secrets) encrypted before database storage
 - Uses XOR encryption with configurable `ENCRYPTION_KEY` environment variable
 - **Recommendation**: Use AWS KMS or HashiCorp Vault in production
@@ -56,6 +68,7 @@ export async function encryptSensitiveData(data: string): Promise<string> {
 ```
 
 #### Webhook Security
+
 - **Stripe**: Signature verification using `stripe.webhooks.constructEvent()`
 - **Razorpay**: HMAC SHA256 signature verification
 - All webhook endpoints validate signatures before processing
@@ -65,13 +78,11 @@ export async function encryptSensitiveData(data: string): Promise<string> {
 const event = stripe.webhooks.constructEvent(payload, signature, webhookSecret)
 
 // Razorpay webhook verification
-const expectedSignature = crypto
-  .createHmac('sha256', webhookSecret)
-  .update(body)
-  .digest('hex')
+const expectedSignature = crypto.createHmac('sha256', webhookSecret).update(body).digest('hex')
 ```
 
 #### Payment Gateway Isolation
+
 - Each gateway (Stripe, Razorpay, PayPal) implemented separately
 - Gateway instances loaded dynamically from database configuration
 - Failed gateway validation returns null, preventing unauthorized access
@@ -79,11 +90,13 @@ const expectedSignature = crypto
 ### 3. Database Security
 
 #### SQLite Configuration
+
 - Database file stored outside public web root
 - File permissions should restrict access to application user only
 - **Recommendation**: Use parameterized queries (Prisma ORM provides this by default)
 
 #### Schema Security
+
 - User passwords hashed with bcrypt before storage
 - Session tokens use NextAuth's secure cookie handling
 - Sensitive fields (API keys) stored encrypted
@@ -91,6 +104,7 @@ const expectedSignature = crypto
 ### 4. Session Security
 
 #### NextAuth Configuration
+
 ```typescript
 // src/lib/auth.ts
 cookies: {
@@ -108,6 +122,7 @@ cookies: {
 ```
 
 **Security Features:**
+
 - HTTP-only cookies (prevents XSS token theft)
 - Secure flag (HTTPS only)
 - SameSite protection (CSRF mitigation)
@@ -116,6 +131,7 @@ cookies: {
 ### 5. Input Validation
 
 #### API Route Validation
+
 - All POST endpoints validate required fields
 - Type checking with TypeScript
 - JSON parsing with error handling
@@ -123,16 +139,14 @@ cookies: {
 ```typescript
 const { action, subscriptionId, gateway } = body
 if (!subscriptionId || !gateway) {
-  return NextResponse.json(
-    { error: 'Subscription ID and gateway required' },
-    { status: 400 }
-  )
+  return NextResponse.json({ error: 'Subscription ID and gateway required' }, { status: 400 })
 }
 ```
 
 ### 6. Security Checklist for Deployment
 
 #### Environment Variables (Required)
+
 ```bash
 # Authentication
 NEXTAUTH_SECRET="<generate-with-openssl-rand-base64-32>"
@@ -157,6 +171,7 @@ GOOGLE_CLIENT_SECRET="..."
 ```
 
 #### Generate Secure Secrets
+
 ```bash
 # Generate NEXTAUTH_SECRET
 openssl rand -base64 32
@@ -166,12 +181,14 @@ openssl rand -base64 32
 ```
 
 #### Server Hardening
+
 1. **SSH Security**:
    - Use SSH keys only (disable password auth)
    - Change default SSH port
    - Use fail2ban
 
 2. **Firewall Rules**:
+
    ```bash
    # Allow only necessary ports
    sudo iptables -A INPUT -p tcp --dport 22 -j ACCEPT  # SSH
@@ -181,11 +198,12 @@ openssl rand -base64 32
    ```
 
 3. **File Permissions**:
+
    ```bash
    # Restrict database access
    chmod 600 prisma/prod.db
    chown opc:opc prisma/prod.db
-   
+
    # Restrict .env access
    chmod 600 .env.production
    ```
@@ -196,6 +214,7 @@ openssl rand -base64 32
    - Force HTTPS redirects
 
 #### Database User Setup
+
 ```bash
 # Set first user as admin (run after deployment)
 sqlite3 prisma/prod.db
@@ -209,6 +228,7 @@ SELECT email, role FROM "User";
 ### 7. Security Best Practices
 
 #### DO's
+
 - ✅ Always use environment variables for secrets
 - ✅ Enable HTTPS in production
 - ✅ Rotate API keys regularly
@@ -219,6 +239,7 @@ SELECT email, role FROM "User";
 - ✅ Backup database regularly
 
 #### DON'Ts
+
 - ❌ Never commit `.env` files to git
 - ❌ Never expose API keys in client-side code
 - ❌ Never disable CSRF protection
@@ -230,6 +251,7 @@ SELECT email, role FROM "User";
 ### 8. Monitoring & Logging
 
 #### What to Monitor
+
 - Failed login attempts
 - Admin access patterns
 - Payment webhook failures
@@ -237,6 +259,7 @@ SELECT email, role FROM "User";
 - Database errors
 
 #### PM2 Log Management
+
 ```bash
 # View logs
 pm2 logs starpath-astrology
@@ -252,6 +275,7 @@ max_files: 10,
 ### 9. Incident Response
 
 #### If Compromised
+
 1. Rotate all API keys immediately
 2. Change all user passwords
 3. Review admin user list
@@ -260,24 +284,28 @@ max_files: 10,
 6. Update all secrets in environment
 
 #### Contact Information
+
 - Document your security contact procedure
 - Have incident response plan ready
 
 ### 10. Compliance Considerations
 
 #### GDPR (if serving EU users)
+
 - Implement data export functionality
 - Add right to be forgotten
 - Document data processing activities
 - Add cookie consent banner
 
 #### PCI-DSS (for payment processing)
+
 - Never store raw card data (use Stripe/Razorpay tokens)
 - Use HTTPS everywhere
 - Regular security assessments
 - Maintain secure network
 
 #### CCPA (if serving California users)
+
 - Add "Do Not Sell My Info" option
 - Disclose data collection practices
 - Honor deletion requests
@@ -285,12 +313,14 @@ max_files: 10,
 ### 11. Security Testing
 
 #### Recommended Tests
+
 1. **Penetration Testing**: Hire security professionals annually
 2. **Dependency Scanning**: `npm audit` regularly
 3. **Code Review**: Security-focused code reviews
 4. **Vulnerability Scanning**: Use tools like Snyk, Dependabot
 
 #### Automated Scanning
+
 ```bash
 # Check for vulnerable dependencies
 npm audit
@@ -302,6 +332,7 @@ docker scout cve <image>
 ### 12. Future Security Enhancements
 
 #### Recommended Additions
+
 1. **Rate Limiting**: Implement using `next-rate-limiter`
 2. **CSP Headers**: Add Content-Security-Policy headers
 3. **2FA**: Add two-factor authentication for admin users
@@ -313,6 +344,7 @@ docker scout cve <image>
 ---
 
 ## Document Version
+
 - **Last Updated**: 2026-04-15
 - **Version**: 1.0
 - **Author**: Development Team

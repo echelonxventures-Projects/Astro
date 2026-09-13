@@ -1,3 +1,11 @@
+<!--
+  HISTORY NOTE (documentation consolidation): PostgreSQL is now the only
+  supported database and the app is multi-tenant (hostname -> platform).
+  Steps below referencing SQLite, single-tenant flows, or `prisma migrate dev`
+  are outdated. See PROJECT_DOCUMENTATION.md section 11 for the current runbook
+  (migrate deploy + seeds, standalone build or Docker Compose).
+-->
+
 # StarPath Astrology - Production Launch Guide
 
 ## Status: READY FOR LAUNCH
@@ -83,6 +91,7 @@ vercel --prod
 ### 5. Post-Deploy Actions
 
 1. **Run migrations** (if using PostgreSQL):
+
    ```bash
    npx prisma migrate deploy
    ```
@@ -164,11 +173,13 @@ pm2 startup
 ### Option 1: Ollama (Free)
 
 1. **Install Ollama** on server:
+
    ```bash
    curl -fsSL https://ollama.com/install.sh | sh
    ```
 
 2. **Pull model**:
+
    ```bash
    ollama pull llama3.2
    ```
@@ -269,6 +280,7 @@ Check dashboard logs
 ### Health Checks
 
 Monitor these endpoints:
+
 - Homepage: `https://your-domain.com`
 - API: `https://your-domain.com/api/astrology/chart`
 

@@ -1,3 +1,9 @@
+<!--
+  HISTORY NOTE (documentation consolidation): this file describes an earlier
+  implementation phase (pre multi-tenancy / pre PostgreSQL migration).
+  Canonical current docs: README.md, PROJECT_DOCUMENTATION.md, docs/MULTI_TENANCY.md.
+-->
+
 # StarPath Astrology - Project Summary
 
 ## Project Status: PRODUCTION READY
@@ -7,12 +13,14 @@ StarPath Astrology is a complete, production-ready astrology platform with perso
 ## What Was Completed
 
 ### 1. Database Setup (Dual Database Support)
+
 - **SQLite** configured for local development (default)
 - **PostgreSQL** schema ready for production deployment
 - Prisma migrations created and applied
 - Database seeded with admin user, regions, and plans
 
 ### 2. Environment Configuration
+
 - `.env` configured for SQLite local development
 - `.env.example` updated with comprehensive documentation
 - NEXTAUTH_SECRET regenerated
@@ -21,6 +29,7 @@ StarPath Astrology is a complete, production-ready astrology platform with perso
 ### 3. Features Implemented
 
 #### Core Features
+
 - ✅ User authentication (Email/Password + Google OAuth)
 - ✅ Birth chart generation with planetary calculations
 - ✅ AI-powered daily horoscopes
@@ -32,6 +41,7 @@ StarPath Astrology is a complete, production-ready astrology platform with perso
 - ✅ Multi-region/multi-currency pricing
 
 #### Additional Features
+
 - ✅ Palmistry (AI palm reading from images)
 - ✅ Face reading (Chinese physiognomy)
 - ✅ Admin AI provider configuration
@@ -41,43 +51,46 @@ StarPath Astrology is a complete, production-ready astrology platform with perso
 - ✅ Framer Motion animations
 
 #### Date Validation (Latest Fix)
+
 - ✅ Three-column DD-MM-YYYY date picker
 - ✅ Dynamic day options based on selected month
 - ✅ Leap year handling for February (28/29 days)
 - ✅ No more invalid dates like Feb 31
 
 #### Timezone Support (Latest Fix)
+
 - ✅ 150+ timezones with UTC offsets
 - ✅ Format: "City (Abbrev) - Country +X:XX"
 - ✅ Auto-detection from location coordinates
 
 ### 4. Pages Available
 
-| Page | Route | Status |
-|------|-------|--------|
-| Homepage | `/` | ✅ Complete |
-| Login | `/login` | ✅ Complete |
-| Signup | `/signup` | ✅ Complete |
-| Dashboard | `/dashboard` | ✅ Complete |
-| Birth Chart | `/chart` | ✅ Complete |
-| Daily Horoscope | `/horoscope/daily` | ✅ Complete |
-| Love Horoscope | `/horoscope/love` | ✅ Complete |
+| Page             | Route               | Status      |
+| ---------------- | ------------------- | ----------- |
+| Homepage         | `/`                 | ✅ Complete |
+| Login            | `/login`            | ✅ Complete |
+| Signup           | `/signup`           | ✅ Complete |
+| Dashboard        | `/dashboard`        | ✅ Complete |
+| Birth Chart      | `/chart`            | ✅ Complete |
+| Daily Horoscope  | `/horoscope/daily`  | ✅ Complete |
+| Love Horoscope   | `/horoscope/love`   | ✅ Complete |
 | Career Horoscope | `/horoscope/career` | ✅ Complete |
-| Compatibility | `/compatibility` | ✅ Complete |
-| AI Chat | `/chat/horoscope` | ✅ Complete |
-| Palmistry | `/palmistry` | ✅ Complete |
-| Face Reading | `/face-reading` | ✅ Complete |
-| Pricing | `/pricing` | ✅ Complete |
-| Profile | `/profile` | ✅ Complete |
-| Subscription | `/subscription` | ✅ Complete |
-| Privacy Policy | `/privacy` | ✅ Complete |
-| Terms of Service | `/terms` | ✅ Complete |
-| Admin Settings | `/settings` | ✅ Complete |
-| Admin Plans | `/admin/plans` | ✅ Complete |
+| Compatibility    | `/compatibility`    | ✅ Complete |
+| AI Chat          | `/chat/horoscope`   | ✅ Complete |
+| Palmistry        | `/palmistry`        | ✅ Complete |
+| Face Reading     | `/face-reading`     | ✅ Complete |
+| Pricing          | `/pricing`          | ✅ Complete |
+| Profile          | `/profile`          | ✅ Complete |
+| Subscription     | `/subscription`     | ✅ Complete |
+| Privacy Policy   | `/privacy`          | ✅ Complete |
+| Terms of Service | `/terms`            | ✅ Complete |
+| Admin Settings   | `/settings`         | ✅ Complete |
+| Admin Plans      | `/admin/plans`      | ✅ Complete |
 
 ### 5. API Endpoints
 
 All API endpoints are implemented:
+
 - `/api/auth/[...nextauth]` - Authentication
 - `/api/auth/signup` - User registration
 - `/api/astrology/chart` - Birth chart management
@@ -92,6 +105,7 @@ All API endpoints are implemented:
 - `/api/stripe/webhook` - Stripe webhooks
 
 ### 6. Build Verification
+
 - ✅ TypeScript compilation successful
 - ✅ Production build successful
 - ✅ Database migrations applied
@@ -119,6 +133,7 @@ Open http://localhost:3000 to see the app.
 ### Default Admin Access
 
 After seeding:
+
 - **Email:** admin@localhost
 - **Password:** admin123
 - **Role:** admin
@@ -128,6 +143,7 @@ After seeding:
 ### For Production (PostgreSQL)
 
 1. Update `.env`:
+
    ```
    NEXTAUTH_URL="https://your-domain.com"
    NEXTAUTH_SECRET="<generate-new-secret>"
@@ -145,25 +161,30 @@ After seeding:
 See `.env.example` for full documentation:
 
 ### Required
+
 - `DATABASE_URL` - Database connection (SQLite or PostgreSQL)
 - `NEXTAUTH_URL` - Your app URL
 - `NEXTAUTH_SECRET` - Auth secret (generate with `openssl rand -base64 32`)
 
 ### For AI Features
+
 - Leave empty for Ollama (free, local)
 - `ANTHROPIC_API_KEY` - For Claude AI (premium)
 
 ### For Payments
+
 - `STRIPE_SECRET_KEY` - Stripe secret key
 - `STRIPE_WEBHOOK_SECRET` - Stripe webhook secret
 
 ### Optional
+
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` - Google OAuth
 - `CLOUDINARY_*` - Image hosting for palmistry/face reading
 
 ## Project Files Modified (Final Session)
 
 ### Branding Updates
+
 - `package.json` - Renamed to "starpath-astrology"
 - `src/app/page.tsx` - Footer copyright updated
 - `src/app/privacy/page.tsx` - Contact email updated
@@ -171,10 +192,12 @@ See `.env.example` for full documentation:
 - `PROJECT_SUMMARY.md` - Updated to StarPath Astrology
 
 ### Environment Files
+
 - `.env` - Updated with new NEXTAUTH_SECRET
 - `.env.example` - Updated with production comments
 
 ### Database
+
 - All migrations applied successfully
 - Database seeded with:
   - Admin user (admin@localhost / admin123)
@@ -184,25 +207,26 @@ See `.env.example` for full documentation:
 
 ## Tech Stack Summary
 
-| Category | Technology |
-|----------|-----------|
-| Framework | Next.js 16.2.3 (App Router, Turbopack) |
-| Language | TypeScript 5 |
-| Styling | Tailwind CSS 4 |
-| Animations | Framer Motion |
-| Icons | Lucide React |
-| Database | SQLite (dev) / PostgreSQL (prod) |
-| ORM | Prisma 6.19.3 |
-| Auth | NextAuth.js 4.24 |
-| AI | Configurable: Ollama, Anthropic, Gemini |
-| Payments | Stripe 22.0 |
-| State | Zustand |
+| Category   | Technology                              |
+| ---------- | --------------------------------------- |
+| Framework  | Next.js 16.2.3 (App Router, Turbopack)  |
+| Language   | TypeScript 5                            |
+| Styling    | Tailwind CSS 4                          |
+| Animations | Framer Motion                           |
+| Icons      | Lucide React                            |
+| Database   | SQLite (dev) / PostgreSQL (prod)        |
+| ORM        | Prisma 6.19.3                           |
+| Auth       | NextAuth.js 4.24                        |
+| AI         | Configurable: Ollama, Anthropic, Gemini |
+| Payments   | Stripe 22.0                             |
+| State      | Zustand                                 |
 
 ## Database Schema
 
 14 tables total:
 
 ### Core Tables
+
 1. **User** - User accounts (with role field for admin)
 2. **Account** - OAuth account links
 3. **Session** - Auth sessions
@@ -213,6 +237,7 @@ See `.env.example` for full documentation:
 8. **Payment** - Payment history
 
 ### Configuration Tables
+
 9. **AppSettings** - Global app settings
 10. **AIProviderConfig** - Per-plan AI configuration
 11. **SubscriptionPlan** - Dynamic pricing plans
@@ -222,15 +247,16 @@ See `.env.example` for full documentation:
 
 ## Default Subscription Plans
 
-| Plan | Price | Interval | Features | AI Model |
-|------|-------|----------|----------|----------|
-| Free | $0 | One-time | Basic chart, 3 readings/month | Ollama llama3.2 |
-| Monthly | $9.99 | Monthly | Unlimited, all features | Anthropic Claude Sonnet |
-| Yearly | $99.99 | Yearly | Unlimited, all features | Anthropic Claude Opus |
+| Plan    | Price  | Interval | Features                      | AI Model                |
+| ------- | ------ | -------- | ----------------------------- | ----------------------- |
+| Free    | $0     | One-time | Basic chart, 3 readings/month | Ollama llama3.2         |
+| Monthly | $9.99  | Monthly  | Unlimited, all features       | Anthropic Claude Sonnet |
+| Yearly  | $99.99 | Yearly   | Unlimited, all features       | Anthropic Claude Opus   |
 
 ## Regional Pricing
 
 Default regions configured:
+
 - United States (USD $)
 - Europe (EUR €)
 - India (INR ₹)

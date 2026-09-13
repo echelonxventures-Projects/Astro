@@ -1,3 +1,9 @@
+<!--
+  HISTORY NOTE (documentation consolidation): this file describes an earlier
+  implementation phase (pre multi-tenancy / pre PostgreSQL migration).
+  Canonical current docs: README.md, PROJECT_DOCUMENTATION.md, docs/MULTI_TENANCY.md.
+-->
+
 # Implementation Summary - StarPath Astrology
 
 ## Project: Universal Payment Gateway System + Admin Security
@@ -10,6 +16,7 @@
 ## 🎯 Objectives Completed
 
 ### 1. Universal Payment Gateway System
+
 - ✅ Multi-gateway support (Stripe, Razorpay, PayPal stub)
 - ✅ All Indian payment methods (UPI, Cards, Netbanking, Wallets, PayLater, EMI)
 - ✅ International payment support (USD, EUR, GBP, INR, SGD, AED, etc.)
@@ -19,12 +26,14 @@
 - ✅ Encrypted storage for API keys and secrets
 
 ### 2. Admin Panel Security
+
 - ✅ Server-side authentication on all admin routes
 - ✅ Role-based access control (admin only)
 - ✅ Protected routes: `/admin/plans`, `/admin/payments`, `/settings`
 - ✅ API routes secured with `checkAdmin()` middleware
 
 ### 3. Payment Gateway Admin UI
+
 - ✅ Gateway management dashboard (`/admin/payments`)
 - ✅ Payment methods configuration
 - ✅ Gateway plans management
@@ -37,6 +46,7 @@
 ## 📁 Files Created/Modified
 
 ### New Payment Gateway Files
+
 ```
 src/lib/payment/
 ├── gateway-interface.ts       # Core IPaymentGateway interface
@@ -56,6 +66,7 @@ src/app/api/payment/
 ```
 
 ### New Admin Files
+
 ```
 src/app/(admin)/
 ├── admin/
@@ -72,6 +83,7 @@ src/app/api/admin/
 ```
 
 ### Database Schema
+
 ```
 prisma/schema.prisma - Added models:
 ├── PaymentGateway             # Gateway configuration
@@ -81,6 +93,7 @@ prisma/schema.prisma - Added models:
 ```
 
 ### Documentation
+
 ```
 ├── DEPLOY.md                  # Deployment guide
 ├── SECURITY.md                # Security documentation
@@ -88,6 +101,7 @@ prisma/schema.prisma - Added models:
 ```
 
 ### Deployment Scripts
+
 ```
 scripts/
 └── deploy.sh                  # Automated deployment script
@@ -100,6 +114,7 @@ prisma/
 ## 🔒 Security Implementation
 
 ### Authentication Flow
+
 ```
 User Request → Server Component → auth() → Database Check → Render/Redirect
                                       ↓
@@ -108,17 +123,19 @@ User Request → Server Component → auth() → Database Check → Render/Redir
 ```
 
 ### Protected Routes
-| Route | Protection Method |
-|-------|------------------|
-| `/admin/plans` | Server component + DB role check |
-| `/admin/payments` | Server component + DB role check |
-| `/settings` | Server component + DB role check |
-| `/api/admin/plans` | checkAdmin() function |
-| `/api/admin/payments` | checkAdmin() function |
-| `/api/settings` | Inline auth + role check |
-| `/api/payment/*` | Public for checkout, secured for management |
+
+| Route                 | Protection Method                           |
+| --------------------- | ------------------------------------------- |
+| `/admin/plans`        | Server component + DB role check            |
+| `/admin/payments`     | Server component + DB role check            |
+| `/settings`           | Server component + DB role check            |
+| `/api/admin/plans`    | checkAdmin() function                       |
+| `/api/admin/payments` | checkAdmin() function                       |
+| `/api/settings`       | Inline auth + role check                    |
+| `/api/payment/*`      | Public for checkout, secured for management |
 
 ### Payment Security
+
 - API keys encrypted before database storage
 - Webhook signatures verified (HMAC SHA256 for Razorpay, Stripe SDK for Stripe)
 - No sensitive data exposed to client-side
@@ -132,6 +149,7 @@ User Request → Server Component → auth() → Database Check → Render/Redir
 **Size:** 1.3MB
 
 ### Contents
+
 - ✅ Complete Next.js application
 - ✅ Payment gateway implementations
 - ✅ Admin panel with security
@@ -141,6 +159,7 @@ User Request → Server Component → auth() → Database Check → Render/Redir
 - ✅ Database seeding scripts
 
 ### What's Excluded
+
 - ❌ `node_modules/` (installed on server)
 - ❌ `.next/` (built on server)
 - ❌ `.git/` (not needed for deployment)
@@ -152,6 +171,7 @@ User Request → Server Component → auth() → Database Check → Render/Redir
 ## 📋 Deployment Checklist
 
 ### On Your Local Machine
+
 ```bash
 # 1. Verify build passes
 cd trustastrology-clone
@@ -172,6 +192,7 @@ scp starpath-deployment-*.tar.gz opc@<SERVER_IP>:/home/opc/starpath
 ```
 
 ### On the Server
+
 ```bash
 # 1. SSH into server
 ssh opc@<SERVER_IP>
@@ -210,6 +231,7 @@ pm2 startup
 ```
 
 ### Required Environment Variables
+
 ```bash
 # Authentication
 NODE_ENV=production
@@ -241,16 +263,19 @@ GOOGLE_CLIENT_SECRET=...
 ### Post-Deployment Configuration
 
 1. **Set Admin Role:**
+
 ```bash
 sqlite3 prisma/prod.db
 UPDATE "User" SET role = 'admin' WHERE email = 'your-email@example.com';
 ```
 
 2. **Configure Webhooks:**
+
 - **Stripe:** `https://astro.echelonxventures.org/api/payment/webhook/stripe`
 - **Razorpay:** `https://astro.echelonxventures.org/api/payment/webhook/razorpay`
 
 3. **Verify Deployment:**
+
 ```bash
 pm2 status
 pm2 logs starpath-astrology
@@ -264,6 +289,7 @@ curl https://astro.echelonxventures.org
 ### Payment Gateway Dashboard (`/admin/payments`)
 
 **Tabs:**
+
 1. **Gateways** - View/manage Stripe, Razorpay, PayPal
    - Enable/disable toggle
    - Set default gateway
@@ -287,12 +313,14 @@ curl https://astro.echelonxventures.org
    - Color-coded status badges
 
 ### Subscription Plans (`/admin/plans`)
+
 - Create/edit/delete plans
 - Feature comparison table
 - Regional pricing
 - AI provider configuration per plan
 
 ### AI Settings (`/settings`)
+
 - Global AI provider config
 - Plan-specific AI settings
 - Test connection button
@@ -302,6 +330,7 @@ curl https://astro.echelonxventures.org
 ## 📊 Database Schema Summary
 
 ### Core Models
+
 - `User` - Users with roles, subscription status
 - `Account`, `Session` - NextAuth tables
 - `SubscriptionPlan` - Dynamic pricing plans
@@ -309,12 +338,14 @@ curl https://astro.echelonxventures.org
 - `PlanFeatureAccess` - Plan-feature relationships
 
 ### Payment Models
+
 - `PaymentGateway` - Gateway configuration (Stripe, Razorpay)
 - `PaymentMethod` - Payment methods per gateway
 - `GatewayPlan` - Gateway-specific plan mapping
 - `PaymentTransaction` - Transaction log across all gateways
 
 ### AI/Settings Models
+
 - `AppSettings` - General application settings
 - `AIProviderConfig` - Dynamic AI provider configuration
 - `Region` - Regional settings, currencies
@@ -324,6 +355,7 @@ curl https://astro.echelonxventures.org
 ## 🔧 API Endpoints
 
 ### Public Payment APIs
+
 ```
 POST /api/payment/checkout           # Create checkout session
 GET  /api/payment/checkout           # Get gateway/plan info
@@ -335,6 +367,7 @@ POST /api/payment/webhook/razorpay   # Razorpay webhook
 ```
 
 ### Admin-Only APIs
+
 ```
 GET  /api/admin/plans                # Get plans, features, regions
 POST /api/admin/plans                # Create/update/delete plans
@@ -351,6 +384,7 @@ POST /api/settings/plans             # Save plan AI config
 ## ✅ Testing Checklist
 
 ### Before Deployment
+
 - [ ] `npm run build` passes locally
 - [ ] All TypeScript errors resolved
 - [ ] Admin routes protected with server-side checks
@@ -358,6 +392,7 @@ POST /api/settings/plans             # Save plan AI config
 - [ ] Webhook handlers verify signatures
 
 ### After Deployment
+
 - [ ] Can access `/login` and sign up
 - [ ] Admin user created with `role = 'admin'`
 - [ ] `/admin/payments` accessible only to admin
@@ -373,6 +408,7 @@ POST /api/settings/plans             # Save plan AI config
 ## 🎯 Future Enhancements
 
 ### Recommended Next Steps
+
 1. **PayPal Integration** - Complete the stub implementation
 2. **Rate Limiting** - Add to payment APIs
 3. **Audit Logging** - Log all admin actions
@@ -383,6 +419,7 @@ POST /api/settings/plans             # Save plan AI config
 8. **Export Features** - Download transaction reports
 
 ### Security Enhancements
+
 1. **CSP Headers** - Add Content-Security-Policy
 2. **Security Headers** - Use helmet.js
 3. **Session Timeout** - Auto-logout after inactivity
@@ -394,11 +431,13 @@ POST /api/settings/plans             # Save plan AI config
 ## 📞 Support
 
 ### Documentation
+
 - `DEPLOY.md` - Deployment guide
 - `SECURITY.md` - Security documentation
 - `IMPLEMENTATION_SUMMARY.md` - This file
 
 ### Key Contacts
+
 - Technical lead: Review SECURITY.md for incident response
 - Deployment issues: Check DEPLOY.md troubleshooting section
 
@@ -406,9 +445,9 @@ POST /api/settings/plans             # Save plan AI config
 
 ## Version History
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0 | 2026-04-15 | Initial release - Payment gateway system + Admin security |
+| Version | Date       | Changes                                                   |
+| ------- | ---------- | --------------------------------------------------------- |
+| 1.0     | 2026-04-15 | Initial release - Payment gateway system + Admin security |
 
 ---
 

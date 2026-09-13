@@ -1,3 +1,11 @@
+<!--
+  HISTORY NOTE (documentation consolidation): PostgreSQL is now the only
+  supported database and the app is multi-tenant (hostname -> platform).
+  Steps below referencing SQLite, single-tenant flows, or `prisma migrate dev`
+  are outdated. See PROJECT_DOCUMENTATION.md section 11 for the current runbook
+  (migrate deploy + seeds, standalone build or Docker Compose).
+-->
+
 # StarPath Astrology - Deployment Preparation
 
 ## Step 1: Get Your OCI Server Details
@@ -12,6 +20,7 @@
 ### Find Your SSH Key
 
 Your SSH key was created when you launched the instance. Common locations:
+
 - `~/.ssh/id_rsa` (Linux/Mac)
 - `C:\Users\YourName\.ssh\id_rsa` (Windows)
 - Or the `.pem` file you downloaded from OCI
@@ -109,7 +118,7 @@ Please provide the following (or check the boxes):
 
 - [ ] OCI Public IP Address: `___.___.___.___`
 - [ ] SSH Key Path: `~/.ssh/_____`
-- [ ] PostgreSQL Choice: [ ] OCI Autonomous  [ ] Install on VM
+- [ ] PostgreSQL Choice: [ ] OCI Autonomous [ ] Install on VM
 
 ---
 
@@ -127,12 +136,12 @@ If you see `Welcome to Ubuntu...`, you're ready to deploy!
 
 ## Files Ready for Deployment
 
-| File | Status |
-|------|--------|
-| `deploy-oci.sh` | ✅ Ready |
-| `.env.production` | ✅ Ready (PostgreSQL configured) |
-| `DEPLOYMENT_OCI.md` | ✅ Ready |
-| `DEPLOYMENT_CHECKLIST.md` | ✅ Ready |
+| File                      | Status                           |
+| ------------------------- | -------------------------------- |
+| `deploy-oci.sh`           | ✅ Ready                         |
+| `.env.production`         | ✅ Ready (PostgreSQL configured) |
+| `DEPLOYMENT_OCI.md`       | ✅ Ready                         |
+| `DEPLOYMENT_CHECKLIST.md` | ✅ Ready                         |
 
 ---
 

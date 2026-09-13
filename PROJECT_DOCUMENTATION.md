@@ -1,509 +1,186 @@
-# StarPath Astrology - Project Documentation
+# StarPath Astrology — Project Documentation
 
-## Overview
+> **Canonical reference** (updated with the multi-tenant white-label architecture, PostgreSQL,
+> platform hierarchy and master configuration). Historical docs in this folder describe earlier
+> implementation phases and carry banner notes where facts changed.
 
-StarPath Astrology is a full-featured, production-ready AI-powered astrology platform built with modern web technologies. It provides personalized birth charts, AI-guided horoscopes, compatibility readings, palmistry, face reading, and a subscription-based premium tier system.
+## 1. What this is
 
----
+A production-grade, **multi-tenant astrology SaaS**: one Next.js 16 deployment serves unlimited
+independently-branded "platforms" (tenants) resolved by request hostname. Each tenant gets its own
+domain(s), branding, languages, markets/currencies, plans, AI provider catalog, payment gateways,
+users and data — all stored in PostgreSQL and administered through in-app portals. Platforms form a
+**hierarchy**: a root (super) platform grants options/rights to sub-platforms, which may delegate
+subsets onward; every effective configuration is capped by its ancestors.
 
-## Table of Contents
+## 2. Tech stack
 
-1. [Project Architecture](#project-architecture)
-2. [Technology Stack](#technology-stack)
-3. [Features](#features)
-4. [Directory Structure](#directory-structure)
-5. [Database Schema](#database-schema)
-6. [API Endpoints](#api-endpoints)
-7. [AI Integration](#ai-integration)
-8. [Payment Gateway System](#payment-gateway-system)
-9. [Authentication & Security](#authentication--security)
-10. [Configuration](#configuration)
-11. [Deployment](#deployment)
+| Layer     | Tech                                                                                                                                     |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework | Next.js 16 (App Router, Turbopack, `output: standalone`), React 19, TypeScript strict                                                    |
+| Data      | PostgreSQL 15+ · Prisma 6 (migrations in `prisma/migrations`) · Redis (ioredis) cache + distributed rate limits                          |
+| Auth      | NextAuth v4 — JWT sessions, tenant-scoped credentials + per-tenant OAuth                                                                 |
+| Payments  | Stripe · Razorpay · PayPal (gateway registry, per-tenant encrypted keys, fraud checks, audit log)                                        |
+| AI        | Catalog-driven providers: any OpenAI-compatible endpoint + Anthropic + Gemini + Ollama + OpenCode                                        |
+| UI        | Tailwind CSS v4 with CSS-variable theming (per-tenant brand injection), Framer Motion, lucide-react                                      |
+| Ops       | Docker/Compose (app+pg+redis, monitoring: Prometheus/Grafana), Sentry, Pino structured logs, Prometheus `/api/metrics`, health endpoints |
+| Quality   | ESLint (custom flat config), Husky + lint-staged, Vitest (167 unit tests), Playwright e2e harness                                        |
 
----
-
-## Project Architecture
-
-### Design Patterns
-
-- **App Router**: Next.js 16 App Router with route groups for organization
-- **Server/Client Components**: Hybrid rendering with server-side auth checks
-- **Factory Pattern**: AI providers and payment gateways use factory pattern
-- **Interface Pattern**: Unified interfaces for multiple AI/payment providers
-- **Repository Pattern**: Prisma ORM abstracts database operations
-
-### Route Groups
-
-| Group | Purpose | Access |
-|-------|---------|--------|
-| `(auth)` | Login/signup pages | Public |
-| `(dashboard)` | User features | Authenticated |
-| `(admin)` | Admin settings | Admin role only |
-| `api/` | API routes | Mixed (public/admin) |
-
----
-
-## Technology Stack
-
-| Category | Technology | Version |
-|----------|-----------|---------|
-| **Framework** | Next.js | 16.2.3 |
-| **Language** | TypeScript | 5.x |
-| **Styling** | Tailwind CSS | 4.x |
-| **Animations** | Framer Motion | 12.x |
-| **Icons** | Lucide React | 1.8.x |
-| **Database** | SQLite (dev) / PostgreSQL (prod) | - |
-| **ORM** | Prisma | 6.19.3 |
-| **Authentication** | NextAuth.js | 4.24.x |
-| **AI Providers** | Ollama, Anthropic, Gemini, OpenRouter | - |
-| **Payments** | Stripe, Razorpay | Stripe 22.x |
-| **State Management** | Zustand | 5.x |
-| **Date Handling** | date-fns | 4.x |
-
----
-
-## Features
-
-### Core Features
-
-| Feature | Description | Access Level |
-|---------|-------------|--------------|
-| **Birth Chart Generation** | Calculate planetary positions, houses, aspects | All users |
-| **Daily Horoscope** | AI-generated daily readings based on birth chart | All users (limited for free) |
-| **Love Horoscope** | Relationship-focused readings | Premium |
-| **Career Horoscope** | Career guidance readings | Premium |
-| **Compatibility Reading** | Synastry analysis between two charts | Premium |
-| **AI Chat** | Conversational astrology consultations | Premium |
-| **Palmistry** | AI palm reading from uploaded images | Premium |
-| **Face Reading** | Chinese physiognomy analysis | Premium |
-
-### Admin Features
-
-| Feature | Route | Description |
-|---------|-------|-------------|
-| **AI Provider Settings** | `/settings` | Configure AI providers per subscription tier |
-| **Plan Management** | `/admin/plans` | Create/edit subscription plans with features |
-| **Payment Gateway Admin** | `/admin/payments` | Manage gateways, methods, transactions |
-
----
-
-## Directory Structure
+## 3. Architecture
 
 ```
-trustastrology-clone/
-├── prisma/
-│   ├── schema.prisma              # SQLite schema (default)
-│   ├── schema.prisma.postgresql   # PostgreSQL schema
-│   └── seed.ts                    # Database seeding
-│   └── seed-payment-gateways.ts   # Payment gateway seeding
-│
-├── src/
-│   ├── app/
-│   │   ├── (auth)/               # Authentication routes
-│   │   │   ├── login/page.tsx
-│   │   │   └── signup/page.tsx
-│   │   │
-│   │   ├── (dashboard)/          # User features
-│   │   │   ├── dashboard/page.tsx
-│   │   │   ├── chart/page.tsx
-│   │   │   ├── horoscope/
-│   │   │   │   ├── daily/page.tsx
-│   │   │   │   ├── love/page.tsx
-│   │   │   │   └── career/page.tsx
-│   │   │   ├── compatibility/page.tsx
-│   │   │   ├── chat/horoscope/page.tsx
-│   │   │   ├── palmistry/page.tsx
-│   │   │   ├── face-reading/page.tsx
-│   │   │   ├── profile/page.tsx
-│   │   │   └── subscription/page.tsx
-│   │   │
-│   │   ├── (admin)/              # Admin routes (protected)
-│   │   │   ├── settings/page.tsx
-│   │   │   ├── admin/
-│   │   │   │   ├── plans/page.tsx
-│   │   │   │   └── payments/page.tsx
-│   │   │
-│   │   ├── api/                  # API routes
-│   │   │   ├── auth/
-│   │   │   ├── astrology/
-│   │   │   ├── settings/
-│   │   │   ├── admin/
-│   │   │   ├── payment/
-│   │   │   └── stripe/
-│   │   │
-│   │   ├── pricing/page.tsx      # Public pricing page
-│   │   ├── privacy/page.tsx
-│   │   ├── terms/page.tsx
-│   │   ├── layout.tsx            # Root layout
-│   │   └── page.tsx              # Homepage
-│   │
-│   ├── components/
-│   │   └── AuthProvider.tsx      # Session provider wrapper
-│   │
-│   ├── lib/
-│   │   ├── ai/                   # AI integration
-│   │   │   ├── provider.ts       # Provider interface
-│   │   │   ├── client.ts         # AI client factory
-│   │   │   ├── anthropic-provider.ts
-│   │   │   ├── gemini-provider.ts
-│   │   │   ├── ollama-provider.ts
-│   │   │   ├── openrouter-provider.ts
-│   │   │   ├── astrology-prompts.ts
-│   │   │   └── plan-config.ts
-│   │   │
-│   │   ├── astrology/            # Astrology calculations
-│   │   │   └── calculations.ts   # Birth chart engine
-│   │   │
-│   │   ├── payment/              # Payment gateways
-│   │   │   ├── gateway-interface.ts
-│   │   │   ├── gateway-registry.ts
-│   │   │   ├── stripe-gateway.ts
-│   │   │   ├── razorpay-gateway.ts
-│   │   │   ├── paypal-gateway.ts
-│   │   │   └── index.ts
-│   │   │
-│   │   ├── auth.ts               # NextAuth configuration
-│   │   ├── db.ts                 # Prisma client
-│   │   ├── plans.ts              # Subscription plans
-│   │   ├── settings.ts           # App settings
-│   │   ├── branding.ts           # Branding constants
-│   │   └── stripe.ts             # Stripe utilities
-│   │
-│   └── types/
-│       └── index.ts              # TypeScript types
-│
-├── public/                       # Static assets
-├── scripts/
-│   └── deploy.sh                 # Deployment script
-│
-└── Configuration Files
-    ├── package.json
-    ├── tsconfig.json
-    ├── next.config.ts
-    ├── tailwind.config
-    ├── postcss.config.mjs
-    └── eslint.config.mjs
+Browser ── Host: acme.customer.com
+   │
+   ▼
+Next.js route handlers / RSC
+   ├─ middleware.ts      security headers, nonce CSP, rate-limit tiers (Redis)
+   ├─ tenant.ts          resolveTenantByHost(host) -> TenantContext   [LRU 60s]
+   │                     exact TenantDomain | TENANT_ROOT_DOMAIN subdomain |
+   │                     *.localhost dev | bare localhost -> default tenant
+   ├─ master-config.ts   effectiveMaster(): intersection of ancestor grants
+   ├─ layout.tsx         injects <style>:root{--brand vars}</style> + LocaleProvider
+   │                     + BrandProvider + metadata/favicon/manifest per tenant
+   ├─ auth.ts            per-request NextAuth options (tenant providers), cross-tenant
+   │                     session guard (JWT tenantId must equal request tenant)
+   └─ getScopedDb(tid)   Prisma extension: auto tenantId injection on all scoped models
+          │
+          ▼
+   PostgreSQL (every customer row carries tenantId)      Redis (cache + limiter)
 ```
 
----
+### Tenant resolution (`src/lib/tenant.ts`)
 
-## Database Schema
+1. Exact `TenantDomain.host` match (custom domains)
+2. First-label slug under `TENANT_ROOT_DOMAIN`
+3. `*.localhost` dev magic (label = slug)
+4. Bare `localhost` / `127.0.0.1` → default tenant
+5. Otherwise: isolation page ("Unknown platform" / suspended → "This platform is paused")
 
-### Core Tables
+### Hierarchy & master configuration (`src/lib/master-config.ts`)
 
-| Model | Purpose | Key Fields |
-|-------|---------|------------|
-| **User** | User accounts | email, passwordHash, role, subscriptionStatus, birthDetails |
-| **Account** | OAuth links | provider, providerAccountId |
-| **Session** | Auth sessions | sessionToken, expires |
-| **BirthChart** | Calculated charts | planets (JSON), houses (JSON), aspects (JSON) |
-| **Reading** | AI readings | type, content, input (JSON) |
-| **ChatSession** | AI conversations | messages (JSON), metadata (JSON) |
-| **Subscription** | Stripe subscriptions | stripeSubscriptionId, plan, status |
-| **Payment** | Payment history | stripePaymentId, amount, currency, status |
+- `Tenant.parentId` (null = root). A child can never exceed any ancestor.
+- `Tenant.settings.master` (`MasterConfig`): `allowedLanguages|allowedRegions|allowedGateways|allowedAiProviders`, `canCreateChildren`, `maxChildren`, `childDefaults`.
+- Effective = walk parent chain, intersect sets, AND rights, min caps (cycle-guarded, 10 levels).
+- Rights flow: superadmin = global; a granted platform admin can list/create/configure its own subtree only; all grant edits are clamped server-side.
 
-### Configuration Tables
+## 4. Data model (PostgreSQL)
 
-| Model | Purpose | Key Fields |
-|-------|---------|------------|
-| **AppSettings** | Global settings | key, value (e.g., AI_PROVIDER, AI_MODEL) |
-| **AIProviderConfig** | Per-plan AI config | provider, model, apiKey, maxTokens, plan |
-| **SubscriptionPlan** | Dynamic plans | name, key, price, interval, features (JSON) |
-| **PlanFeature** | Feature definitions | name, key, category |
-| **PlanFeatureAccess** | Plan-feature matrix | planId, featureId, enabled, value |
-| **Region** | Regional settings | name, code, currency, priceMultiplier |
+| Group           | Tables (all with `tenantId` FK→Tenant, cascade, indexed)                                                                                                                                                                                                 |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tenancy         | `Tenant` (slug unique, status, branding JSON, settings JSON incl. locales+master, parentId), `TenantDomain` (host unique)                                                                                                                                |
+| Identity        | `User` (`@@unique([tenantId,email])`, roles: user/moderator/admin/superadmin), `Account`, `Session`, `VerificationToken`, `UserDevice`                                                                                                                   |
+| Core data       | `BirthChart`, `Reading`, `ChatSession`, `AstroProfile`, `Notification`, `UserMemory`                                                                                                                                                                     |
+| Commerce        | `Subscription`, `Payment`, `PaymentTransaction`, `PaymentAuditLog(tenantId?)`, `PaymentGateway` (`@@unique([tenantId,key])`, encrypted secrets), `PaymentMethod`, `GatewayPlan`                                                                          |
+| Platform config | `SubscriptionPlan` (`@@unique([tenantId,key])`, `tier` free/paid, regionalPricing), `PlanFeature`, `PlanFeatureAccess`, `AppSettings` (`@@unique([tenantId,key])`), `AIProviderConfig` (plan bindings), `AIProviderCatalog` (`@@unique([tenantId,key])`) |
+| Global          | `Region` is **per tenant** (unique per tenant); `Region`-adjacent reference: none — everything customer-facing is tenant-scoped                                                                                                                          |
 
-### Payment Tables
+Migrations: `init_postgresql` → `add_payment_audit_log` → `add_multi_tenancy` → `ai_provider_catalog` → `region_per_tenant` → `platform_hierarchy` (all applied by `npx prisma migrate deploy`).
 
-| Model | Purpose | Key Fields |
-|-------|---------|------------|
-| **PaymentGateway** | Gateway config | name, key, apiKey, apiSecret, isEnabled |
-| **PaymentMethod** | Methods per gateway | name, key (upi, card, netbanking) |
-| **GatewayPlan** | Gateway-plan mapping | gatewayPlanId (Stripe/Razorpay Price ID) |
-| **PaymentTransaction** | Unified transactions | gatewayTransactionId, status, amount |
+## 5. Branding & theming
 
----
+- `src/lib/branding.ts`: `BrandConfig` (name, shortName, tagline, logoUrl, faviconUrl, 19-color palette, SEO) + `mergeBranding()` + `brandToCssRules()`.
+- Root layout injects tenant CSS variables (`--primary`, `--background`, …) that Tailwind classes consume app-wide → whole UI re-skins per tenant; `BrandProvider/BrandName/BrandLogo` for identity text; manifest/metadata/favicon per tenant.
+- `/admin/branding` = live-preview editor (colors, identity, SEO) + `/api/admin/branding/upload` (Cloudinary, local fallback).
+- **Zero hardcoded brand strings remain in `src/app`** — verified by grep.
 
-## API Endpoints
+## 6. AI provider engine
 
-### Authentication APIs
+- `AIProviderCatalog` per tenant: key, label, kind, baseUrl, apiKey, models[], capabilities[] (`vision`), options (`extraHeaders`, `noAuth`, `checkUrl`, `priority`).
+- Kinds (the only code-level wire protocols): `openai-compatible` (generic — covers OpenAI/OpenRouter/Groq/NVIDIA/Together/LM Studio…), `ollama`, `anthropic`, `gemini`, `opencode`. **Adding a vendor = a DB row via UI, no deploy.**
+- Resolution: plan binding (`AIProviderConfig` → catalog entry) → tenant default entry → priority order; vision routes require `vision` capability; env/AppSettings legacy chain only as bootstrap fallback.
+- Managed at `/settings` (tabs: Plan Binding / Providers / Default) with per-provider connectivity test.
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/auth/signup` | POST | Create new account |
-| `/api/auth/[...nextauth]` | GET/POST | NextAuth endpoints |
+## 7. Plans, markets, currency, languages
 
-### Astrology APIs
+- `SubscriptionPlan` rows drive pricing page, dashboard chip, subscription card, checkout, and even Razorpay/PayPal `brand_name` at request time. `tier` decides upgrade semantics; `regionalPricing` + `Region.priceMultiplier/currency` handle localization of prices.
+- `GET /api/plans` (public, tenant-scoped) feeds pricing; `/api/admin/plans` = tenant admin CRUD (plans/features/regions).
+- Languages: `Tenant.settings.locales` {supportedLanguages, defaultLanguage, currencyRegion} → `LocaleProvider` scopes `LanguageSwitcher`, sets `<html lang>`/dir. Portal: `/admin/localization`. Dictionary coverage: en + partial es/fr/de/hi (content work).
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/astrology/chart` | GET | Get user's birth charts |
-| `/api/astrology/chart` | POST | Create/save birth chart |
-| `/api/astrology/generate` | POST | Generate AI reading |
-| `/api/astrology/chat` | GET | Get chat sessions |
-| `/api/astrology/chat` | POST | Send message to AI |
-| `/api/astrology/palmistry` | POST | Analyze palm image |
-| `/api/astrology/face-reading` | POST | Analyze face image |
+## 8. Admin portals & roles
 
-### Payment APIs
+| Portal                | Role                          | Purpose                                                                                                                                                     |
+| --------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/admin/tenants`      | superadmin / delegated parent | Platform tree, suspend/activate/delete, lineage                                                                                                             |
+| `/admin/tenants/new`  | same                          | **Setup wizard**: identity+brand → languages → markets/currency → plans → gateways+AI → admin account (one submit provisions everything, clamped to grants) |
+| `/admin/master`       | superadmin / delegated parent | Master configuration: per-node grants (options + rights + child defaults)                                                                                   |
+| `/admin/branding`     | tenant admin                  | White-label editor w/ live preview + asset upload                                                                                                           |
+| `/admin/localization` | tenant admin                  | Languages + default market                                                                                                                                  |
+| `/admin/payments`     | tenant admin                  | Per-tenant gateways/methods/gateway plans/transactions                                                                                                      |
+| `/admin/plans`        | tenant admin                  | Plans, features, markets                                                                                                                                    |
+| `/settings`           | tenant admin                  | AI catalog, plan bindings, default provider                                                                                                                 |
 
-| Endpoint | Method | Purpose | Access |
-|----------|--------|---------|--------|
-| `/api/payment/checkout` | POST | Create checkout session | Public |
-| `/api/payment/methods` | GET | Get available methods | Public |
-| `/api/payment/subscription` | GET/POST | Manage subscription | Authenticated |
-| `/api/payment/webhook/stripe` | POST | Stripe webhook | Public |
-| `/api/payment/webhook/razorpay` | POST | Razorpay webhook | Public |
+Roles: `user`, `moderator`, `admin` (per tenant), `superadmin` (platform operator). Sessions carry `tenantId`; cross-tenant cookie replay is rejected in both NextAuth session callback and `auth()`.
 
-### Admin APIs (Protected)
+## 9. API surface
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/admin/plans` | GET | Get all plans, features, regions |
-| `/api/admin/plans` | POST | Create/update/delete plans |
-| `/api/admin/payments` | GET | Get gateways, methods, transactions |
-| `/api/admin/payments` | POST | Manage gateway configuration |
-| `/api/settings` | GET/POST | AI provider settings |
-| `/api/settings/plans` | GET/POST | Plan-specific AI config |
+- **Auth**: `POST /api/auth/signup` · NextAuth `ALL /api/auth/[...nextauth]` (tenant-aware) · `GET /api/auth/providers|session|csrf`
+- **Platform (public)**: `GET /api/plans[?type=features|regions]` · `GET /api/branding` · `GET /api/health` · `GET /api/ready` · `GET /api/metrics` · `GET /manifest.webmanifest`
+- **Astrology (user)**: `POST /api/astrology/chart|generate|chat|palmistry|face-reading`
+- **User data**: `GET/POST/DELETE /api/profiles` · `/api/memory` · `/api/devices` · `/api/gdpr/data`
+- **Billing**: `GET/POST /api/payment/checkout` · `/api/payment/methods` · `/api/payment/subscription` · webhooks `stripe|razorpay|paypal` (tenant via `?t=<slug>`) · legacy `POST /api/stripe/checkout|webhook`, `POST /api/stripe/portal`
+- **Tenant admin**: `GET/PUT /api/branding` · `POST /api/admin/branding/upload` · `GET/PATCH /api/admin/localization` · `GET/POST /api/admin/plans` · `GET/POST /api/settings` · `GET/POST /api/settings/plans` · `GET/POST /api/settings/providers` (CRUD+test)
+- **Super/parent admin**: `GET/POST /api/admin/tenants` · `PATCH/DELETE /api/admin/tenants/:id` · `GET/POST /api/admin/master-config`
 
----
+OpenAPI specs (docs repo, `/openapi/*.yaml`): auth, charts, readings, chat, payments, admin (incl. tenants/branding/localization/plans).
 
-## AI Integration
+## 10. Security
 
-### Supported Providers
+CSP nonce + security headers (middleware), HSTS, clickjacking/MIME protections · tiered Redis-backed rate limits (auth 5/min, admin 30/min, api 100/min…) · bot/UA heuristics + audit trail · zod validation on all inputs · encrypted gateway secrets (AES-256-GCM, `ENCRYPTION_KEY`) · bcrypt(12) · fraud-detection hooks · payment audit log · per-tenant data isolation (DB NOT NULL + scoped client + request guards) · `NEXTAUTH_TRUST_HOST` only because host→tenant resolution is strict.
 
-| Provider | Use Case | API Key Required | Vision Support |
-|----------|----------|------------------|----------------|
-| **Ollama** | Free tier, local | No | No |
-| **Anthropic Claude** | Premium | Yes | Yes |
-| **Google Gemini** | Premium alternative | Yes | Yes |
-| **OpenRouter** | Multi-model access | Yes | Depends on model |
+## 11. Operations
 
-### Provider Interface
-
-```typescript
-interface AIProvider {
-  name: string
-  supportsVision: boolean
-  complete(request: TextCompletionRequest): Promise<string>
-  completeWithVision?(request: VisionCompletionRequest): Promise<string>
-}
-```
-
-### Per-Plan AI Configuration
-
-| Plan | Default Provider | Default Model | Max Tokens |
-|------|------------------|---------------|------------|
-| Free | OpenRouter | meta-llama/llama-3.2-3b-instruct | 512 |
-| Monthly | Anthropic | claude-sonnet-4-20250514 | 1024 |
-| Yearly | Anthropic | claude-opus-4-7 | 2048 |
-
-### Astrology Prompts
-
-Located in `src/lib/ai/astrology-prompts.ts`:
-- Birth chart interpretation prompts
-- Daily horoscope generation
-- Love/Career reading templates
-- Compatibility analysis prompts
-- Palmistry/Face reading prompts
-
----
-
-## Payment Gateway System
-
-### Architecture
-
-The payment system uses a unified gateway interface allowing multiple payment providers:
-
-```typescript
-interface IPaymentGateway {
-  name: string
-  key: string
-  supportedCurrencies: string[]
-  supportedCountries: string[]
-
-  createCheckoutSession(params: CheckoutParams): Promise<CheckoutResult>
-  handleWebhook(payload: string, signature: string): Promise<WebhookResult>
-  getSubscription(subscriptionId: string): Promise<SubscriptionInfo>
-  cancelSubscription(subscriptionId: string): Promise<CancelResult>
-}
-```
-
-### Supported Gateways
-
-| Gateway | Status | Primary Use | Supported Methods |
-|---------|--------|-------------|-------------------|
-| **Stripe** | Implemented | International | Cards, Apple Pay, Google Pay |
-| **Razorpay** | Implemented | India | UPI, Cards, Netbanking, Wallets, PayLater, EMI |
-| **PayPal** | Stub | Future | PayPal, Cards |
-
-### Payment Methods (India via Razorpay)
-
-| Method | Key | Description |
-|--------|-----|-------------|
-| UPI | `upi` | Unified Payments Interface |
-| Credit/Debit Cards | `card` | All major cards |
-| Netbanking | `netbanking` | All Indian banks |
-| Wallets | `wallet` | Paytm, PhonePe, etc. |
-| PayLater | `paylater` | Simpl, LazyPay |
-| EMI | `emi` | Card EMI options |
-
-### Security
-
-- API keys encrypted with AES-256 before storage
-- Webhook signatures verified (HMAC SHA256)
-- No sensitive data exposed to client-side
-- CSRF protection via NextAuth cookies
-
----
-
-## Authentication & Security
-
-### Authentication Flow
-
-```
-User Request → Server Component → auth() → Database Check → Render/Redirect
-                                      ↓
-                              Not Authenticated → /login
-                              Non-Admin User → /dashboard?error=...
-```
-
-### Protected Routes
-
-| Route Type | Protection Method |
-|------------|-------------------|
-| Admin pages (`/admin/*`) | Server component + DB role check |
-| Admin APIs (`/api/admin/*`) | `checkAdmin()` middleware |
-| Dashboard pages (`/dashboard/*`) | `AuthProvider` + session check |
-
-### Admin Access
-
-Default admin credentials (from seed):
-- Email: `admin@localhost`
-- Password: `admin123`
-
-**Important**: Change password before production!
-
----
-
-## Configuration
-
-### Environment Variables
-
-#### Required
-
-| Variable | Description |
-|----------|-------------|
-| `DATABASE_URL` | Database connection (SQLite or PostgreSQL) |
-| `NEXTAUTH_URL` | App URL (e.g., `http://localhost:3000`) |
-| `NEXTAUTH_SECRET` | Auth secret (generate with `openssl rand -base64 32`) |
-
-#### AI Providers
-
-| Variable | Provider | Required For |
-|----------|----------|--------------|
-| `OPENROUTER_API_KEY` | OpenRouter | Free tier |
-| `ANTHROPIC_API_KEY` | Anthropic | Premium tiers |
-| `GEMINI_API_KEY` | Gemini | Alternative premium |
-| `OLLAMA_URL` | Ollama | Local AI (default: `http://localhost:11434`) |
-
-#### Payment Gateways
-
-| Variable | Gateway |
-|----------|---------|
-| `STRIPE_SECRET_KEY` | Stripe secret key |
-| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
-| `RAZORPAY_KEY_ID` | Razorpay key ID |
-| `RAZORPAY_KEY_SECRET` | Razorpay key secret |
-| `RAZORPAY_WEBHOOK_SECRET` | Razorpay webhook secret |
-| `ENCRYPTION_KEY` | For encrypting gateway API keys |
-
-#### Optional
-
-| Variable | Purpose |
-|----------|---------|
-| `GOOGLE_CLIENT_ID` | Google OAuth |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth |
-| `CLOUDINARY_CLOUD_NAME` | Image uploads (palmistry) |
-| `CLOUDINARY_API_KEY` | Image uploads |
-| `CLOUDINARY_API_SECRET` | Image uploads |
-
----
-
-## Deployment
-
-### Local Development
+### Local self-host (what's running now)
 
 ```bash
-# 1. Install dependencies
-npm install
-
-# 2. Setup environment
-cp .env.example .env
-
-# 3. Generate Prisma client
-npx prisma generate
-
-# 4. Run migrations
-npx prisma migrate dev --name init
-
-# 5. Seed database
-npx tsx prisma/seed.ts
-
-# 6. Start development server
-npm run dev
+colima start && docker start starpath-postgres starpath-redis   # PG :15433, Redis :16380 (colima context)
+cd StarPath-Astrology && npm ci && npm run build                # standalone output
+rm -rf .next/standalone/public .next/standalone/.next/static
+cp -R public .next/standalone/public && cp -R .next/static .next/standalone/.next/static
+set -a; source .env; set +a; NEXTAUTH_URL=http://localhost:3001 PORT=3001 \
+  node .next/standalone/server.js                               # app :3001 (:3000 is taken by another stack)
 ```
 
-### Production Deployment (Vercel)
+DB bootstrap: `npx prisma migrate deploy && npx tsx prisma/seed.ts && npx tsx prisma/seed-payment-gateways.ts`
 
-1. Push code to GitHub
-2. Import project in Vercel dashboard
-3. Set environment variables
-4. Deploy
+Docker alternatives: `docker-compose.yml` (full prod stack), `docker-compose.dev.yml` (services only), `docker-compose.monitoring.yml`.
 
-### Production Deployment (OCI/VPS)
+### Demo state (seeded)
 
-```bash
-# 1. Create deployment package
-tar -czf starpath-deployment.tar.gz --exclude='node_modules' --exclude='.next' --exclude='.git' trustastrology-clone
+| Platform                                             | URL                                             | Login                                    |
+| ---------------------------------------------------- | ----------------------------------------------- | ---------------------------------------- |
+| StarPath (root)                                      | http://localhost:3001 · starpath.localhost:3001 | `admin@localhost` / `admin123`           |
+| — superadmin                                         | same hosts                                      | `super@localhost` / `admin123`           |
+| LunaAstro (sub-platform of StarPath)                 | http://luna.localhost:3001                      | `admin@localhost` / `admin123`           |
+| Stellar Paths (sub-platform of LunaAstro, 3rd level) | http://stellar.localhost:3001                   | `admin@stellar.test` / `StellarPass123!` |
 
-# 2. Transfer to server
-scp starpath-deployment.tar.gz user@server:/home/opc/starpath
+### CI/CD
 
-# 3. On server: extract, install, build
-cd /home/opc/starpath
-tar -xzf starpath-deployment.tar.gz
-npm install
-npx prisma generate
-npx prisma migrate deploy
-npm run build
+GitHub Actions (root repo + app repo): build/lint/test, PR checks, security scan, dependabot, cd-staging/cd-production. Husky pre-commit → lint-staged (eslint --fix + prettier).
 
-# 4. Start with PM2
-pm2 start npm --name "starpath" -- start
-pm2 save
-pm2 startup
+## 12. Quality status (last full run)
+
+- `tsc --noEmit`: 0 errors · `eslint`: 0 errors (style warnings only) · Vitest: **167/167** · Production build + standalone boot: ✓
+- Live matrix verified in headless Chromium: three-level hierarchy, per-tenant brand/theme/language/currency, over-grant rejection, session guards, provider CRUD, plan rename propagation, webhook tenant param.
+
+## 13. Known limitations / roadmap
+
+1. **Translation content**: language _selection_ is per tenant; dictionaries beyond en (+partial es/fr/de/hi) need content work.
+2. Legacy parallel payment endpoints (`/api/stripe/*`) retained for backward compat; consolidate onto `/api/payment/*` when clients migrate.
+3. `Region` seeded globally-catalogued per new tenant (markets beyond the 5 templates require grants in Master Config first).
+4. Logo hosting: Cloudinary (preferred) or `/public/uploads` dev fallback (wiped on redeploy).
+5. Per-tenant OAuth requires registering callback URLs per domain at the provider.
+6. E2E Playwright suite exists but predates tenancy — update specs to cover wizard/tenants.
+
+## 14. Repo map
+
 ```
-
-### Production Checklist
-
-- [ ] Update `NEXTAUTH_URL` to production domain
-- [ ] Generate new `NEXTAUTH_SECRET`
-- [ ] Change admin password from `admin123`
-- [ ] Configure PostgreSQL database
-- [ ] Set up AI provider API keys
-- [ ] Configure Stripe/Razorpay webhooks
-- [ ] Set webhook URLs in provider dashboards
-
----
-
-## License
-
-MIT
-
-## Disclaimer
-
-This is an educational astrology platform. Readings are for entertainment purposes only. Planetary calculations are simplified approximations - for production use, consider integrating Swiss Ephemeris for higher accuracy.
-
----
-
-**Last Updated**: April 30, 2026
+StarPath-Astrology/            the application (git repo, PR: feat/multi-tenancy -> main #1)
+├─ prisma/  schema, migrations, seeds (multi-tenant)
+├─ src/lib/ tenant.ts master-config.ts tenant-provision.ts branding.ts plans.ts
+│           ai/ (catalog.ts, providers) payment/ settings.ts security.ts …
+├─ src/app/ (admin)/admin/{tenants,master,branding,localization,payments,plans}
+│           (auth)/ (dashboard)/ api/ layout.tsx (tenant theme+locale)
+├─ docs/    MULTI_TENANCY.md PRODUCTION-DEPLOYMENT.md
+└─ README.md QUICK START / portals / env
+../ (astro workspace)          docs layer: openapi/*.yaml, API_DOCUMENTATION.md, scripts/ (postman/api-client gen)
+```

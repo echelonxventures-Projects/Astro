@@ -1,14 +1,22 @@
+<!--
+  HISTORY NOTE (documentation consolidation): PostgreSQL is now the only
+  supported database and the app is multi-tenant (hostname -> platform).
+  Steps below referencing SQLite, single-tenant flows, or `prisma migrate dev`
+  are outdated. See PROJECT_DOCUMENTATION.md section 11 for the current runbook
+  (migrate deploy + seeds, standalone build or Docker Compose).
+-->
+
 # 🚀 Deploy StarPath Astrology to OCI
 
 ## Your Production Details
 
-| Item | Value |
-|------|-------|
-| **Domain** | astro.echelonxventures.org |
-| **Hosting** | Oracle Cloud Infrastructure (Always Free) |
-| **Port** | 3000 (internal), 80/443 (public) |
-| **Database** | SQLite (`prod.db`) |
-| **AI Provider** | Ollama (free, local) or Anthropic (paid) |
+| Item            | Value                                     |
+| --------------- | ----------------------------------------- |
+| **Domain**      | astro.echelonxventures.org                |
+| **Hosting**     | Oracle Cloud Infrastructure (Always Free) |
+| **Port**        | 3000 (internal), 80/443 (public)          |
+| **Database**    | SQLite (`prod.db`)                        |
+| **AI Provider** | Ollama (free, local) or Anthropic (paid)  |
 
 ---
 
@@ -51,12 +59,12 @@ pm2 restart starpath-astrology
 
 ## Files Created for Deployment
 
-| File | Description |
-|------|-------------|
-| `deploy-oci.sh` | Automated deployment script |
-| `.env.production` | Production environment template |
-| `DEPLOYMENT_OCI.md` | Detailed deployment guide |
-| `DEPLOYMENT_CHECKLIST.md` | This quick checklist |
+| File                      | Description                     |
+| ------------------------- | ------------------------------- |
+| `deploy-oci.sh`           | Automated deployment script     |
+| `.env.production`         | Production environment template |
+| `DEPLOYMENT_OCI.md`       | Detailed deployment guide       |
+| `DEPLOYMENT_CHECKLIST.md` | This quick checklist            |
 
 ---
 
@@ -189,12 +197,12 @@ curl http://localhost:11434/api/generate -d '{"model":"llama3.2","prompt":"Hello
 
 ## Cost Estimate (OCI Always Free)
 
-| Resource | Cost |
-|----------|------|
-| Compute (VM.Standard.A1.Flex) | FREE |
-| Storage (200 GB) | FREE |
-| Bandwidth (10 TB/month) | FREE |
-| **Total** | **$0/month** |
+| Resource                      | Cost         |
+| ----------------------------- | ------------ |
+| Compute (VM.Standard.A1.Flex) | FREE         |
+| Storage (200 GB)              | FREE         |
+| Bandwidth (10 TB/month)       | FREE         |
+| **Total**                     | **$0/month** |
 
 ---
 

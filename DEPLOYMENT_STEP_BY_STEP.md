@@ -1,3 +1,11 @@
+<!--
+  HISTORY NOTE (documentation consolidation): PostgreSQL is now the only
+  supported database and the app is multi-tenant (hostname -> platform).
+  Steps below referencing SQLite, single-tenant flows, or `prisma migrate dev`
+  are outdated. See PROJECT_DOCUMENTATION.md section 11 for the current runbook
+  (migrate deploy + seeds, standalone build or Docker Compose).
+-->
+
 # 🚀 Deploy StarPath Astrology to OCI - Step by Step
 
 **Domain:** astro.echelonxventures.org
@@ -26,6 +34,7 @@
 The SSH key was created when you launched the instance:
 
 **Linux/Mac:**
+
 ```bash
 # Check common locations
 ls -la ~/.ssh/
@@ -33,11 +42,13 @@ ls -la ~/.ssh/
 ```
 
 **Windows (PowerShell):**
+
 ```powershell
 dir ~\.ssh\
 ```
 
 If you can't find it, you may need to:
+
 - Check your downloads folder for `.pem` files
 - Or create a new SSH key: `ssh-keygen -t ed25519 -f ~/.ssh/oci_key`
 - Then add it to OCI Console → Instance → "Add SSH Key"
@@ -116,6 +127,7 @@ chmod +x deploy-oci.sh
 ```
 
 The script will:
+
 - ✅ Install PostgreSQL
 - ✅ Install Node.js 20.x
 - ✅ Install PM2, Nginx, Certbot
@@ -136,6 +148,7 @@ The script will:
 ### Save This Information
 
 The script will display:
+
 - Database credentials (save these!)
 - Admin login details
 - Management commands
@@ -162,11 +175,13 @@ https://astro.echelonxventures.org
 ### 1. Change Admin Password
 
 **Option A: Via Web Interface**
+
 1. Login as admin
 2. Go to profile settings
 3. Change password
 
 **Option B: Via Database**
+
 ```bash
 # SSH into server
 ssh -i ~/.ssh/your_key ubuntu@YOUR_OCI_IP
@@ -248,6 +263,7 @@ sudo systemctl restart ollama
 ## Management Commands
 
 ### PM2 (Application)
+
 ```bash
 pm2 status
 pm2 logs starpath-astrology
@@ -256,6 +272,7 @@ pm2 stop starpath-astrology
 ```
 
 ### Nginx (Web Server)
+
 ```bash
 sudo systemctl status nginx
 sudo nginx -t
@@ -263,18 +280,21 @@ sudo systemctl restart nginx
 ```
 
 ### PostgreSQL (Database)
+
 ```bash
 sudo systemctl status postgresql
 sudo -u postgres psql
 ```
 
 ### Ollama (AI)
+
 ```bash
 sudo systemctl status ollama
 ollama list
 ```
 
 ### SSL Certificate
+
 ```bash
 sudo certbot certificates
 sudo certbot renew --dry-run
@@ -284,39 +304,39 @@ sudo certbot renew --dry-run
 
 ## What's Deployed
 
-| Component | Status |
-|-----------|--------|
-| Node.js 20.x | ✅ Installed |
-| PostgreSQL | ✅ Running on port 5432 |
-| PM2 | ✅ Managing app process |
-| Nginx | ✅ Reverse proxy + SSL |
-| Ollama | ✅ AI model loaded |
-| Let's Encrypt | ✅ SSL certificate |
-| Firewall | ✅ Ports 22, 80, 443 open |
+| Component     | Status                    |
+| ------------- | ------------------------- |
+| Node.js 20.x  | ✅ Installed              |
+| PostgreSQL    | ✅ Running on port 5432   |
+| PM2           | ✅ Managing app process   |
+| Nginx         | ✅ Reverse proxy + SSL    |
+| Ollama        | ✅ AI model loaded        |
+| Let's Encrypt | ✅ SSL certificate        |
+| Firewall      | ✅ Ports 22, 80, 443 open |
 
 ---
 
 ## Cost (OCI Always Free)
 
-| Resource | Monthly Cost |
-|----------|-------------|
-| Compute (Ampere A1) | $0 |
-| PostgreSQL (self-hosted) | $0 |
-| Storage (200 GB) | $0 |
-| Bandwidth (10 TB) | $0 |
-| **Total** | **$0.00** |
+| Resource                 | Monthly Cost |
+| ------------------------ | ------------ |
+| Compute (Ampere A1)      | $0           |
+| PostgreSQL (self-hosted) | $0           |
+| Storage (200 GB)         | $0           |
+| Bandwidth (10 TB)        | $0           |
+| **Total**                | **$0.00**    |
 
 ---
 
 ## Support Files Created
 
-| File | Location |
-|------|----------|
-| Deployment Script | `~/starpath-astrology-clone/deploy-oci.sh` |
-| Environment Config | `~/starpath-astrology-clone/.env` |
-| DB Credentials | `~/db_connection.txt` |
-| Deployment Info | `~/deployment-info.txt` |
-| This Guide | `DEPLOYMENT_STEP_BY_STEP.md` |
+| File               | Location                                   |
+| ------------------ | ------------------------------------------ |
+| Deployment Script  | `~/starpath-astrology-clone/deploy-oci.sh` |
+| Environment Config | `~/starpath-astrology-clone/.env`          |
+| DB Credentials     | `~/db_connection.txt`                      |
+| Deployment Info    | `~/deployment-info.txt`                    |
+| This Guide         | `DEPLOYMENT_STEP_BY_STEP.md`               |
 
 ---
 
