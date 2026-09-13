@@ -58,6 +58,7 @@ Next.js route handlers / RSC
 
 ### Hierarchy & master configuration (`src/lib/master-config.ts`)
 
+- Host resolution gates unverified `custom` domains; in-house subdomains auto-serve.
 - `Tenant.parentId` (null = root). A child can never exceed any ancestor.
 - `Tenant.settings.master` (`MasterConfig`): `allowedLanguages|allowedRegions|allowedGateways|allowedAiProviders`, `canCreateChildren`, `maxChildren`, `childDefaults`.
 - Effective = walk parent chain, intersect sets, AND rights, min caps (cycle-guarded, 10 levels).
@@ -120,7 +121,7 @@ Roles: `user`, `moderator`, `admin` (per tenant), `superadmin` (platform operato
 - **Astrology (user)**: `POST /api/astrology/chart|generate|chat|palmistry|face-reading`
 - **User data**: `GET/POST/DELETE /api/profiles` · `/api/memory` · `/api/devices` · `/api/gdpr/data`
 - **Billing**: `GET/POST /api/payment/checkout` · `/api/payment/methods` · `/api/payment/subscription` · webhooks `stripe|razorpay|paypal` (tenant via `?t=<slug>`) · legacy `POST /api/stripe/checkout|webhook`, `POST /api/stripe/portal`
-- **Tenant admin**: `GET/PUT /api/branding` · `POST /api/admin/branding/upload` · `GET/PATCH /api/admin/localization` · `GET/POST /api/admin/plans` · `GET/POST /api/settings` · `GET/POST /api/settings/plans` · `GET/POST /api/settings/providers` (CRUD+test)
+- **Tenant admin**: `GET/PUT /api/branding` · `POST /api/admin/branding/upload` · `GET/PATCH /api/admin/localization` · `GET/POST /api/admin/plans` · `GET/POST /api/settings` · `GET/POST /api/settings/plans` · `GET/POST /api/settings/providers` (CRUD+test) · `GET/PATCH /api/admin/localization`
 - **Super/parent admin**: `GET/POST /api/admin/tenants` · `PATCH/DELETE /api/admin/tenants/:id` · `GET/POST /api/admin/master-config`
 
 OpenAPI specs (docs repo, `/openapi/*.yaml`): auth, charts, readings, chat, payments, admin (incl. tenants/branding/localization/plans).

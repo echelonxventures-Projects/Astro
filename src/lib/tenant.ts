@@ -56,7 +56,16 @@ export class TenantNotActiveError extends Error {
 }
 
 const NONE = 'NONE'
-const hostCache = new LRUCache<string, string>({ max: 500, ttl: 60_000 })
+
+// One shared LRU per Node process. Next bundles route handlers and pages into
+// separate module graphs, so a module-scoped cache would not be invalidated
+// across them; globalThis guarantees a single instance per server process.
+const g = globalThis as unknown as { __starpathHostCache?: LRUCache<string, string> }
+if (!g.__starpathHostCache) {
+  g.__starpathHostCache = new LRUCache<string, string>({ max: 500, ttl: 60_000 })
+}
+const hostCache = g.__starpathHostCache
+const NEGATIVE_TTL = 10_000
 
 export function normalizeHost(input: string | null | undefined): string {
   if (!input) return ''
@@ -118,12 +127,19 @@ export async function resolveTenantByHost(
   const domain = await prisma.tenantDomain.findUnique({
     where: { host },
     select: {
+      type: true,
+      status: true,
       tenant: {
         select: { id: true, slug: true, name: true, status: true, branding: true, settings: true },
       },
     },
   })
   if (domain) {
+    // Tenant-owned domains serve traffic only after DNS verification
+    if (domain.type === 'custom' && domain.status !== 'verified') {
+      hostCache.set(host, NONE)
+      return null
+    }
     row = domain.tenant as ResolvedRow
   }
 
@@ -155,7 +171,7 @@ export async function resolveTenantByHost(
   }
 
   if (!row) {
-    hostCache.set(host, NONE)
+    hostCache.set(host, NONE, { ttl: NEGATIVE_TTL })
     return null
   }
   hostCache.set(host, row.id)
@@ -231,6 +247,73 @@ export async function getBrandName(): Promise<string> {
 }
 
 const DEFAULT_BRANDING_FALLBACK = 'Astrology Platform'
+
+// Slugs that can never be claimed as in-house subdomains
+export const RESERVED_SLUGS = [
+  'www',
+  'api',
+  'app',
+  'admin',
+  'dashboard',
+  'mail',
+  'static',
+  'assets',
+  'cdn',
+  'dev',
+  'staging',
+  'stg',
+  'prod',
+  'test',
+  'root',
+  'support',
+  'docs',
+  'blog',
+  'starpath',
+  'luna',
+  'stellar',
+  'e2e',
+]
+
+export const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/
+
+export function validateSlug(slug: string): string | null {
+  if (!SLUG_RE.test(slug))
+    return 'Slug must be 3-40 chars: lowercase letters, digits, hyphens (no leading/trailing hyphen)'
+  if (RESERVED_SLUGS.includes(slug)) return `Slug "${slug}" is reserved`
+  return null
+}
+
+export function normalizeDomainHost(raw: string): string {
+  let host = String(raw ?? '')
+    .trim()
+    .toLowerCase()
+  if (host.includes('://')) {
+    try {
+      host = new URL(host).host
+    } catch {
+      /* keep */
+    }
+  }
+  return host.replace(/\.$/, '').replace(/:\d+$/, '')
+}
+
+/** Absolute base URL for the current request's tenant host (scheme-aware). */
+export function tenantBaseUrlFromHeaders(h: { get(name: string): string | null }): string {
+  const host = h.get('host')
+  if (!host) return (process.env.NEXTAUTH_URL ?? 'http://localhost:3000').replace(/\/$/, '')
+  const fwdProto = h.get('x-forwarded-proto')
+  const proto =
+    fwdProto || ((process.env.NEXTAUTH_URL ?? '').startsWith('https') ? 'https' : 'http')
+  return `${proto}://${host}`
+}
+
+export async function getTenantBaseUrl(): Promise<string> {
+  try {
+    return tenantBaseUrlFromHeaders(await headers())
+  } catch {
+    return (process.env.NEXTAUTH_URL ?? 'http://localhost:3000').replace(/\/$/, '')
+  }
+}
 
 export function invalidateTenantHostCache(): void {
   hostCache.clear()

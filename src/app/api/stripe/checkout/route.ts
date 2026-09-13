@@ -38,8 +38,10 @@ export async function POST(_req: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const successUrl = `${process.env.NEXTAUTH_URL}/subscription?success=true`
-    const cancelUrl = `${process.env.NEXTAUTH_URL}/pricing?canceled=true`
+    const { getTenantBaseUrl } = await import('@/lib/tenant')
+    const tenantBase = await getTenantBaseUrl()
+    const successUrl = `${tenantBase}/subscription?success=true`
+    const cancelUrl = `${tenantBase}/pricing?canceled=true`
 
     // If user already has a customer ID, use it
     if (user.stripeCustomerId) {
@@ -94,7 +96,8 @@ export async function GET(_req: NextRequest) {
       return NextResponse.json({ error: 'No subscription found' }, { status: 404 })
     }
 
-    const returnUrl = `${process.env.NEXTAUTH_URL}/subscription`
+    const { getTenantBaseUrl } = await import('@/lib/tenant')
+    const returnUrl = `${await getTenantBaseUrl()}/subscription`
 
     const portalSession = await createPortalSession({
       customerId: user.stripeCustomerId,

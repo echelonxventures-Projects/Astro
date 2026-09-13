@@ -17,12 +17,20 @@ auto-registers `<slug>.<TENANT_ROOT_DOMAIN>` or `<slug>.localhost` (dev).
 
 Propagation check: `dig +short api.example.com` before the next steps.
 
-## 3. Attach the domain to the tenant
+## 3. Attach the domain to the tenant (with verification)
 
-Superadmin → `/admin/tenants` → the platform → **Config** modal, add to
-`domains` (or `PATCH /api/admin/tenants/:id` with `{"domains":["astro.example.com","www.astro.example.com"]}`).
-Rows land in `TenantDomain`; host resolution picks them up within the 60s LRU TTL
-(instant on config writes — the cache is invalidated).
+Tenant admin (or delegated parent / superadmin): `POST /api/admin/tenants/<id>/domains`
+with `{"host":"astro.example.com"}` — creates a `custom/pending` row and returns the
+TXT challenge. Publish it at the customer's DNS provider:
+
+```
+_starpath-verify.astro.example.com.  TXT  "vp_xxxxxxxx…"
+```
+
+then `POST /api/admin/tenants/<id>/domains/<domainId>` (no body) to run the DNS check.
+Until verified the host is **not served** (domain-squatting protection). In-house
+subdomains (`<slug>.<TENANT_ROOT_DOMAIN>` / `<slug>.localhost` in dev) are automatic.
+Force-verify (`{"force":true}`) is superadmin-only, for controlled migrations.
 
 ## 4. TLS termination
 

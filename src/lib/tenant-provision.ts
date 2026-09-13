@@ -5,6 +5,7 @@
  * and the seed. Everything lives in the DB and is editable afterwards.
  */
 
+import { randomBytes } from 'crypto'
 import bcrypt from 'bcryptjs'
 import { ensureDefaultCatalog } from './ai/catalog'
 import { mergeBranding, type BrandConfigInput } from './branding'
@@ -16,7 +17,7 @@ import {
 } from './master-config'
 import { initializeDefaultPlans } from './plans'
 import type { TenantSettings } from './tenant'
-import { invalidateTenantHostCache } from './tenant'
+import { invalidateTenantHostCache, normalizeDomainHost, validateSlug } from './tenant'
 import { DEFAULT_REGION_TEMPLATE, type RegionTemplate } from './tenant-defaults'
 import { prisma } from '@/lib/db'
 
@@ -85,6 +86,14 @@ const GATEWAY_LABELS: Record<string, { name: string; envKeys: Record<string, str
   },
 }
 
+export function classifyDomainHost(host: string): {
+  type: 'in_house' | 'custom'
+  status: 'verified' | 'pending'
+} {
+  const isLocal = host === 'localhost' || host === '127.0.0.1' || host.endsWith('.localhost')
+  return isLocal ? { type: 'in_house', status: 'verified' } : { type: 'custom', status: 'pending' }
+}
+
 export async function provisionTenant(opts: ProvisionOptions): Promise<ProvisionResult> {
   // Hierarchy: children are bound to a parent and restricted by its effective master
   const regions =
@@ -116,14 +125,30 @@ export async function provisionTenant(opts: ProvisionOptions): Promise<Provision
     throw new Error(violations.join('; '))
   }
 
-  const hosts = new Set<string>()
-  const primary = `${opts.slug}.localhost`
-  hosts.add(primary)
-  for (const h of opts.domains ?? []) {
-    const host = String(h).trim().toLowerCase().replace(/:\d+$/, '')
-    if (host) hosts.add(host)
+  const slugProblem = validateSlug(opts.slug)
+  if (slugProblem) throw new Error(slugProblem)
+
+  const rootHost = normalizeDomainHost(process.env.TENANT_ROOT_DOMAIN ?? '') || 'localhost'
+  const isLocalhost = (host: string): boolean =>
+    host === 'localhost' || host === '127.0.0.1' || host.endsWith('.localhost')
+  const hosts = new Map<string, { type: string; status: string; token: string | null }>()
+  const primary = `${opts.slug}.${rootHost}`
+  hosts.set(primary, { type: 'in_house', status: 'verified', token: null })
+  if (rootHost !== 'localhost') {
+    // dev-convenience alias so tooling/tests can use <slug>.localhost anywhere
+    hosts.set(`${opts.slug}.localhost`, { type: 'in_house', status: 'verified', token: null })
   }
-  for (const host of hosts) {
+  for (const h of opts.domains ?? []) {
+    const host = normalizeDomainHost(String(h))
+    if (!host || hosts.has(host)) continue
+    hosts.set(
+      host,
+      isLocalhost(host)
+        ? { type: 'in_house', status: 'verified', token: null }
+        : { type: 'custom', status: 'pending', token: `vp_${randomBytes(16).toString('hex')}` }
+    )
+  }
+  for (const host of hosts.keys()) {
     const taken = await prisma.tenantDomain.findUnique({ where: { host } })
     if (taken) throw new Error(`Domain already in use: ${host}`)
   }
@@ -139,7 +164,16 @@ export async function provisionTenant(opts: ProvisionOptions): Promise<Provision
       branding: opts.branding ? (mergeBranding(opts.branding) as never) : undefined,
       settings: { ...(opts.master ? { ...settings, master: opts.master } : settings) } as never,
       parentId: opts.parentId ?? null,
-      domains: { create: Array.from(hosts).map((host, i) => ({ host, isPrimary: i === 0 })) },
+      domains: {
+        create: Array.from(hosts.entries()).map(([host, meta], i) => ({
+          host,
+          isPrimary: i === 0,
+          type: meta.type,
+          status: meta.status,
+          verificationToken: meta.token,
+          verifiedAt: meta.status === 'verified' ? new Date() : null,
+        })),
+      },
     },
   })
 

@@ -123,11 +123,21 @@ async function seedTenant(t: TenantSeed, passwordHash: string) {
   })
 
   for (const [i, host] of t.domains.entries()) {
+    const local = host === 'localhost' || host === '127.0.0.1' || host.endsWith('.localhost')
     await prisma.tenantDomain.upsert({
       where: { host },
-      update: { tenantId: t.id },
-      create: { id: `domain_${t.slug}_${i}`, host, tenantId: t.id, isPrimary: i === 0 },
+      update: { tenantId: t.id, type: 'in_house', status: 'verified' },
+      create: {
+        id: `domain_${t.slug}_${i}`,
+        host,
+        tenantId: t.id,
+        isPrimary: i === 0,
+        type: 'in_house',
+        status: 'verified',
+        verifiedAt: new Date(),
+      },
     })
+    void local
   }
 
   // Same email across tenants on purpose: demonstrates per-tenant uniqueness

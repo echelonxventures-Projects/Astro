@@ -32,14 +32,35 @@ Enforcement:
 Portals: **`/admin/master`** (Master Configuration: tree + grant editor, visible
 to superadmins and delegated platform admins), wizard at `/admin/tenants/new`.
 
+## Domains: in-house vs tenant-owned
+
+Every tenant is reachable through **two ownership classes**:
+
+| Class                | Example                                             | Creation                                                   | Serving condition           |
+| -------------------- | --------------------------------------------------- | ---------------------------------------------------------- | --------------------------- |
+| `in_house` subdomain | `acme.<TENANT_ROOT_DOMAIN>` (dev: `acme.localhost`) | automatic at provisioning                                  | always (we own the DNS)     |
+| `custom` domain      | `astro.customer.com`                                | wizard `domains`, or `POST /api/admin/tenants/:id/domains` | **only after verification** |
+
+Custom domains attach as `status: pending` with a `verificationToken`.
+Verification (`POST /api/admin/tenants/:id/domains/:domainId`) requires a DNS TXT
+record `_starpath-verify.<host> = <token>`; superadmins may `force` for edge cases.
+The host resolver refuses pending custom hosts (isolation page), and rows carry
+`type/status/verifiedAt` for UI display. Management: GET/POST/DELETE under
+`/api/admin/tenants/:id/domains[/:domainId]` (self-admin, parent with rights, or superadmin).
+Reserved slugs (`www`, `api`, `admin`, existing tenants, …) are blocked by
+`validateSlug` in provisioning and the create API.
+
+Payment redirects and OG metadata use the **request tenant's base URL**
+(`getTenantBaseUrl()`), so checkout flows never bounce customers off their own domain.
+
 ## Core concepts
 
-| Concept          | Model                                     | Notes                                                                                                                                   |
-| ---------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Tenant           | `Tenant`                                  | One white-label platform. `branding` (JSON `BrandConfig`) + `settings` (JSON: OAuth keys, email sender, feature flags) live on the row. |
-| Domain           | `TenantDomain`                            | Any hostname owned by a tenant (vanity domains, subdomains). `isPrimary` marks the canonical one.                                       |
-| Scoping          | `tenantId` on every customer-facing table | Users, charts, readings, chats, subscriptions, payments, plans, gateways, AI configs, app settings.                                     |
-| Email uniqueness | `@@unique([tenantId, email])`             | The same email can exist on multiple tenants.                                                                                           |
+| Concept          | Model                                     | Notes                                                                                                                                                                               |
+| ---------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tenant           | `Tenant`                                  | One white-label platform. `branding` (JSON `BrandConfig`) + `settings` (JSON: OAuth keys, email sender, feature flags) live on the row.                                             |
+| Domain           | `TenantDomain`                            | Ownership class `in_house` (auto, ours) / `custom` (tenant-owned, must pass `_starpath-verify.<host>` TXT challenge); status pending→verified gates serving; `isPrimary` canonical. |
+| Scoping          | `tenantId` on every customer-facing table | Users, charts, readings, chats, subscriptions, payments, plans, gateways, AI configs, app settings.                                                                                 |
+| Email uniqueness | `@@unique([tenantId, email])`             | The same email can exist on multiple tenants.                                                                                                                                       |
 
 ## Host → tenant resolution
 
