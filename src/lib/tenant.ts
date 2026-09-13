@@ -137,7 +137,7 @@ export async function resolveTenantByHost(
   if (domain) {
     // Tenant-owned domains serve traffic only after DNS verification
     if (domain.type === 'custom' && domain.status !== 'verified') {
-      hostCache.set(host, NONE)
+      hostCache.set(host, NONE, { ttl: NEGATIVE_TTL })
       return null
     }
     row = domain.tenant as ResolvedRow
@@ -171,10 +171,10 @@ export async function resolveTenantByHost(
   }
 
   if (!row) {
-    hostCache.set(host, NONE, { ttl: NEGATIVE_TTL })
+    hostCache.set(host, NONE, { ttl: 30_000 })
     return null
   }
-  hostCache.set(host, row.id)
+  hostCache.set(host, row.id, { ttl: 60_000 })
   return toContext(row)
 }
 

@@ -1,0 +1,25 @@
+# Edge proxy with automatic HTTPS for every tenant domain (in-house + verified custom).
+# Usage (on the deploy host):
+#   CADDY_ASK_SECRET=... CADDY_ACME_EMAIL=ops@example.com \
+#   docker compose -f docker-compose.caddy.yml up -d
+services:
+  caddy:
+    image: caddy:2
+    container_name: starpath-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      CADDY_ACME_EMAIL: ${CADDY_ACME_EMAIL:?set CADDY_ACME_EMAIL}
+      CADDY_ASK_URL: http://host.docker.internal:${APP_PORT:-3001}/api/domains/challenge?key=${CADDY_ASK_SECRET:?set CADDY_ASK_SECRET}
+      UPSTREAM_URL: host.docker.internal:${APP_PORT:-3001}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+volumes:
+  caddy_data:
+  caddy_config:
