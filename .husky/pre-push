@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+# Free-plan stand-in for GitHub branch protection on private repos:
+# direct pushes to main are blocked; use scripts/ship.sh (PR + green CI + merge).
+branch=$(git symbolic-ref --quiet --short HEAD || echo "")
+remote_cmd=$(git rev-parse --abbrev-ref "@{upstream}" 2>/dev/null || echo "")
+
+if [ "$branch" = "main" ] && [ "${ALLOW_DIRECT_MAIN:-0}" != "1" ]; then
+  echo "✋ Direct push to main is blocked (branch protection stand-in)."
+  echo "   Ship via PR + CI:   scripts/ship.sh \"commit: message\"   (see CONTRIBUTING.md)"
+  echo "   Emergency override: ALLOW_DIRECT_MAIN=1 git push"
+  exit 1
+fi
+exit 0

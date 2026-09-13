@@ -13,6 +13,19 @@ Thank you for your interest in contributing to StarPath Astrology.
 
 ## Development Workflow
 
+## Shipping Changes to main
+
+This repo is private on the free plan, so GitHub branch protection is unavailable.
+Enforcement is local + CI based:
+
+1. Do **not** push to `main` directly — the `.husky/pre-push` hook blocks it
+   (emergency override: `ALLOW_DIRECT_MAIN=1`).
+2. Ship with `scripts/ship.sh "feat: message"`: it moves your work to a branch,
+   pushes, opens a PR, **watches the CI checks (lint / type-check / unit 173 /
+   e2e 50)** and squash-merges only when everything is green.
+3. If you upgrade the org to GitHub Pro, enable real protection with:
+   `gh api -X PUT repos/echelonxventures-Projects/Astro/branches/main/protection -f required_status_checks[strict]=true -f required_status_checks[contexts][]=Lint -f required_status_checks[contexts][]="Type Check" -f required_status_checks[contexts][]="Unit Tests" -f required_status_checks[contexts][]="E2E Tests" -F required_pull_request_reviews=null -F enforce_admins=true -f restrictions=null`
+
 ### Branch Naming
 
 - Feature branches: `feature/description`
