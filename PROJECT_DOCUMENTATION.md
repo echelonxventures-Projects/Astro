@@ -161,12 +161,18 @@ Docker alternatives: `docker-compose.yml` (full prod stack), `docker-compose.dev
 
 GitHub Actions (root repo + app repo): build/lint/test, PR checks, security scan, dependabot, cd-staging/cd-production. Husky pre-commit → lint-staged (eslint --fix + prettier).
 
-## 12. Quality status (last full run)
+## 12. Branch workflow
+
+PR flow enforced locally (free-plan limitation): `.husky/pre-push` blocks direct
+`main` pushes; `scripts/ship.sh` automates branch → PR → watch CI → squash-merge.
+Full command to enable native protection after a Pro upgrade is in CONTRIBUTING.md.
+
+## 13. Quality status (last full run)
 
 - `tsc --noEmit`: 0 errors · `eslint`: 0 errors (style warnings only) · Vitest: **167/167** · Production build + standalone boot: ✓
 - Live matrix verified in headless Chromium: three-level hierarchy, per-tenant brand/theme/language/currency, over-grant rejection, session guards, provider CRUD, plan rename propagation, webhook tenant param.
 
-## 13. Known limitations / roadmap
+## 14. Known limitations / roadmap
 
 1. **Translation content**: language _selection_ is per tenant; dictionaries beyond en (+partial es/fr/de/hi) need content work.
 2. Legacy parallel payment endpoints (`/api/stripe/*`) retained for backward compat; consolidate onto `/api/payment/*` when clients migrate.
@@ -175,7 +181,7 @@ GitHub Actions (root repo + app repo): build/lint/test, PR checks, security scan
 5. Per-tenant OAuth requires registering callback URLs per domain at the provider.
 6. E2E Playwright suite exists but predates tenancy — update specs to cover wizard/tenants.
 
-## 14. Repo map
+## 15. Repo map
 
 ```
 StarPath-Astrology/            the application (git repo, PR: feat/multi-tenancy -> main #1)
