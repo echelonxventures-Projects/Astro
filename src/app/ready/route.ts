@@ -36,7 +36,7 @@ async function checkMigrations(): Promise<{
     const pendingMigrations = (await prisma.$queryRaw`
       SELECT COUNT(*) as count
       FROM _prisma_migrations
-      WHERE finished_at IS NULL
+      WHERE finished_at IS NULL AND rolled_back_at IS NULL
     `) as Array<{ count: number }>
 
     const pending = Number(pendingMigrations[0]?.count || 0)

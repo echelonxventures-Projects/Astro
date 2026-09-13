@@ -1,6 +1,7 @@
 'use client'
 
 import { Cog, ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react'
+import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import AdminHeader from '@/components/layout/AdminHeader'
 import { logger } from '@/lib/logger'
@@ -193,6 +194,15 @@ export default function TenantsClient(): React.ReactElement {
         <p className="text-gray-400 mb-8">
           Each tenant is an independent white-label platform served by this deployment.
         </p>
+
+        <div className="mb-8">
+          <Link
+            href="/admin/tenants/new"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white font-semibold text-sm transition"
+          >
+            <Plus className="w-4 h-4" /> New Platform (setup wizard)
+          </Link>
+        </div>
 
         {error && (
           <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-200">

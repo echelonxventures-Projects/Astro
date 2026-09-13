@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { BrandLogo, BrandName, BrandTagline } from '@/components/BrandProvider'
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 
 export default function HomePage() {
   return (
@@ -51,6 +52,7 @@ export default function HomePage() {
               </Link>
             </div>
             <div className="flex items-center gap-4">
+              <LanguageSwitcher compact />
               <Link href="/login" className="text-gray-300 hover:text-white transition">
                 Login
               </Link>

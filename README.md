@@ -119,6 +119,14 @@ npx prisma migrate deploy
 
 ## Environment Variables Reference
 
+Multi-tenant additions (see docs/MULTI_TENANCY.md):
+
+| Var                   | Purpose                                                                          |
+| --------------------- | -------------------------------------------------------------------------------- |
+| `TENANT_ROOT_DOMAIN`  | Subdomain root mapped to tenant slugs (e.g. `starpath.app` -> acme.starpath.app) |
+| `NEXTAUTH_TRUST_HOST` | `true` - required: browsers sign in on arbitrary tenant hostnames                |
+| `DIRECT_URL`          | Prisma migration/admin connection (schema stays `postgresql://...`)              |
+
 See `.env.example` for all available options:
 
 | Variable                  | Description                                           | Required          |

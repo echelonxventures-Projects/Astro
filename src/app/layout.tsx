@@ -4,6 +4,7 @@ import { headers } from 'next/headers'
 import './globals.css'
 import AuthProvider from '@/components/AuthProvider'
 import { BrandProvider } from '@/components/BrandProvider'
+import { LocaleProvider } from '@/components/LocaleProvider'
 import MonitoringProvider from '@/components/MonitoringProvider'
 import { brandToCssRules, DEFAULT_BRANDING, type BrandConfig } from '@/lib/branding'
 import { getTenantContext, TenantNotActiveError } from '@/lib/tenant'
@@ -18,19 +19,35 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 })
 
-async function resolveBrand(): Promise<{
+interface ResolvedLayout {
   brand: BrandConfig
   ok: boolean
   host: string
   suspended: boolean
-}> {
+  locales: { supportedLanguages: string[]; defaultLanguage: string; currencyRegion: string }
+}
+
+const FALLBACK_LOCALES = { supportedLanguages: ['en'], defaultLanguage: 'en', currencyRegion: 'us' }
+
+async function resolveBrand(): Promise<ResolvedLayout> {
   const host = (await headers()).get('host') ?? 'localhost'
   try {
     const ctx = await getTenantContext()
-    return { brand: ctx.branding, ok: true, host, suspended: false }
+    return {
+      brand: ctx.branding,
+      ok: true,
+      host,
+      suspended: false,
+      locales: {
+        supportedLanguages:
+          ctx.settings.locales?.supportedLanguages ?? FALLBACK_LOCALES.supportedLanguages,
+        defaultLanguage: ctx.settings.locales?.defaultLanguage ?? FALLBACK_LOCALES.defaultLanguage,
+        currencyRegion: ctx.settings.locales?.currencyRegion ?? FALLBACK_LOCALES.currencyRegion,
+      },
+    }
   } catch (error) {
     const suspended = error instanceof TenantNotActiveError
-    return { brand: DEFAULT_BRANDING, ok: false, host, suspended }
+    return { brand: DEFAULT_BRANDING, ok: false, host, suspended, locales: FALLBACK_LOCALES }
   }
 }
 
@@ -110,17 +127,19 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>): Promise<React.ReactElement> {
-  const { brand, ok, host, suspended } = await resolveBrand()
+  const { brand, ok, host, suspended, locales } = await resolveBrand()
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-gradient-to-b from-[var(--background)] via-[var(--muted)] to-[var(--background)] text-[var(--foreground)]">
         <style id="tenant-theme" dangerouslySetInnerHTML={{ __html: brandToCssRules(brand) }} />
         {ok ? (
-          <BrandProvider brand={brand}>
-            <AuthProvider>
-              <MonitoringProvider>{children}</MonitoringProvider>
-            </AuthProvider>
-          </BrandProvider>
+          <LocaleProvider config={locales}>
+            <BrandProvider brand={brand}>
+              <AuthProvider>
+                <MonitoringProvider>{children}</MonitoringProvider>
+              </AuthProvider>
+            </BrandProvider>
+          </LocaleProvider>
         ) : (
           <UnknownTenant host={host} suspended={suspended} />
         )}

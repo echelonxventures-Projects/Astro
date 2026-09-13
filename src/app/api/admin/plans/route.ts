@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (type === 'regions') {
-      const regions = await getActiveRegions()
+      const regions = await getActiveRegions(tenantId)
       return NextResponse.json({ regions })
     }
 
@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
       }
 
       case 'createRegion': {
-        const region = await createRegion(data)
+        const region = await createRegion({ ...data, tenantId })
         return NextResponse.json(region)
       }
 

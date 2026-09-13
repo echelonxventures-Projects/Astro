@@ -27,8 +27,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (type === 'regions') {
-      const { prisma } = await import('@/lib/db')
-      const regions = await prisma.region.findMany({
+      const regions = await db.region.findMany({
         where: { isActive: true },
         orderBy: { sortOrder: 'asc' },
       })

@@ -58,6 +58,7 @@ interface TenantSeed {
   branding: object | null
   domains: string[]
   adminName: string
+  locales: { supportedLanguages: string[]; defaultLanguage: string; currencyRegion: string }
 }
 
 const TENANTS: TenantSeed[] = [
@@ -69,6 +70,11 @@ const TENANTS: TenantSeed[] = [
     branding: null,
     domains: ['localhost', '127.0.0.1', 'starpath.localhost'],
     adminName: 'Admin User',
+    locales: {
+      supportedLanguages: ['en', 'es', 'fr', 'de', 'hi'],
+      defaultLanguage: 'en',
+      currencyRegion: 'us',
+    },
   },
   {
     id: 'tenant_luna_demo',
@@ -78,6 +84,7 @@ const TENANTS: TenantSeed[] = [
     branding: LUNA_BRANDING,
     domains: ['luna.localhost'],
     adminName: 'Luna Admin',
+    locales: { supportedLanguages: ['en', 'hi'], defaultLanguage: 'en', currencyRegion: 'in' },
   },
 ]
 

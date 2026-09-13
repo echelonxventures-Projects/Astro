@@ -23,6 +23,7 @@ import { prisma } from './db'
 export const DEFAULT_TENANT_ID = 'tenant_starpath_default'
 
 export interface TenantSettings {
+  locales?: { supportedLanguages?: string[]; defaultLanguage?: string; currencyRegion?: string }
   oauth?: Record<string, { clientId?: string; clientSecret?: string }>
   emailFrom?: string
   supportEmail?: string
@@ -252,6 +253,8 @@ const TENANT_SCOPED_MODELS = new Set<string>([
   'AstroProfile',
   'AppSettings',
   'AIProviderConfig',
+  'AIProviderCatalog',
+  'Region',
   'SubscriptionPlan',
   'PlanFeature',
   'PaymentGateway',

@@ -169,9 +169,9 @@ export async function getPlanWithRegionalPricing(
 /**
  * Get all active regions
  */
-export async function getActiveRegions(): Promise<RegionConfig[]> {
+export async function getActiveRegions(tenantId: string): Promise<RegionConfig[]> {
   const regions = await prisma.region.findMany({
-    where: { isActive: true },
+    where: { tenantId, isActive: true },
     orderBy: { sortOrder: 'asc' },
   })
 
@@ -184,14 +184,14 @@ export async function getActiveRegions(): Promise<RegionConfig[]> {
 /**
  * Get default region
  */
-export async function getDefaultRegion(): Promise<RegionConfig | null> {
+export async function getDefaultRegion(tenantId: string): Promise<RegionConfig | null> {
   const region = await prisma.region.findFirst({
-    where: { isActive: true, isDefault: true },
+    where: { tenantId, isActive: true, isDefault: true },
   })
 
   if (!region) {
     // Fallback to first active region
-    const regions = await getActiveRegions()
+    const regions = await getActiveRegions(tenantId)
     return regions[0] || null
   }
 
@@ -204,9 +204,9 @@ export async function getDefaultRegion(): Promise<RegionConfig | null> {
 /**
  * Get region by key
  */
-export async function getRegionByKey(key: string): Promise<RegionConfig | null> {
+export async function getRegionByKey(tenantId: string, key: string): Promise<RegionConfig | null> {
   const region = await prisma.region.findUnique({
-    where: { key },
+    where: { tenantId_key: { tenantId, key } },
   })
 
   if (!region) return null
@@ -438,6 +438,7 @@ export async function deleteFeature(id: string): Promise<void> {
  * Create a new region
  */
 export async function createRegion(data: {
+  tenantId: string
   name: string
   key: string
   code: string
@@ -512,9 +513,12 @@ export async function deleteRegion(id: string): Promise<void> {
 /**
  * Get a region by key with parsed currencies
  */
-export async function getRegionByKeyWithCurrencies(key: string): Promise<RegionConfig | null> {
+export async function getRegionByKeyWithCurrencies(
+  tenantId: string,
+  key: string
+): Promise<RegionConfig | null> {
   const region = await prisma.region.findUnique({
-    where: { key },
+    where: { tenantId_key: { tenantId, key } },
   })
 
   if (!region) return null
@@ -557,79 +561,82 @@ export async function setFeatureAccess(
 /**
  * Initialize default subscription plans and features
  */
-export async function initializeDefaultPlans(tenantId: string): Promise<void> {
+export async function initializeDefaultPlans(tenantId: string, seedRegions = true): Promise<void> {
   // Create default regions first
-  const defaultRegions = [
-    {
-      key: 'us',
-      name: 'United States',
-      code: 'US',
-      currency: 'usd',
-      currencies: [{ code: 'usd', symbol: '$', name: 'US Dollar' }],
-      isDefault: true,
-      sortOrder: 0,
-      priceMultiplier: 1.0,
-    },
-    {
-      key: 'eu',
-      name: 'Europe',
-      code: 'EU',
-      currency: 'eur',
-      currencies: [
-        { code: 'eur', symbol: '€', name: 'Euro' },
-        { code: 'gbp', symbol: '£', name: 'British Pound' },
-      ],
-      isDefault: false,
-      sortOrder: 1,
-      priceMultiplier: 0.92,
-    },
-    {
-      key: 'in',
-      name: 'India',
-      code: 'IN',
-      currency: 'inr',
-      currencies: [{ code: 'inr', symbol: '₹', name: 'Indian Rupee' }],
-      isDefault: false,
-      sortOrder: 2,
-      priceMultiplier: 83.5,
-    },
-    {
-      key: 'uk',
-      name: 'United Kingdom',
-      code: 'GB',
-      currency: 'gbp',
-      currencies: [{ code: 'gbp', symbol: '£', name: 'British Pound' }],
-      isDefault: false,
-      sortOrder: 3,
-      priceMultiplier: 0.79,
-    },
-    {
-      key: 'global',
-      name: 'Global',
-      code: 'GLOBAL',
-      currency: 'usd',
-      currencies: [
-        { code: 'usd', symbol: '$', name: 'US Dollar' },
-        { code: 'eur', symbol: '€', name: 'Euro' },
-        { code: 'gbp', symbol: '£', name: 'British Pound' },
-        { code: 'inr', symbol: '₹', name: 'Indian Rupee' },
-        { code: 'aud', symbol: 'A$', name: 'Australian Dollar' },
-        { code: 'cad', symbol: 'C$', name: 'Canadian Dollar' },
-      ],
-      isDefault: false,
-      sortOrder: 4,
-      priceMultiplier: 1.0,
-    },
-  ]
+  const defaultRegions = seedRegions
+    ? [
+        {
+          key: 'us',
+          name: 'United States',
+          code: 'US',
+          currency: 'usd',
+          currencies: [{ code: 'usd', symbol: '$', name: 'US Dollar' }],
+          isDefault: true,
+          sortOrder: 0,
+          priceMultiplier: 1.0,
+        },
+        {
+          key: 'eu',
+          name: 'Europe',
+          code: 'EU',
+          currency: 'eur',
+          currencies: [
+            { code: 'eur', symbol: '€', name: 'Euro' },
+            { code: 'gbp', symbol: '£', name: 'British Pound' },
+          ],
+          isDefault: false,
+          sortOrder: 1,
+          priceMultiplier: 0.92,
+        },
+        {
+          key: 'in',
+          name: 'India',
+          code: 'IN',
+          currency: 'inr',
+          currencies: [{ code: 'inr', symbol: '₹', name: 'Indian Rupee' }],
+          isDefault: false,
+          sortOrder: 2,
+          priceMultiplier: 83.5,
+        },
+        {
+          key: 'uk',
+          name: 'United Kingdom',
+          code: 'GB',
+          currency: 'gbp',
+          currencies: [{ code: 'gbp', symbol: '£', name: 'British Pound' }],
+          isDefault: false,
+          sortOrder: 3,
+          priceMultiplier: 0.79,
+        },
+        {
+          key: 'global',
+          name: 'Global',
+          code: 'GLOBAL',
+          currency: 'usd',
+          currencies: [
+            { code: 'usd', symbol: '$', name: 'US Dollar' },
+            { code: 'eur', symbol: '€', name: 'Euro' },
+            { code: 'gbp', symbol: '£', name: 'British Pound' },
+            { code: 'inr', symbol: '₹', name: 'Indian Rupee' },
+            { code: 'aud', symbol: 'A$', name: 'Australian Dollar' },
+            { code: 'cad', symbol: 'C$', name: 'Canadian Dollar' },
+          ],
+          isDefault: false,
+          sortOrder: 4,
+          priceMultiplier: 1.0,
+        },
+      ]
+    : []
 
   for (const regionData of defaultRegions) {
     const existing = await prisma.region.findUnique({
-      where: { key: regionData.key },
+      where: { tenantId_key: { tenantId, key: regionData.key } },
     })
 
     if (!existing) {
       await prisma.region.create({
         data: {
+          tenantId,
           ...regionData,
           currencies: JSON.stringify(regionData.currencies),
         },

@@ -49,6 +49,7 @@ model Tenant {
   subscriptionPlans     SubscriptionPlan[]
   planFeatures          PlanFeature[]
   paymentGateways       PaymentGateway[]
+  regions               Region[]
 
   @@index([status])
 }
@@ -373,21 +374,27 @@ model AIProviderCatalog {
   @@index([enabled])
 }
 
-// Configurable regions for multi-region support (global reference data)
+// Configurable regions/currencies - per tenant (each platform picks its markets)
 model Region {
   id          String   @id @default(cuid())
+  tenantId    String
   name        String   // Display name (e.g., "United States", "Europe", "India")
-  key         String   @unique // Internal key (e.g., "us", "eu", "in")
-  code        String   @unique // ISO country code or region code
+  key         String   // Internal key (e.g., "us", "eu", "in") - unique per tenant
+  code        String   // ISO country code or region code - unique per tenant
   currency    String   @default("usd") // Default currency for this region
   currencies  String?  // JSON array of supported currencies [{code, symbol, name}]
   isActive    Boolean  @default(true)
   isDefault   Boolean  @default(false)
   sortOrder   Int      @default(0)
   priceMultiplier Float    @default(1.0) // For regional pricing adjustments
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@unique([tenantId, key])
+  @@unique([tenantId, code])
+  @@index([tenantId])
   @@index([key])
   @@index([code])
   @@index([isActive])

@@ -74,18 +74,32 @@ prices, features, feature-access matrix and regional overrides. All UI labels
 Razorpay/PayPal brand_name) resolve names/prices from these rows at request time.
 Public read endpoint: `GET /api/plans` (tenant-scoped, no auth); admin CRUD: `/api/admin/plans`.
 
+## Languages & markets per tenant
+
+- `Tenant.settings.locales`: {supportedLanguages, defaultLanguage, currencyRegion}
+- Layout wraps the app in `LocaleProvider` -> `LanguageSwitcher` (mounted on landing +
+  dashboard nav) only offers the tenant's languages; sets `<html lang>`/dir.
+- Markets: `Region` is per-tenant (key/code unique within a tenant) with currency +
+  priceMultiplier; `GET /api/plans?type=regions` is tenant-scoped; the default market
+  sets pricing-page currency for new visitors.
+- Caveat: the shipped translation dictionary covers navigation/auth strings for
+  es/fr/de/hi; untranslated UI remains English until added to `src/lib/i18n.ts`.
+
 ## Admin portals
 
-| Portal                      | Who          | What                                                                                                             |
-| --------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------- |
-| `/admin/tenants`            | superadmin   | Create tenants (name, slug, color preset, domains), suspend/activate, delete, raw branding/settings JSON config. |
-| `/admin/branding`           | tenant admin | Full look & feel editor (identity, logo/favicon upload, 16 colors, SEO) with live preview.                       |
-| `/admin/payments`           | tenant admin | Per-tenant gateways/keys/plans (rows now carry `tenantId`).                                                      |
-| `/admin/plans`, `/settings` | tenant admin | Per-tenant plans/features and AI provider configs.                                                               |
+| Portal                      | Who          | What                                                                                                                                                                                                                                             |
+| --------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/admin/tenants`            | superadmin   | Create tenants (name, slug, color preset, domains), suspend/activate, delete, raw branding/settings JSON config.                                                                                                                                 |
+| `/admin/tenants/new`        | superadmin   | **Platform setup wizard**: identity + brand, languages, markets/currency, plans & pricing, payment gateways, default AI provider, admin account - one submit provisions everything (`POST /api/admin/tenants` -> `src/lib/tenant-provision.ts`). |
+| `/admin/localization`       | tenant admin | Supported languages + default language + default market (currency). API: `GET/PATCH /api/admin/localization`.                                                                                                                                    |
+| `/admin/branding`           | tenant admin | Full look & feel editor (identity, logo/favicon upload, 16 colors, SEO) with live preview.                                                                                                                                                       |
+| `/admin/payments`           | tenant admin | Per-tenant gateways/keys/plans (rows now carry `tenantId`).                                                                                                                                                                                      |
+| `/admin/plans`, `/settings` | tenant admin | Per-tenant plans/features and AI provider configs.                                                                                                                                                                                               |
 
 APIs: `GET/POST /api/admin/tenants`, `PATCH/DELETE /api/admin/tenants/:id`,
 `GET/PUT /api/branding`, `POST /api/admin/branding/upload` (Cloudinary, falls back to
-`public/uploads/<tenantId>/` when Cloudinary keys are absent).
+`public/uploads/<tenantId>/` when Cloudinary keys are absent), `GET/PATCH /api/admin/localization`,
+`GET/POST /api/settings/providers` (AI catalog CRUD + test), `GET /api/plans` (public, per tenant).
 
 ## Onboarding a new customer
 

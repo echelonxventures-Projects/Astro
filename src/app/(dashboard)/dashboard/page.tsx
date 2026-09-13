@@ -13,6 +13,7 @@ import {
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { BrandName } from '@/components/BrandProvider'
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { getScopedDb } from '@/lib/tenant'
@@ -81,6 +82,7 @@ export default async function DashboardPage() {
               </Link>
             </div>
             <div className="flex items-center gap-4">
+              <LanguageSwitcher compact />
               {(user.role === 'admin' || user.role === 'superadmin') && (
                 <>
                   <Link href="/settings" className="text-purple-300 hover:text-white transition">
@@ -91,6 +93,12 @@ export default async function DashboardPage() {
                     className="text-purple-300 hover:text-white transition"
                   >
                     Branding
+                  </Link>
+                  <Link
+                    href="/admin/localization"
+                    className="text-purple-300 hover:text-white transition"
+                  >
+                    Localization
                   </Link>
                 </>
               )}

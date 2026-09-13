@@ -3,12 +3,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { ensureDefaultCatalog } from '@/lib/ai/catalog'
 import { auth } from '@/lib/auth'
-import { mergeBranding } from '@/lib/branding'
 import { prisma } from '@/lib/db'
 import { logError } from '@/lib/logger'
-import { invalidateTenantHostCache } from '@/lib/tenant'
+import { provisionTenant } from '@/lib/tenant-provision'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -53,11 +51,28 @@ export async function POST(req: NextRequest) {
     await checkSuperAdmin()
 
     const body = await req.json()
-    const { name, slug, branding, domains } = body as {
+    const {
+      name,
+      slug,
+      branding,
+      domains,
+      locales,
+      regions,
+      plans,
+      gateways,
+      aiDefault,
+      adminUser,
+    } = body as {
       name?: string
       slug?: string
       branding?: Record<string, unknown> | null
       domains?: string[]
+      locales?: { supportedLanguages?: string[]; defaultLanguage?: string; currencyRegion?: string }
+      regions?: unknown[]
+      plans?: unknown[]
+      gateways?: unknown[]
+      aiDefault?: string
+      adminUser?: { email?: string; name?: string; password?: string }
     }
 
     if (!name || !name.trim()) {
@@ -72,49 +87,46 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       )
     }
-
-    const existing = await prisma.tenant.findUnique({ where: { slug } })
-    if (existing) {
+    const existingTenant = await prisma.tenant.findUnique({ where: { slug } })
+    if (existingTenant) {
       return NextResponse.json({ error: 'A tenant with this slug already exists' }, { status: 409 })
     }
-
-    const hosts = new Set<string>()
-    for (const h of [slug + '.localhost', ...(Array.isArray(domains) ? domains : [])]) {
-      const host = String(h).trim().toLowerCase().replace(/:\d+$/, '')
-      if (host) hosts.add(host)
-    }
-
-    const taken = await prisma.tenantDomain.findMany({
-      where: { host: { in: Array.from(hosts) } },
-      select: { host: true },
-    })
-    if (taken.length > 0) {
+    if (adminUser?.email && (!adminUser.password || adminUser.password.length < 8)) {
       return NextResponse.json(
-        { error: `Domains already in use: ${taken.map(t => t.host).join(', ')}` },
-        { status: 409 }
+        { error: 'Admin password must be at least 8 characters' },
+        { status: 400 }
       )
     }
 
-    const tenant = await prisma.tenant.create({
-      data: {
-        name: name.trim(),
+    try {
+      const provisioned = await provisionTenant({
         slug,
-        branding: branding ? (mergeBranding(branding as never) as never) : undefined,
-        domains: {
-          create: Array.from(hosts)
-            .filter(Boolean)
-            .map((host, i) => ({
-              host,
-              isPrimary: i === 0,
-            })),
-        },
-      },
-      include: { domains: true },
-    })
+        name: name.trim(),
+        branding: branding as never,
+        domains,
+        locales,
+        regions: (Array.isArray(regions) && regions.length ? regions : 'default') as never,
+        plans: Array.isArray(plans) ? (plans as never) : undefined,
+        gateways: Array.isArray(gateways) ? (gateways as never) : undefined,
+        aiDefault,
+        adminUser:
+          adminUser?.email && adminUser.password
+            ? { email: adminUser.email, name: adminUser.name, password: adminUser.password }
+            : undefined,
+      })
 
-    await ensureDefaultCatalog(tenant.id, tenant.name)
-    invalidateTenantHostCache()
-    return NextResponse.json({ tenant })
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: provisioned.tenantId },
+        include: { domains: true },
+      })
+      return NextResponse.json({ tenant, provision: provisioned })
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      if (message.includes('already in use')) {
+        return NextResponse.json({ error: message }, { status: 409 })
+      }
+      throw error
+    }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
     if (message === 'Unauthorized' || message === 'Superadmin access required') {
