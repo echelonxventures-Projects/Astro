@@ -59,6 +59,7 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/starpath_e2e?schema=public
       DIRECT_URL: postgresql://postgres:postgres@localhost:5432/starpath_e2e?schema=public
       NEXTAUTH_TRUST_HOST: "true"
+      RATE_LIMIT_DISABLED: "true"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -86,6 +87,7 @@ jobs:
           echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/starpath_e2e?schema=public" >> .env
           echo "DIRECT_URL=postgresql://postgres:postgres@localhost:5432/starpath_e2e?schema=public" >> .env
           echo "ENCRYPTION_KEY=test-encryption-key-minimum-32-characters" >> .env
+          echo "RATE_LIMIT_DISABLED=true" >> .env
 
       - name: Apply migrations and seed tenants
         run: |

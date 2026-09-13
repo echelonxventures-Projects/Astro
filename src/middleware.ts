@@ -187,8 +187,8 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return createForbiddenResponse(requestId)
   }
 
-  // Check rate limit for this request
-  if (!isRateLimitExempt(path)) {
+  // Check rate limit for this request (disabled only in CI e2e via RATE_LIMIT_DISABLED)
+  if (process.env.RATE_LIMIT_DISABLED !== 'true' && !isRateLimitExempt(path)) {
     const identifier = getUserIdentifier(request)
     const rateLimitResult = await checkRateLimitForPath(identifier, path)
 
