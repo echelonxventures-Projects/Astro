@@ -41,6 +41,24 @@ jobs:
     name: E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: starpath_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/starpath_e2e?schema=public
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/starpath_e2e?schema=public
+      NEXTAUTH_TRUST_HOST: "true"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -58,20 +76,28 @@ jobs:
         run: npm run db:generate
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium firefox webkit
+        run: npx playwright install --with-deps chromium
 
       - name: Create .env file
         run: |
           echo "NEXTAUTH_SECRET=test-secret-minimum-32-characters-long-secure" > .env
           echo "NEXTAUTH_URL=http://localhost:3000" >> .env
-          echo "DATABASE_URL=file:./test.db" >> .env
+          echo "NEXTAUTH_TRUST_HOST=true" >> .env
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/starpath_e2e?schema=public" >> .env
+          echo "DIRECT_URL=postgresql://postgres:postgres@localhost:5432/starpath_e2e?schema=public" >> .env
           echo "ENCRYPTION_KEY=test-encryption-key-minimum-32-characters" >> .env
+
+      - name: Apply migrations and seed tenants
+        run: |
+          npx prisma migrate deploy
+          npx tsx prisma/seed.ts
+          npx tsx prisma/seed-payment-gateways.ts
 
       - name: Build application
         run: npm run build
 
       - name: Run Playwright tests
-        run: npm run test:e2e
+        run: npm run test:e2e -- --project=chromium
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4

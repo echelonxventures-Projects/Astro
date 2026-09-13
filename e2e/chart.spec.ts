@@ -3,7 +3,7 @@ import { test, expect, Page } from '@playwright/test'
 test.describe('Birth Chart Creation', () => {
   // Helper function to create and login a user
   async function createAndLoginUser(page: Page): Promise<{ email: string }> {
-    const testEmail = `_chart-test-${Date.now()}@example.com`
+    const testEmail = `chart-test-${Date.now()}@example.com`
     const testPassword = 'Password123!'
 
     // Create user
@@ -29,11 +29,11 @@ test.describe('Birth Chart Creation', () => {
   test.describe('Chart Creation Page', () => {
     test.beforeEach(async ({ page }) => {
       await createAndLoginUser(page)
-      await page.goto('/_chart')
+      await page.goto('/chart')
     })
 
-    test('should display birth _chart creation page', async ({ page }) => {
-      await expect(page.getByRole('heading', { name: /birth _chart|create _chart/i })).toBeVisible()
+    test('should display birth chart creation page', async ({ page }) => {
+      await expect(page.getByRole('heading', { name: /birth chart|create chart/i })).toBeVisible()
     })
 
     test('should have birth date input fields', async ({ page }) => {
@@ -62,7 +62,7 @@ test.describe('Birth Chart Creation', () => {
       expect(locCount).toBeGreaterThan(0)
     })
 
-    test('should create birth _chart with valid data', async ({ page }) => {
+    test('should create birth chart with valid data', async ({ page }) => {
       // Fill in the form
       const nameInput = page.locator('input[name*="name"], input[placeholder*="name"]').first()
       if (await nameInput.isVisible()) {
@@ -141,11 +141,11 @@ test.describe('Birth Chart Creation', () => {
   })
 
   test.describe('Chart Display', () => {
-    test('should display _chart with planets', async ({ page }) => {
+    test('should display chart with planets', async ({ page }) => {
       await createAndLoginUser(page)
 
-      // Create a _chart via API
-      const response = await page.request.post('/api/astrology/_chart', {
+      // Create a chart via API
+      const response = await page.request.post('/api/astrology/chart', {
         data: {
           name: 'Test Chart',
           birthDate: '1990-06-15',
@@ -160,10 +160,10 @@ test.describe('Birth Chart Creation', () => {
       if (response.ok()) {
         const _chart = await response.json()
 
-        // Navigate to view the _chart
-        await page.goto('/_chart')
+        // Navigate to view the chart
+        await page.goto('/chart')
 
-        // Should show _chart data
+        // Should show chart data
         await expect(page.getByText(/sun|moon|mercury|venus|mars/i).first()).toBeVisible()
       }
     })
@@ -172,7 +172,7 @@ test.describe('Birth Chart Creation', () => {
       await createAndLoginUser(page)
 
       // Create multiple charts
-      await page.request.post('/api/astrology/_chart', {
+      await page.request.post('/api/astrology/chart', {
         data: {
           name: 'Chart 1',
           birthDate: '1990-06-15',
@@ -182,7 +182,7 @@ test.describe('Birth Chart Creation', () => {
         },
       })
 
-      await page.request.post('/api/astrology/_chart', {
+      await page.request.post('/api/astrology/chart', {
         data: {
           name: 'Chart 2',
           birthDate: '1995-03-20',
@@ -193,7 +193,7 @@ test.describe('Birth Chart Creation', () => {
       })
 
       // Navigate to charts list
-      await page.goto('/_chart')
+      await page.goto('/chart')
 
       // Should show list of charts
       await expect(page.getByText(/Chart 1|Chart 2/i).first()).toBeVisible()
@@ -201,8 +201,8 @@ test.describe('Birth Chart Creation', () => {
   })
 
   test.describe('Chart API', () => {
-    test('should require authentication for _chart creation', async ({ page }) => {
-      const response = await page.request.post('/api/astrology/_chart', {
+    test('should require authentication for chart creation', async ({ page }) => {
+      const response = await page.request.post('/api/astrology/chart', {
         data: {
           name: 'Test Chart',
           birthDate: '1990-06-15',
@@ -215,10 +215,10 @@ test.describe('Birth Chart Creation', () => {
       expect(response.status()).toBe(401)
     })
 
-    test('should validate _chart input', async ({ page }) => {
+    test('should validate chart input', async ({ page }) => {
       await createAndLoginUser(page)
 
-      const response = await page.request.post('/api/astrology/_chart', {
+      const response = await page.request.post('/api/astrology/chart', {
         data: {
           name: 'Test Chart',
           // Missing required fields
