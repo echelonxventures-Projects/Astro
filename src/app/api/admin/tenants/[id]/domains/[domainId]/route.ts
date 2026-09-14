@@ -4,7 +4,6 @@
  * DELETE -> remove a custom domain (in-house/primary hosts are managed, not removable here)
  */
 
-import { promises as dns } from 'dns'
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
@@ -63,33 +62,14 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       return NextResponse.json({ ok: true, forced: true })
     }
 
-    const recordName = `_starpath-verify.${domain.host}`
-    let found: string[] = []
-    try {
-      const answers = await dns.resolveTxt(recordName)
-      found = answers.map(parts => parts.join(''))
-    } catch (error) {
-      logError('DNS TXT lookup failed', {
-        recordName,
-        error: error instanceof Error ? error.message : error,
-      })
-    }
-    const matched = domain.verificationToken ? found.includes(domain.verificationToken) : false
-    if (matched) {
-      await prisma.tenantDomain.update({
-        where: { id: domain.id },
-        data: { status: 'verified', verifiedAt: new Date() },
-      })
-      invalidateTenantHostCache()
-      return NextResponse.json({ ok: true, verified: true })
-    }
+    const { runDomainCheck } = await import('@/lib/domains/monitor')
+    const r = await runDomainCheck(domain.id)
+    if (!r) return NextResponse.json({ error: 'Domain not found' }, { status: 404 })
     return NextResponse.json({
-      ok: false,
-      verified: false,
-      recordName,
-      expected: domain.verificationToken,
-      found,
-      hint: 'Add the TXT record at the domain’s DNS provider, then retry. Propagation can take a few minutes.',
+      ok: r.status === 'verified',
+      verified: r.status === 'verified',
+      status: r.status,
+      message: r.message,
     })
   } catch (error: unknown) {
     return handle(error, 'Failed to verify domain')
@@ -113,6 +93,39 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
     return handle(error, 'Failed to remove domain')
+  }
+}
+
+export async function PATCH(req: NextRequest, { params }: Ctx) {
+  try {
+    const { id, domainId } = await params
+    await access(id)
+    const body = await req.json()
+    const want = String(body?.status ?? '')
+    if (!['disabled', 'verified'].includes(want)) {
+      return NextResponse.json(
+        { error: "status must be 'disabled' or 'verified'" },
+        { status: 400 }
+      )
+    }
+    const domain = await prisma.tenantDomain.findFirst({ where: { id: domainId, tenantId: id } })
+    if (!domain) return NextResponse.json({ error: 'Domain not found' }, { status: 404 })
+    if (domain.type !== 'custom')
+      return NextResponse.json(
+        { error: 'In-house hosts are managed automatically' },
+        { status: 400 }
+      )
+    if (want === 'verified' && domain.status !== 'disabled' && domain.status !== 'failing') {
+      return NextResponse.json(
+        { error: 'Only disabled/failing domains can be re-enabled; use Check for staged ones' },
+        { status: 400 }
+      )
+    }
+    await prisma.tenantDomain.update({ where: { id: domain.id }, data: { status: want } })
+    invalidateTenantHostCache()
+    return NextResponse.json({ ok: true, status: want })
+  } catch (error: unknown) {
+    return handle(error, 'Failed to update domain state')
   }
 }
 

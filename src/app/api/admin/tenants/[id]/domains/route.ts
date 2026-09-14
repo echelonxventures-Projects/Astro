@@ -8,6 +8,7 @@ import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { dnsInstructions as sharedDns } from '@/lib/domains/check'
 import { logError } from '@/lib/logger'
 import { effectiveMaster } from '@/lib/master-config'
 import { invalidateTenantHostCache, normalizeDomainHost } from '@/lib/tenant'
@@ -36,19 +37,6 @@ async function access(targetTenantId: string) {
 
 const HOST_RE = /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24}$/
 
-function dnsInstructions(host: string, token: string) {
-  return {
-    recordType: 'TXT',
-    name: host.startsWith('_starpath-verify.') ? host : `_starpath-verify.${host}`,
-    value: token,
-    alternative: {
-      recordType: 'CNAME',
-      name: `_starpath-verify.${host}`,
-      value: `verify.t.starpath.app`,
-    },
-  }
-}
-
 export async function GET(_req: NextRequest, { params }: Ctx) {
   try {
     const { id } = await params
@@ -56,6 +44,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     const domains = await prisma.tenantDomain.findMany({
       where: { tenantId: id },
       orderBy: [{ isPrimary: 'desc' }, { host: 'asc' }],
+      include: { _count: { select: { checks: true } } },
     })
     return NextResponse.json({
       domains: domains.map(d => ({
@@ -65,8 +54,14 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
         status: d.status,
         isPrimary: d.isPrimary,
         verifiedAt: d.verifiedAt,
+        lastCheckedAt: d.lastCheckedAt,
+        lastCheckMessage: d.lastCheckMessage,
+        live: d.live,
         verificationToken: d.verificationToken,
-        dns: d.verificationToken ? dnsInstructions(d.host, d.verificationToken) : null,
+        checkCount: d._count.checks,
+        dns: d.verificationToken
+          ? sharedDns({ host: d.host, verificationToken: d.verificationToken })
+          : null,
       })),
     })
   } catch (error: unknown) {
@@ -98,19 +93,27 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     }
     const token = `vp_${randomBytes(16).toString('hex')}`
     const domain = await prisma.tenantDomain.create({
-      data: { host, tenantId: id, type: 'custom', status: 'pending', verificationToken: token },
+      data: { host, tenantId: id, type: 'custom', status: 'pending_dns', verificationToken: token },
     })
     invalidateTenantHostCache()
+    let check: { status: string; message: string } | null = null
+    try {
+      const { runDomainCheck } = await import('@/lib/domains/monitor')
+      check = await runDomainCheck(domain.id)
+    } catch {
+      /* best effort */
+    }
     return NextResponse.json({
       domain: {
         id: domain.id,
         host: domain.host,
         type: domain.type,
-        status: domain.status,
+        status: check?.status ?? domain.status,
         isPrimary: domain.isPrimary,
+        message: check?.message,
       },
-      dns: dnsInstructions(host, token),
-      note: 'The domain will serve the platform only after DNS verification.',
+      dns: sharedDns({ host, verificationToken: token }),
+      note: 'Stage your DNS records at your registrar; the platform advances automatically (monitor every 5m) or via Check now.',
     })
   } catch (error: unknown) {
     return handle(error, 'Failed to attach domain')

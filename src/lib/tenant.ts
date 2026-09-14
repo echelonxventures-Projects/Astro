@@ -25,6 +25,7 @@ export const DEFAULT_TENANT_ID = 'tenant_starpath_default'
 export interface TenantSettings {
   locales?: { supportedLanguages?: string[]; defaultLanguage?: string; currencyRegion?: string }
   master?: import('./master-config').MasterConfig
+  aiPolicy?: import('./ai/catalog').AiPolicy
   oauth?: Record<string, { clientId?: string; clientSecret?: string }>
   emailFrom?: string
   supportEmail?: string
@@ -66,6 +67,9 @@ if (!g.__starpathHostCache) {
 }
 const hostCache = g.__starpathHostCache
 const NEGATIVE_TTL = 10_000
+// pending_* and disabled never serve; verified and failing (monitor-detected
+// degradation) keep serving traffic — see docs/DOMAIN_ONBOARDING.md
+const CUSTOM_SERVES = (status: string): boolean => status === 'verified' || status === 'failing'
 
 export function normalizeHost(input: string | null | undefined): string {
   if (!input) return ''
@@ -136,7 +140,7 @@ export async function resolveTenantByHost(
   })
   if (domain) {
     // Tenant-owned domains serve traffic only after DNS verification
-    if (domain.type === 'custom' && domain.status !== 'verified') {
+    if (domain.type === 'custom' && !CUSTOM_SERVES(domain.status)) {
       hostCache.set(host, NONE, { ttl: NEGATIVE_TTL })
       return null
     }

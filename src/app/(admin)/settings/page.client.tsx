@@ -18,11 +18,19 @@ import { useCallback, useEffect, useState } from 'react'
 import { BrandName } from '@/components/BrandProvider'
 import { logger } from '@/lib/logger'
 
+interface PolicyState {
+  preferFreeFirst: boolean
+  gatePaidProviders: boolean
+  paidStatusValues: string[]
+  paidPlanTiers: string[]
+}
+
 interface ProviderEntry {
   id: string
   key: string
   label: string
   kind: string
+  cost: 'free' | 'paid'
   baseUrl: string | null
   apiKey: string | null
   models: string[]
@@ -59,6 +67,7 @@ interface ProviderForm {
   key: string
   label: string
   kind: string
+  cost: 'free' | 'paid'
   baseUrl: string
   apiKey: string
   models: string
@@ -70,6 +79,7 @@ interface ProviderForm {
 
 const EMPTY_FORM: ProviderForm = {
   key: '',
+  cost: 'free',
   label: '',
   kind: 'openai-compatible',
   baseUrl: '',
@@ -94,16 +104,31 @@ export default function SettingsClient(): React.ReactElement {
   const [flash, setFlash] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState<ProviderForm>(EMPTY_FORM)
+  const [policy, setPolicy] = useState<PolicyState>({
+    preferFreeFirst: true,
+    gatePaidProviders: true,
+    paidStatusValues: ['premium'],
+    paidPlanTiers: ['paid'],
+  })
+  const [originalPolicy, setOriginalPolicy] = useState<PolicyState>(policy)
+  const [policySaving, setPolicySaving] = useState(false)
+  const [policySaved, setPolicySaved] = useState(false)
   const [testingId, setTestingId] = useState<string | null>(null)
   const [testResults, setTestResults] = useState<Record<string, 'ok' | 'fail'>>({})
 
   const refresh = useCallback(async (): Promise<void> => {
     try {
-      const [setRes, provRes, planRes] = await Promise.all([
+      const [setRes, provRes, planRes, polRes] = await Promise.all([
         fetch('/api/settings'),
         fetch('/api/settings/providers'),
         fetch('/api/plans'),
+        fetch('/api/settings/policy'),
       ])
+      if (polRes.ok) {
+        const pd = await polRes.json()
+        setPolicy(pd.policy)
+        setOriginalPolicy(pd.policy)
+      }
       if (setRes.ok) {
         const d = await setRes.json()
         setDefaultKey(d.defaultKey ?? '')
@@ -213,6 +238,7 @@ export default function SettingsClient(): React.ReactElement {
         key: form.key.trim(),
         label: form.label.trim(),
         kind: form.kind,
+        cost: form.cost,
         baseUrl: form.baseUrl.trim() || null,
         apiKey: form.apiKey.trim() || null,
         models: form.models
@@ -380,6 +406,11 @@ export default function SettingsClient(): React.ReactElement {
                         )}
                       </div>
                       <p className="text-sm text-gray-400">
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded ${p.cost === 'paid' ? 'bg-amber-400/20 text-amber-300' : 'bg-emerald-400/15 text-emerald-300'}`}
+                        >
+                          {p.cost.toUpperCase()}
+                        </span>{' '}
                         {p.baseUrl || '(provider SDK default)'} · {p.models.length} model
                         {p.models.length === 1 ? '' : 's'}
                         {p.capabilities.includes('vision') ? ' · vision' : ''}
@@ -413,6 +444,7 @@ export default function SettingsClient(): React.ReactElement {
                             key: p.key,
                             label: p.label,
                             kind: p.kind,
+                            cost: p.cost ?? 'free',
                             baseUrl: p.baseUrl ?? '',
                             apiKey: p.apiKey ?? '',
                             models: p.models.join(', '),
@@ -465,6 +497,17 @@ export default function SettingsClient(): React.ReactElement {
                       placeholder="OpenAI"
                       className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-[var(--primary)] outline-none"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Cost class</label>
+                    <select
+                      value={form.cost}
+                      onChange={e => setForm({ ...form, cost: e.target.value as 'free' | 'paid' })}
+                      className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-[var(--primary)] outline-none"
+                    >
+                      <option value="free">free (usable by everyone)</option>
+                      <option value="paid">paid (paying customers only)</option>
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">Protocol kind</label>
@@ -626,11 +669,20 @@ export default function SettingsClient(): React.ReactElement {
                         >
                           {providers
                             .filter(p => p.enabled)
-                            .map(p => (
-                              <option key={p.key} value={p.key}>
-                                {p.label}
-                              </option>
-                            ))}
+                            .map(p => {
+                              const blocked =
+                                policy.gatePaidProviders &&
+                                p.cost === 'paid' &&
+                                def.tier != null &&
+                                !policy.paidPlanTiers.includes(def.tier)
+                              return (
+                                <option key={p.key} value={p.key} disabled={blocked}>
+                                  {p.label}
+                                  {p.cost === 'paid' ? ' · paid' : ''}
+                                  {blocked ? ' (policy: paid customers only)' : ''}
+                                </option>
+                              )
+                            })}
                         </select>
                       </div>
                       <div>
@@ -739,6 +791,96 @@ export default function SettingsClient(): React.ReactElement {
                     <option key={m} value={m} />
                   ))}
                 </datalist>
+              </div>
+              <div className="border-t border-white/10 pt-4">
+                <h3 className="font-bold mb-3">Routing policy (per platform)</h3>
+                <p className="text-xs text-gray-500 mb-3">
+                  Stored on this platform - nothing is hardcoded. The paid gate applies at runtime
+                  and at binding-save.
+                </p>
+                <label className="flex items-center gap-2 text-sm text-gray-300 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={policy.preferFreeFirst}
+                    onChange={e => setPolicy({ ...policy, preferFreeFirst: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  Prefer FREE providers first (everyone, incl. paid customers, unless a paid plan is
+                  bound explicitly)
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-300 mb-3">
+                  <input
+                    type="checkbox"
+                    checked={policy.gatePaidProviders}
+                    onChange={e => setPolicy({ ...policy, gatePaidProviders: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  Restrict paid-cost providers to paying customers only
+                </label>
+                <div className="grid md:grid-cols-2 gap-3 text-sm">
+                  <input
+                    value={policy.paidStatusValues.join(', ')}
+                    onChange={e =>
+                      setPolicy({
+                        ...policy,
+                        paidStatusValues: e.target.value
+                          .split(',')
+                          .map(x => x.trim())
+                          .filter(Boolean),
+                      })
+                    }
+                    className="bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-white outline-none focus:border-[var(--primary)]"
+                    placeholder="statuses treated as paid (e.g. premium)"
+                  />
+                  <input
+                    value={policy.paidPlanTiers.join(', ')}
+                    onChange={e =>
+                      setPolicy({
+                        ...policy,
+                        paidPlanTiers: e.target.value
+                          .split(',')
+                          .map(x => x.trim())
+                          .filter(Boolean),
+                      })
+                    }
+                    className="bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-white outline-none focus:border-[var(--primary)]"
+                    placeholder="plan tiers treated as paid (e.g. paid)"
+                  />
+                </div>
+                <button
+                  onClick={async () => {
+                    setPolicySaving(true)
+                    try {
+                      const res = await fetch('/api/settings/policy', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ policy }),
+                      })
+                      const d = await res.json()
+                      if (res.ok) {
+                        setOriginalPolicy(d.policy ?? policy)
+                        setPolicySaved(true)
+                        setTimeout(() => setPolicySaved(false), 2500)
+                      } else {
+                        setError(d.error ?? 'Could not save policy')
+                      }
+                    } finally {
+                      setPolicySaving(false)
+                    }
+                  }}
+                  disabled={
+                    policySaving || JSON.stringify(policy) === JSON.stringify(originalPolicy)
+                  }
+                  className="mt-4 inline-flex items-center gap-2 bg-[var(--primary)] hover:bg-[var(--primary-dark)] disabled:opacity-40 text-white px-5 py-2 rounded-full font-semibold transition"
+                >
+                  {policySaving ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}{' '}
+                  Save policy
+                  {policySaved && <span className="text-emerald-300">saved</span>}
+                </button>
               </div>
               <div className="flex items-center gap-3">
                 <button

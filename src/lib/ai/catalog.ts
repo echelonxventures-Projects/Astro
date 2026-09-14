@@ -38,6 +38,7 @@ export interface CatalogEntry {
   key: string
   label: string
   kind: ProviderKind
+  cost: 'free' | 'paid'
   baseUrl: string | null
   apiKey: string | null
   models: string[]
@@ -64,6 +65,7 @@ export function parseCatalogEntry(row: any): CatalogEntry {
     key: row.key,
     label: row.label,
     kind: isProviderKind(row.kind) ? row.kind : 'openai-compatible',
+    cost: row.cost === 'paid' ? 'paid' : 'free',
     baseUrl: row.baseUrl,
     apiKey: row.apiKey,
     models: parseJson<string[]>(row.models, []),
@@ -72,6 +74,99 @@ export function parseCatalogEntry(row: any): CatalogEntry {
     enabled: row.enabled,
     isDefault: row.isDefault,
     sortOrder: row.sortOrder,
+  }
+}
+
+export interface AiPolicy {
+  preferFreeFirst: boolean
+  gatePaidProviders: boolean
+  paidStatusValues: string[]
+  paidPlanTiers: string[]
+}
+
+export const DEFAULT_AI_POLICY: AiPolicy = {
+  preferFreeFirst: true,
+  gatePaidProviders: true,
+  paidStatusValues: ['premium'],
+  paidPlanTiers: ['paid'],
+}
+
+export function resolveAiPolicy(raw: Partial<AiPolicy> | null | undefined): AiPolicy {
+  return {
+    preferFreeFirst: raw?.preferFreeFirst ?? DEFAULT_AI_POLICY.preferFreeFirst,
+    gatePaidProviders: raw?.gatePaidProviders ?? DEFAULT_AI_POLICY.gatePaidProviders,
+    paidStatusValues: raw?.paidStatusValues?.length
+      ? raw.paidStatusValues
+      : [...DEFAULT_AI_POLICY.paidStatusValues],
+    paidPlanTiers: raw?.paidPlanTiers?.length
+      ? raw.paidPlanTiers
+      : [...DEFAULT_AI_POLICY.paidPlanTiers],
+  }
+}
+
+export interface SelectionInput {
+  entries: CatalogEntry[] // enabled + usable, in catalog order
+  policy: AiPolicy
+  userPaid: boolean
+  needsVision?: boolean
+  binding?: CatalogEntry | null // plan-bound provider (from AIProviderConfig)
+}
+
+export interface SelectionResult {
+  entry: CatalogEntry | null
+  reason: string
+}
+
+/**
+ * Pure routing policy:
+ *  - plan binding wins when the cost gate allows it
+ *  - unpaid users: free-cost providers only (unless gate disabled)
+ *  - preferFreeFirst: among candidates, free cost class before paid
+ *  - within a class: explicit isDefault, then options.priority/sortOrder
+ */
+export function selectProviderEntry({
+  entries,
+  policy,
+  userPaid,
+  needsVision = false,
+  binding,
+}: SelectionInput): SelectionResult {
+  const visionOk = (e: CatalogEntry) => !needsVision || e.capabilities.includes('vision')
+  const gatedPaidAllowed = !policy.gatePaidProviders || userPaid
+
+  if (binding && visionOk(binding) && (gatedPaidAllowed || binding.cost === 'free')) {
+    return { entry: binding, reason: 'plan-binding' }
+  }
+
+  let pool = entries.filter(visionOk)
+  if (policy.gatePaidProviders && !userPaid) {
+    pool = pool.filter(e => e.cost === 'free')
+  }
+  if (pool.length === 0) {
+    return {
+      entry: null,
+      reason:
+        policy.gatePaidProviders && !userPaid && needsVision
+          ? 'no-free-vision-provider'
+          : 'no-usable-provider',
+    }
+  }
+  const rank = (e: CatalogEntry): number => e.options.priority ?? e.sortOrder + 100
+  const byClass = (e: CatalogEntry): number => (policy.preferFreeFirst && e.cost === 'free' ? 0 : 1)
+  pool = [...pool].sort((a, b) => {
+    const cls = byClass(a) - byClass(b)
+    if (cls !== 0) return cls
+    if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1
+    return rank(a) - rank(b)
+  })
+  const paidUserFreePick = userPaid && policy.preferFreeFirst && pool[0].cost === 'free'
+  return {
+    entry: pool[0],
+    reason: binding
+      ? 'binding-blocked-by-policy'
+      : paidUserFreePick
+        ? 'prefer-free-first'
+        : 'policy-priority',
   }
 }
 
@@ -163,6 +258,7 @@ export interface CatalogInput {
   key: string
   label: string
   kind: string
+  cost?: 'free' | 'paid'
   baseUrl?: string | null
   apiKey?: string | null
   models?: string[]
@@ -182,6 +278,7 @@ export function toCatalogData(
     key: input.key,
     label: input.label,
     kind: isProviderKind(input.kind) ? input.kind : 'openai-compatible',
+    cost: input.cost === 'paid' ? 'paid' : 'free',
     baseUrl: input.baseUrl ?? null,
     apiKey: input.apiKey ?? null,
     models: JSON.stringify(input.models ?? []),
@@ -204,6 +301,7 @@ export async function ensureDefaultCatalog(tenantId: string, tenantName: string)
       key: 'openrouter',
       label: 'OpenRouter',
       kind: 'openai-compatible',
+      cost: 'free' as const,
       baseUrl: 'https://openrouter.ai/api/v1',
       apiKey: process.env.OPENROUTER_API_KEY || null,
       models: ['meta-llama/llama-3.2-3b-instruct:free', 'google/gemma-3-1b-it:free'],
@@ -220,6 +318,7 @@ export async function ensureDefaultCatalog(tenantId: string, tenantName: string)
       key: 'nvidia',
       label: 'NVIDIA NIM',
       kind: 'openai-compatible',
+      cost: 'free' as const,
       baseUrl: 'https://integrate.api.nvidia.com/v1',
       apiKey: process.env.NVIDIA_API_KEY || null,
       models: ['meta/llama-3.1-8b-instruct'],
@@ -230,6 +329,7 @@ export async function ensureDefaultCatalog(tenantId: string, tenantName: string)
       key: 'ollama',
       label: 'Ollama (local)',
       kind: 'ollama',
+      cost: 'free' as const,
       baseUrl: process.env.OLLAMA_URL || 'http://localhost:11434',
       models: ['llama3.2'],
       capabilities: ['vision'],
@@ -243,6 +343,7 @@ export async function ensureDefaultCatalog(tenantId: string, tenantName: string)
       key: 'anthropic',
       label: 'Anthropic Claude',
       kind: 'anthropic',
+      cost: 'paid' as const,
       apiKey: process.env.ANTHROPIC_API_KEY || null,
       models: ['claude-sonnet-4-20250514', 'claude-opus-4-20250514'],
       capabilities: ['vision'],
@@ -252,6 +353,7 @@ export async function ensureDefaultCatalog(tenantId: string, tenantName: string)
       key: 'gemini',
       label: 'Google Gemini',
       kind: 'gemini',
+      cost: 'paid' as const,
       apiKey: process.env.GEMINI_API_KEY || null,
       models: ['gemini-2.0-flash'],
       capabilities: ['vision'],
@@ -261,6 +363,7 @@ export async function ensureDefaultCatalog(tenantId: string, tenantName: string)
       key: 'opencode',
       label: 'OpenCode (local)',
       kind: 'opencode',
+      cost: 'free' as const,
       baseUrl: process.env.OPENCODE_URL || 'http://localhost:8080',
       models: ['claude-sonnet-4'],
       capabilities: [],

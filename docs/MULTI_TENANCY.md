@@ -103,6 +103,23 @@ Payment redirects and OG metadata use the **request tenant's base URL**
 - Client components read identity via `useBrand()` / `<BrandName />` / `<BrandLogo />`
   (`src/components/BrandProvider.tsx`).
 
+## AI routing policy (free-first, paid-gated - fully configurable)
+
+Stored in `Tenant.settings.aiPolicy` (nothing hardcoded):
+
+| Field               | Default       | Meaning                                                                                   |
+| ------------------- | ------------- | ----------------------------------------------------------------------------------------- |
+| `preferFreeFirst`   | `true`        | Among eligible providers, the **free** cost class wins for everyone                       |
+| `gatePaidProviders` | `true`        | `cost: paid` catalog entries (and paid plan-bindings) are usable only by paying customers |
+| `paidStatusValues`  | `["premium"]` | Which `User.subscriptionStatus` values count as paying                                    |
+| `paidPlanTiers`     | `["paid"]`    | Which `SubscriptionPlan.tier` values count as paying                                      |
+
+Runtime resolution (`selectProviderEntry` in `src/lib/ai/catalog.ts`, pure + unit-tested):
+plan binding → (blocked by gate for unpaid) → free class → `isDefault` → priority.
+Admin UI: cost class per provider, routing-policy card, binding dropdowns that
+disabled paid options on unpaid plans; API rejects such bindings (`/api/settings/plans`).
+A paid customer is never forced onto a free model unless their plan binding says so.
+
 ## AI providers (catalog-driven, zero-hardcoded)
 
 Providers live in `AIProviderCatalog` (one row per provider per tenant): key, label,
@@ -133,6 +150,22 @@ Public read endpoint: `GET /api/plans` (tenant-scoped, no auth); admin CRUD: `/a
   sets pricing-page currency for new visitors.
 - Caveat: the shipped translation dictionary covers navigation/auth strings for
   es/fr/de/hi; untranslated UI remains English until added to `src/lib/i18n.ts`.
+
+## Domain lifecycle (customer-purchased, platform-mapped, masked)
+
+Customers buy domains anywhere and configure them at their registrar. Statuses:
+`pending_dns` (nothing resolves yet) → `pending_verification` (TXT ownership token
+missing) → `verified` (Caddy mints TLS automatically on first visit) → `failing`
+(health lost; recovers automatically) / `disabled`.
+
+- Self-service portal `/admin/domains`: staged status, exact DNS records with
+  registrar notes, Check-now, disable/enable, detach.
+- Monitor (`DOMAIN_MONITOR=1`): in-process 5-min pass over custom domains, writes
+  `DomainCheck` history, flips verified↔failing, alerts `DOMAIN_ALERT_WEBHOOK`.
+- Masking: unverified/failing custom hosts never leak the platform; echo probe
+  `/api/domains/echo` confirms the right tenant answers; all absolute URLs
+  (checkout redirects, OG, manifest) are computed from the request host, so the
+  underlying platform host never appears to end users.
 
 ## Admin portals
 

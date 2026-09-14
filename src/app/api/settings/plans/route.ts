@@ -70,6 +70,32 @@ export async function POST(_req: NextRequest) {
         )
       }
     }
+    // Routing policy gate: paid-cost providers may not bind to unpaid plans
+    const { resolveAiPolicy } = await import('@/lib/ai/catalog')
+    const { prisma } = await import('@/lib/db')
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: session.user.tenantId! },
+      select: { settings: true },
+    })
+    const policy = resolveAiPolicy((tenant?.settings as { aiPolicy?: never } | null)?.aiPolicy)
+    if (policy.gatePaidProviders) {
+      for (const plan of plans) {
+        if (!plan.provider) continue
+        const entry = catalog.find(c => c.key === plan.provider)
+        if (entry?.cost !== 'paid') continue
+        const planRow = await prisma.subscriptionPlan.findUnique({
+          where: { tenantId_key: { tenantId: session.user.tenantId!, key: plan.plan } },
+          select: { tier: true },
+        })
+        if (planRow && policy.paidPlanTiers.includes(planRow.tier)) continue
+        return NextResponse.json(
+          {
+            error: `Provider "${entry.label}" is marked PAID and cannot be bound to the "${plan.plan}" plan (unpaid tier). Your routing policy reserves paid providers for paying customers - change the provider's cost class or the policy if you intend this.`,
+          },
+          { status: 400 }
+        )
+      }
+    }
     // Save each plan configuration
     for (const plan of plans) {
       await updateAIPlanConfig(session.user.tenantId!, plan.plan, {

@@ -92,6 +92,10 @@ Migrations: `init_postgresql` → `add_payment_audit_log` → `add_multi_tenancy
 - Kinds (the only code-level wire protocols): `openai-compatible` (generic — covers OpenAI/OpenRouter/Groq/NVIDIA/Together/LM Studio…), `ollama`, `anthropic`, `gemini`, `opencode`. **Adding a vendor = a DB row via UI, no deploy.**
 - Resolution: plan binding (`AIProviderConfig` → catalog entry) → tenant default entry → priority order; vision routes require `vision` capability; env/AppSettings legacy chain only as bootstrap fallback.
 - Managed at `/settings` (tabs: Plan Binding / Providers / Default) with per-provider connectivity test.
+- **Routing policy** (`Tenant.settings.aiPolicy`, pure engine in `selectProviderEntry`): `preferFreeFirst`
+  routes everyone to free-cost providers; `gatePaidProviders` restricts `cost: paid` entries to users whose
+  status/plan-tier match policy data (`paidStatusValues`, `paidPlanTiers`). Enforced at resolution AND when
+  saving plan bindings; editable in the UI, zero hardcoding.
 
 ## 7. Plans, markets, currency, languages
 
