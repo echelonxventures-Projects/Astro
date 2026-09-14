@@ -147,7 +147,7 @@ Seed credentials: dev keeps `admin123` with a printed warning; production requir
 
 DB bootstrap: `npx prisma migrate deploy && npx tsx prisma/seed.ts && npx tsx prisma/seed-payment-gateways.ts`
 
-Docker alternatives: `docker-compose.yml` (full prod stack), `docker-compose.dev.yml` (services only), `docker-compose.monitoring.yml`.
+Docker alternatives: `docker-compose.yml` (full prod stack), `docker-compose.dev.yml` (services only), `docker-compose.monitoring.yml`, `docker-compose.caddy.yml` (edge TLS: on-demand ACME via the app's `ask` gate `/api/domains/challenge` — certs mint automatically for in-house + DNS-verified custom domains).
 
 ### Demo state (seeded)
 

@@ -32,12 +32,33 @@ Until verified the host is **not served** (domain-squatting protection). In-hous
 subdomains (`<slug>.<TENANT_ROOT_DOMAIN>` / `<slug>.localhost` in dev) are automatic.
 Force-verify (`{"force":true}`) is superadmin-only, for controlled migrations.
 
-## 4. TLS termination
+## 4. TLS — automatic via Caddy (recommended)
 
-Terminate HTTPS at your edge (nginx `nginx.conf.example`, Cloudflare, ALB…). The
-app should receive `X-Forwarded-Proto: https`; then set the tenant-facing
-`NEXTAUTH_URL` to **https** so NextAuth cookies carry `Secure` (cookie security
-follows the `NEXTAUTH_URL` protocol by design).
+A Caddy edge with **on-demand ACME** issues certificates for every tenant domain
+the moment a visitor first reaches it — including future customer domains, no
+redeploy:
+
+```bash
+export CADDY_ASK_SECRET="$(openssl rand -hex 24)"   # also put in app .env
+export CADDY_ACME_EMAIL="ops@example.com"
+docker compose -f docker-compose.caddy.yml up -d
+```
+
+Flow: unknown SNI → Caddy asks the app (`GET /api/domains/challenge?key=…&domain=…`)
+→ the app answers `200` only for hosts that resolve to a tenant **and** passed DNS
+verification (or are in-house). A 404 makes Caddy refuse issuance (squatting +
+ACME-abuse protection). Ask answers are LRU-cached (10–60 s); in-app verification
+clears the cache instantly.
+
+Point the app's `NEXTAUTH_URL` at **https://<root tenant domain>** so auth cookies
+carry `Secure` behind Caddy. The legacy nginx option (`nginx.conf.example`) or a
+Cloudflare-fronted setup still works — forward `X-Forwarded-Proto`.
+
+| Piece                                                                          | File                                     |
+| ------------------------------------------------------------------------------ | ---------------------------------------- |
+| Caddyfile (global `on_demand_tls` ask + `https://` catch-all proxy)            | `caddy/Caddyfile`                        |
+| Edge compose (ports 80/443, `caddy_data`/`caddy_config` volumes, host-gateway) | `docker-compose.caddy.yml`               |
+| ask endpoint (key-gated, `timingSafeEqual`)                                    | `src/app/api/domains/challenge/route.ts` |
 
 ## 5. Third-party callbacks to update
 

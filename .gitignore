@@ -69,3 +69,10 @@ logs/
 # Uploads
 /uploads/
 /public/uploads/
+
+# cloud-sync conflict copies ("file 2.ts") — never commit these
+* [0-9].ts
+* [0-9].tsx
+* [0-9].js
+* [0-9].json
+* [0-9].sql

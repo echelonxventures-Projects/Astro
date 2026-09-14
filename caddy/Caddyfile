@@ -1,0 +1,20 @@
+{
+	email {$CADDY_ACME_EMAIL}
+	on_demand_tls {
+		# The app only answers "ok" for hosts that map to a tenant AND passed
+		# DNS verification (custom domains) - unverified hosts get 404, so Caddy
+		# refuses to request a certificate for them (squatting protection).
+		ask {$CADDY_ASK_URL}
+	}
+}
+
+# Catch-all HTTPS site: TLS on demand (ACME), proxy to the multi-tenant app.
+https:// {
+	tls {
+		on_demand
+	}
+	reverse_proxy {$UPSTREAM_URL} {
+		header_up X-Forwarded-Proto https
+		header_up X-Real-IP {remote_host}
+	}
+}
