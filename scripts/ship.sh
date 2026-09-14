@@ -28,7 +28,11 @@ if [ -z "${PR:-}" ] || [ "$PR" = "null" ]; then
   gh pr create --base main --head "$CUR" --fill 2>/dev/null || gh pr create --base main --head "$CUR" --title "${MSG:-ship: $CUR}" --body "Automated ship via scripts/ship.sh"
   PR=$(gh pr view --json number --jq '.number')
 fi
-echo "→ PR #$PR open; waiting for checks…"
+echo "→ PR #$PR open; waiting for checks to register…"
+for _ in $(seq 1 30); do
+  if [ -n "$(gh pr checks "$PR" 2>/dev/null || true)" ]; then break; fi
+  sleep 10
+done
 gh pr checks "$PR" --watch --interval 30
 gh pr merge "$PR" --squash --delete-branch
 git switch main && git pull --ff-only
