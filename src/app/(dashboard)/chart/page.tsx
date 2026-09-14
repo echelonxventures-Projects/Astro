@@ -123,18 +123,25 @@ export default function BirthChartPage() {
 
     setSearchingLocation(true)
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`
-      )
+      const response = await fetch(`/api/astrology/geo?q=${encodeURIComponent(query)}`)
+      if (!response.ok) throw new Error('geo unavailable')
       const data = await response.json()
 
-      const results = data.map((item: any) => ({
-        name: item.display_name,
-        latitude: item.lat,
-        longitude: item.lon,
-        country: item.address?.country || '',
-        state: item.address?.state || '',
-      }))
+      const results = (data.results ?? []).map(
+        (item: {
+          displayName: string
+          latitude: string
+          longitude: string
+          country: string
+          state: string
+        }) => ({
+          name: item.displayName,
+          latitude: item.latitude,
+          longitude: item.longitude,
+          country: item.country,
+          state: item.state,
+        })
+      )
 
       setSearchResults(results)
       setShowDropdown(true)

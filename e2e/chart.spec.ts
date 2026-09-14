@@ -88,6 +88,21 @@ test.describe('Birth Chart Creation', () => {
       await expect(page.locator('text=/sun|moon|ascendant|planetary/i').first()).toBeVisible()
     })
 
+    test('birth place autocomplete suggests and fills coordinates', async ({ page }) => {
+      const cityInput = page.getByPlaceholder('Search city, country...')
+      await cityInput.fill('New York')
+      await expect(page.locator('button', { hasText: /new york/i }).first()).toBeVisible({
+        timeout: 20000,
+      })
+      await page
+        .locator('button', { hasText: /new york/i })
+        .first()
+        .click()
+      await expect(page.locator('input[type="number"]').first()).not.toHaveValue('', {
+        timeout: 10000,
+      })
+    })
+
     test('should block submission when required fields are missing', async ({ page }) => {
       // Form has native `required` on the date selects; submitting empty must not navigate
       await page.locator('input[type="time"]').fill('12:30')
