@@ -69,9 +69,13 @@ model TenantDomain {
   host              String    @unique // lowercase, no port: "astro.customer.com"
   tenantId          String
   type              String    @default("in_house") // in_house | custom
-  status            String    @default("verified") // pending | verified
+  status            String    @default("verified") // pending_dns | pending_verification | verified | failing | disabled
   verificationToken String? // expected value of TXT record _starpath-verify.<host>
   verifiedAt        DateTime?
+  lastCheckedAt     DateTime?
+  lastCheckMessage  String?   @db.Text
+  live              Boolean   @default(false) // monitor-probed: tenant echoed back on this host
+  checks            DomainCheck[]
   isPrimary         Boolean   @default(false)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -80,6 +84,23 @@ model TenantDomain {
 
   @@index([tenantId])
   @@index([status])
+}
+
+// Health-check history for tenant domains (monitor + manual rechecks)
+model DomainCheck {
+  id        String   @id @default(cuid())
+  domainId  String
+  ok        Boolean
+  status    String // resulting TenantDomain status
+  message   String?  @db.Text
+  dnsFound  Boolean  @default(false)
+  txtFound  Boolean  @default(false)
+  httpsOk   Boolean  @default(false)
+  checkedAt DateTime @default(now())
+
+  domain TenantDomain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+
+  @@index([domainId, checkedAt])
 }
 
 // ===========================================
@@ -373,6 +394,7 @@ model AIProviderCatalog {
   kind         String   @default("openai-compatible") // openai-compatible | ollama | anthropic | gemini | opencode
   baseUrl      String?  // openai-compatible/ollama/opencode: server URL; anthropic/gemini: optional custom endpoint
   apiKey       String?  @db.Text
+  cost         String   @default("free") // free | paid - drives the routing policy (paid for paid customers only)
   models       String?  @db.Text // JSON array of model ids offered for this provider
   capabilities String?  // JSON array e.g. ["vision"]
   options      String?  @db.Text // JSON: { extraHeaders, noAuth, checkUrl, priority }

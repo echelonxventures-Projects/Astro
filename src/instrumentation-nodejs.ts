@@ -18,6 +18,11 @@ export async function register() {
       logger.info('Instrumentation: SENTRY_DSN not configured, skipping Sentry')
     }
 
+    if (process.env.DOMAIN_MONITOR === '1') {
+      const { startDomainMonitor } = await import('@/lib/domains/monitor')
+      startDomainMonitor()
+    }
+
     // Initialize metrics
     const { initMetrics } = await import('@/lib/monitoring/metrics')
     initMetrics()

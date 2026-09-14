@@ -7,7 +7,13 @@
  */
 
 import type { CatalogEntry } from './catalog'
-import { buildProviderFromEntry, getDefaultEntry, isUsable } from './catalog'
+import {
+  buildProviderFromEntry,
+  getEntry,
+  isUsable,
+  listCatalog,
+  selectProviderEntry,
+} from './catalog'
 import { DEFAULT_TENANT_ID, resolveTenantByHost } from '@/lib/tenant'
 
 export interface AIProviderConfig {
@@ -79,6 +85,7 @@ async function legacyEntry(tenantId: string): Promise<CatalogEntry | null> {
     key: over.key ?? 'legacy',
     label: over.label ?? 'Legacy',
     kind: over.kind ?? 'openai-compatible',
+    cost: over.cost ?? 'free',
     baseUrl: null,
     apiKey: null,
     models: [],
@@ -169,11 +176,87 @@ async function legacyEntry(tenantId: string): Promise<CatalogEntry | null> {
   })
 }
 
-async function resolveEntry(tenantId: string, needsVision: boolean): Promise<CatalogEntry> {
-  const entry = await getDefaultEntry(tenantId, needsVision)
-  if (entry) return entry
+export interface AiUserContext {
+  userPaid: boolean
+  planKey: string | null
+}
+
+/** Is the current session's user a paying customer, per the tenant's policy (all data-driven)? */
+export async function resolveAiUserContext(tenantId: string): Promise<AiUserContext> {
+  try {
+    const { auth } = await import('@/lib/auth')
+    const { prisma } = await import('@/lib/db')
+    const session = await auth()
+    const userId = session?.user?.id
+    if (!userId || session?.user?.tenantId !== tenantId) return { userPaid: false, planKey: null }
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { subscriptionStatus: true, subscriptionPlan: true },
+    })
+    if (!user) return { userPaid: false, planKey: null }
+    const { parseMaster } = await import('@/lib/master-config')
+    void parseMaster
+    const { resolveAiPolicy } = await import('./catalog')
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { settings: true },
+    })
+    const policy = resolveAiPolicy(((tenant?.settings ?? {}) as { aiPolicy?: never }).aiPolicy)
+    let userPaid = policy.paidStatusValues.includes(user.subscriptionStatus)
+    if (!userPaid && user.subscriptionPlan) {
+      const plan = await prisma.subscriptionPlan.findUnique({
+        where: { tenantId_key: { tenantId, key: user.subscriptionPlan } },
+        select: { tier: true },
+      })
+      userPaid = Boolean(plan && policy.paidPlanTiers.includes(plan.tier))
+    }
+    return { userPaid, planKey: user.subscriptionPlan ?? null }
+  } catch {
+    return { userPaid: false, planKey: null }
+  }
+}
+
+async function resolveEntry(
+  tenantId: string,
+  needsVision: boolean,
+  userPaidHint?: boolean
+): Promise<CatalogEntry> {
+  const { prisma } = await import('@/lib/db')
+  const { resolveAiPolicy } = await import('./catalog')
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { settings: true },
+  })
+  const policy = resolveAiPolicy(((tenant?.settings ?? {}) as { aiPolicy?: never }).aiPolicy)
+  const ctx =
+    userPaidHint === undefined
+      ? await resolveAiUserContext(tenantId)
+      : { userPaid: userPaidHint, planKey: null as string | null }
+  const userPaid = userPaidHint ?? ctx.userPaid
+
+  const entries = (await listCatalog(tenantId, true)).filter(isUsable)
+  let binding = null as CatalogEntry | null
+  if (ctx.planKey) {
+    const { getAIPlanConfig } = await import('./plan-config')
+    const cfg = await getAIPlanConfig(tenantId, ctx.planKey)
+    if (cfg?.enabled) binding = await getEntry(tenantId, cfg.provider)
+  }
+  const sel = selectProviderEntry({ entries, policy, userPaid, needsVision, binding })
+  if (sel.entry) return sel.entry
+
   const legacy = await legacyEntry(tenantId)
-  if (!legacy) throw new Error(`No AI provider configured for tenant ${tenantId}`)
+  if (!legacy) {
+    throw new Error(
+      sel.reason === 'no-free-vision-provider'
+        ? 'No free vision-capable AI provider is configured for this platform. Add one in Settings → Providers.'
+        : `No AI provider configured for tenant ${tenantId} (policy: ${sel.reason})`
+    )
+  }
+  if (policy.gatePaidProviders && !userPaid && legacy.cost === 'paid') {
+    throw new Error(
+      'Only free AI providers are available for this account. Configure a free provider in Settings → Providers.'
+    )
+  }
   if (needsVision && !legacy.capabilities.includes('vision')) {
     throw new Error(
       `The active AI provider "${legacy.label}" does not support vision. Add a vision-capable provider in Settings → Providers.`
@@ -183,9 +266,12 @@ async function resolveEntry(tenantId: string, needsVision: boolean): Promise<Cat
 }
 
 /** Get the configured AI provider for the current request's tenant. */
-export async function getAIProvider(opts?: { needsVision?: boolean }): Promise<AIProvider> {
+export async function getAIProvider(opts?: {
+  needsVision?: boolean
+  userPaid?: boolean
+}): Promise<AIProvider> {
   const tenantId = await resolveAiTenantId()
-  const entry = await resolveEntry(tenantId, opts?.needsVision ?? false)
+  const entry = await resolveEntry(tenantId, opts?.needsVision ?? false, opts?.userPaid)
   const { getSetting } = await import('@/lib/settings')
   const defaultModel = await getSetting(tenantId, 'AI_DEFAULT_MODEL')
   const model = defaultModel && entry.models.includes(defaultModel) ? defaultModel : undefined
@@ -215,6 +301,7 @@ export async function getAIProviderForPlan(tenantId: string, plan: string): Prom
       id: `cfg-${config.id ?? config.provider}`,
       key: config.provider,
       label: config.name,
+      cost: config.provider === 'anthropic' || config.provider === 'gemini' ? 'paid' : 'free',
       kind:
         config.provider === 'anthropic' ||
         config.provider === 'gemini' ||

@@ -35,6 +35,9 @@ async function checkAdmin(): Promise<string> {
 }
 
 function validate(input: Partial<CatalogInput>): string | null {
+  if (input.cost !== undefined && !['free', 'paid'].includes(input.cost)) {
+    return "cost must be 'free' or 'paid\'"
+  }
   if (input.key !== undefined && !/^[a-z0-9][a-z0-9_-]{1,40}$/.test(input.key)) {
     return 'Key must be lowercase letters, digits, "-" or "_" (2-41 chars)'
   }
