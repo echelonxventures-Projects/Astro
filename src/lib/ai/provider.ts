@@ -7,13 +7,7 @@
  */
 
 import type { CatalogEntry } from './catalog'
-import {
-  buildProviderFromEntry,
-  getEntry,
-  isUsable,
-  listCatalog,
-  selectProviderEntry,
-} from './catalog'
+import { buildProviderFromEntry, getEntry, isUsable, listCatalog } from './catalog'
 import { DEFAULT_TENANT_ID, resolveTenantByHost } from '@/lib/tenant'
 
 export interface AIProviderConfig {
@@ -105,7 +99,7 @@ async function legacyEntry(tenantId: string): Promise<CatalogEntry | null> {
       kind: 'openai-compatible',
       baseUrl: 'https://openrouter.ai/api/v1',
       apiKey: openrouterKey,
-      models: [m['AI_MODEL'] || 'meta-llama/llama-3.2-3b-instruct:free'],
+      models: [m['AI_MODEL'] || 'inclusionai/ling-3.0-flash-vl:free'],
       capabilities: ['vision'],
       options: {
         extraHeaders: {
@@ -123,7 +117,7 @@ async function legacyEntry(tenantId: string): Promise<CatalogEntry | null> {
       kind: 'openai-compatible',
       baseUrl: 'https://integrate.api.nvidia.com/v1',
       apiKey: nvidiaKey,
-      models: [m['AI_MODEL'] || 'meta/llama-3.1-8b-instruct'],
+      models: [m['AI_MODEL'] || 'deepseek-ai/deepseek-r1'],
     })
   }
   const ollamaUrl = m['OLLAMA_URL'] || 'http://localhost:11434'
@@ -220,7 +214,7 @@ async function resolveEntry(
   tenantId: string,
   needsVision: boolean,
   userPaidHint?: boolean
-): Promise<CatalogEntry> {
+): Promise<CatalogEntry[]> {
   const { prisma } = await import('@/lib/db')
   const { resolveAiPolicy } = await import('./catalog')
   const tenant = await prisma.tenant.findUnique({
@@ -241,15 +235,18 @@ async function resolveEntry(
     const cfg = await getAIPlanConfig(tenantId, ctx.planKey)
     if (cfg?.enabled) binding = await getEntry(tenantId, cfg.provider)
   }
-  const sel = selectProviderEntry({ entries, policy, userPaid, needsVision, binding })
-  if (sel.entry) return sel.entry
+  const { rankProviderEntries, probeCatalogEntry } = await import('./catalog')
+  const ranked = rankProviderEntries({ entries, policy, userPaid, needsVision, binding })
+  const probed = await Promise.all(ranked.map(async e => ({ e, ok: await probeCatalogEntry(e) })))
+  const live = probed.filter(x => x.ok).map(x => x.e)
+  if (live.length > 0) return live
 
   const legacy = await legacyEntry(tenantId)
   if (!legacy) {
     throw new Error(
-      sel.reason === 'no-free-vision-provider'
+      needsVision && policy.gatePaidProviders && !userPaid
         ? 'No free vision-capable AI provider is configured for this platform. Add one in Settings → Providers.'
-        : `No AI provider configured for tenant ${tenantId} (policy: ${sel.reason})`
+        : `No AI provider configured for tenant ${tenantId}. Add one in Settings → Providers.`
     )
   }
   if (policy.gatePaidProviders && !userPaid && legacy.cost === 'paid') {
@@ -262,7 +259,7 @@ async function resolveEntry(
       `The active AI provider "${legacy.label}" does not support vision. Add a vision-capable provider in Settings → Providers.`
     )
   }
-  return legacy
+  return [legacy]
 }
 
 /** Get the configured AI provider for the current request's tenant. */
@@ -271,11 +268,13 @@ export async function getAIProvider(opts?: {
   userPaid?: boolean
 }): Promise<AIProvider> {
   const tenantId = await resolveAiTenantId()
-  const entry = await resolveEntry(tenantId, opts?.needsVision ?? false, opts?.userPaid)
+  const entries = await resolveEntry(tenantId, opts?.needsVision ?? false, opts?.userPaid)
   const { getSetting } = await import('@/lib/settings')
+  const { buildProviderChain } = await import('./catalog')
   const defaultModel = await getSetting(tenantId, 'AI_DEFAULT_MODEL')
-  const model = defaultModel && entry.models.includes(defaultModel) ? defaultModel : undefined
-  return buildProviderFromEntry(entry, { model })
+  return buildProviderChain(entries, e => ({
+    model: defaultModel && e.models.includes(defaultModel) ? defaultModel : undefined,
+  }))
 }
 
 /**

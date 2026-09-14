@@ -162,6 +162,11 @@ export async function POST(req: NextRequest) {
     })
   } catch (error) {
     logger.debug({ error, userId: session.user.id }, 'Error generating reading')
-    return NextResponse.json({ error: 'Failed to generate reading' }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: `Failed to generate reading: ${(error instanceof Error ? error.message : 'Unknown error').slice(0, 300)}`,
+      },
+      { status: 502 }
+    )
   }
 }

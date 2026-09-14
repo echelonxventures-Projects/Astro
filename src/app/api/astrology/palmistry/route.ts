@@ -80,6 +80,11 @@ If the palm image is unclear or lines cannot be distinguished, politely explain 
     return NextResponse.json({ reading })
   } catch (error) {
     logError('Error analyzing palm', error, { userId: session.user.id })
-    return NextResponse.json({ error: 'Failed to analyze palm' }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: `Failed to analyze palm: ${(error instanceof Error ? error.message : 'Unknown error').slice(0, 300)}`,
+      },
+      { status: 502 }
+    )
   }
 }
