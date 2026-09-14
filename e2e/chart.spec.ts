@@ -90,12 +90,12 @@ test.describe('Birth Chart Creation', () => {
 
     test('birth place autocomplete suggests and fills coordinates', async ({ page }) => {
       const cityInput = page.getByPlaceholder('Search city, country...')
-      await cityInput.fill('New York')
-      await expect(page.locator('button', { hasText: /new york/i }).first()).toBeVisible({
+      await cityInput.fill('Kathmandu')
+      await expect(page.locator('button', { hasText: /kathmandu/i }).first()).toBeVisible({
         timeout: 20000,
       })
       await page
-        .locator('button', { hasText: /new york/i })
+        .locator('button', { hasText: /kathmandu/i })
         .first()
         .click()
       await expect(page.locator('input[type="number"]').first()).not.toHaveValue('', {

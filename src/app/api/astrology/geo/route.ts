@@ -31,12 +31,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Query too long' }, { status: 400 })
   }
 
-  const cacheKey = `geo:nominatim:${q.toLowerCase()}`
+  const cacheKey = `geo:nominatim:en:${q.toLowerCase()}`
   try {
     const cached = await cacheGet<GeoResult[]>(cacheKey)
     if (cached) return NextResponse.json({ results: cached })
 
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5&addressdetails=1`
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5&addressdetails=1&accept-language=en`
     const ctrl = new AbortController()
     const timer = setTimeout(() => ctrl.abort(), 8000)
     const res = await fetch(url, {

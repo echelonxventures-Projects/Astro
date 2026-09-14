@@ -429,39 +429,42 @@ export default function BirthChartPage() {
                 </div>
 
                 {/* Location Search Dropdown */}
-                {showDropdown && (searchResults.length > 0 || searchingLocation) && (
-                  <div className="absolute z-50 w-full mt-1 bg-gray-900 border border-purple-500/30 rounded-xl shadow-2xl max-h-64 overflow-y-auto">
-                    {searchingLocation ? (
-                      <div className="p-4 text-center text-purple-300">
-                        <Loader2 className="w-5 h-5 animate-spin inline mr-2" />
-                        Searching locations...
-                      </div>
-                    ) : (
-                      searchResults.map((location, index) => (
-                        <button
-                          key={index}
-                          type="button"
-                          onClick={() => selectLocation(location)}
-                          className="w-full px-4 py-3 text-left hover:bg-purple-600/30 transition flex items-start gap-3 border-b border-purple-500/10 last:border-0"
-                        >
-                          <MapPin className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <div className="font-medium text-white">{location.name}</div>
-                            {(location.state || location.country) && (
-                              <div className="text-sm text-purple-300">
-                                {[location.state, location.country].filter(Boolean).join(', ')}
+                {showDropdown &&
+                  (searchResults.length > 0 ||
+                    searchingLocation ||
+                    formData.birthPlace.length >= 3) && (
+                    <div className="absolute z-50 w-full mt-1 bg-gray-900 border border-purple-500/30 rounded-xl shadow-2xl max-h-64 overflow-y-auto">
+                      {searchingLocation ? (
+                        <div className="p-4 text-center text-purple-300">
+                          <Loader2 className="w-5 h-5 animate-spin inline mr-2" />
+                          Searching locations...
+                        </div>
+                      ) : (
+                        searchResults.map((location, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => selectLocation(location)}
+                            className="w-full px-4 py-3 text-left hover:bg-purple-600/30 transition flex items-start gap-3 border-b border-purple-500/10 last:border-0"
+                          >
+                            <MapPin className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <div className="font-medium text-white">{location.name}</div>
+                              {(location.state || location.country) && (
+                                <div className="text-sm text-purple-300">
+                                  {[location.state, location.country].filter(Boolean).join(', ')}
+                                </div>
+                              )}
+                              <div className="text-xs text-purple-400 mt-1">
+                                Lat: {parseFloat(location.latitude).toFixed(4)}, Lon:{' '}
+                                {parseFloat(location.longitude).toFixed(4)}
                               </div>
-                            )}
-                            <div className="text-xs text-purple-400 mt-1">
-                              Lat: {parseFloat(location.latitude).toFixed(4)}, Lon:{' '}
-                              {parseFloat(location.longitude).toFixed(4)}
                             </div>
-                          </div>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                )}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
               </div>
 
               {/* Coordinates */}
