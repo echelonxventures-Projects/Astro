@@ -124,49 +124,112 @@ export interface SelectionResult {
  *  - preferFreeFirst: among candidates, free cost class before paid
  *  - within a class: explicit isDefault, then options.priority/sortOrder
  */
-export function selectProviderEntry({
+export function rankProviderEntries({
   entries,
   policy,
   userPaid,
   needsVision = false,
   binding,
-}: SelectionInput): SelectionResult {
+}: SelectionInput): CatalogEntry[] {
   const visionOk = (e: CatalogEntry) => !needsVision || e.capabilities.includes('vision')
-  const gatedPaidAllowed = !policy.gatePaidProviders || userPaid
+  const gateAllowed = (e: CatalogEntry) =>
+    !policy.gatePaidProviders || userPaid || e.cost === 'free'
+  const head: CatalogEntry[] = binding && visionOk(binding) && gateAllowed(binding) ? [binding] : []
+  const rank = (e: CatalogEntry) => e.options.priority ?? e.sortOrder + 100
+  const byClass = (e: CatalogEntry) => (policy.preferFreeFirst && e.cost === 'free' ? 0 : 1)
+  const pool = entries
+    .filter(e => visionOk(e) && gateAllowed(e) && e.key !== binding?.key)
+    .sort((a, b) => {
+      const cls = byClass(a) - byClass(b)
+      if (cls !== 0) return cls
+      if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1
+      return rank(a) - rank(b)
+    })
+  return [...head, ...pool]
+}
 
-  if (binding && visionOk(binding) && (gatedPaidAllowed || binding.cost === 'free')) {
-    return { entry: binding, reason: 'plan-binding' }
+export function selectProviderEntry(input: SelectionInput): SelectionResult {
+  const list = rankProviderEntries(input)
+  const entry = list[0] ?? null
+  let reason: string
+  if (!entry) {
+    reason =
+      input.policy.gatePaidProviders && !input.userPaid && input.needsVision
+        ? 'no-free-vision-provider'
+        : 'no-usable-provider'
+  } else if (input.binding && entry.key === input.binding.key) {
+    reason = 'plan-binding'
+  } else if (input.binding) {
+    reason = 'binding-blocked-by-policy'
+  } else if (input.policy.preferFreeFirst && entry.cost === 'free') {
+    reason = 'prefer-free-first'
+  } else {
+    reason = 'policy-priority'
   }
+  return { entry, reason }
+}
 
-  let pool = entries.filter(visionOk)
-  if (policy.gatePaidProviders && !userPaid) {
-    pool = pool.filter(e => e.cost === 'free')
+/** Entries with a checkUrl get probed so dead local servers (e.g. Ollama off) drop out. */
+export async function probeCatalogEntry(e: CatalogEntry): Promise<boolean> {
+  const url = e.options.checkUrl
+  if (!url) return true
+  try {
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), 1500)
+    const res = await fetch(url, { method: 'GET', signal: ctrl.signal })
+    clearTimeout(timer)
+    return res.status < 500
+  } catch {
+    return false
   }
-  if (pool.length === 0) {
-    return {
-      entry: null,
-      reason:
-        policy.gatePaidProviders && !userPaid && needsVision
-          ? 'no-free-vision-provider'
-          : 'no-usable-provider',
+}
+
+/**
+ * Ordered fail-over chain: when one provider errors (bad key, model
+ * unavailable, outage, rate limit) the next-ranked candidate is tried.
+ */
+export async function buildProviderChain(
+  ordered: CatalogEntry[],
+  overrides?: (e: CatalogEntry) => { model?: string; maxTokens?: number }
+): Promise<AIProvider> {
+  const attempts: { label: string; provider: AIProvider }[] = []
+  for (const e of ordered) {
+    try {
+      const provider = await buildProviderFromEntry(e, overrides ? overrides(e) : undefined)
+      attempts.push({ label: `${e.label} [${e.key}]`, provider })
+    } catch {
+      /* unusable definition - skip */
     }
   }
-  const rank = (e: CatalogEntry): number => e.options.priority ?? e.sortOrder + 100
-  const byClass = (e: CatalogEntry): number => (policy.preferFreeFirst && e.cost === 'free' ? 0 : 1)
-  pool = [...pool].sort((a, b) => {
-    const cls = byClass(a) - byClass(b)
-    if (cls !== 0) return cls
-    if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1
-    return rank(a) - rank(b)
-  })
-  const paidUserFreePick = userPaid && policy.preferFreeFirst && pool[0].cost === 'free'
+  if (attempts.length === 0)
+    throw new Error('No usable AI provider configured. Add one in Settings -> Providers.')
+
   return {
-    entry: pool[0],
-    reason: binding
-      ? 'binding-blocked-by-policy'
-      : paidUserFreePick
-        ? 'prefer-free-first'
-        : 'policy-priority',
+    name: attempts.map(a => a.label).join(' -> '),
+    supportsVision: attempts.some(a => a.provider.supportsVision),
+    async complete(request) {
+      const errors: string[] = []
+      for (const a of attempts) {
+        try {
+          return await a.provider.complete(request)
+        } catch (err) {
+          errors.push(`${a.label}: ${err instanceof Error ? err.message : String(err)}`)
+        }
+      }
+      throw new Error(`No AI provider responded. ${errors.slice(0, 3).join(' | ')}`)
+    },
+    async completeWithVision(request) {
+      const errors: string[] = []
+      for (const a of attempts) {
+        if (!a.provider.completeWithVision) continue
+        try {
+          return await a.provider.completeWithVision(request)
+        } catch (err) {
+          errors.push(`${a.label}: ${err instanceof Error ? err.message : String(err)}`)
+        }
+      }
+      throw new Error(`No vision-capable AI provider responded. ${errors.slice(0, 3).join(' | ')}`)
+    },
   }
 }
 
@@ -304,7 +367,7 @@ export async function ensureDefaultCatalog(tenantId: string, tenantName: string)
       cost: 'free' as const,
       baseUrl: 'https://openrouter.ai/api/v1',
       apiKey: process.env.OPENROUTER_API_KEY || null,
-      models: ['meta-llama/llama-3.2-3b-instruct:free', 'google/gemma-3-1b-it:free'],
+      models: ['inclusionai/ling-3.0-flash-vl:free', 'nex-agi/nex-n2.5-mini:free'],
       capabilities: ['vision'],
       options: {
         extraHeaders: {
@@ -321,7 +384,7 @@ export async function ensureDefaultCatalog(tenantId: string, tenantName: string)
       cost: 'free' as const,
       baseUrl: 'https://integrate.api.nvidia.com/v1',
       apiKey: process.env.NVIDIA_API_KEY || null,
-      models: ['meta/llama-3.1-8b-instruct'],
+      models: ['deepseek-ai/deepseek-r1', 'meta/llama-3.1-70b-instruct'],
       capabilities: [],
       options: { priority: 15 },
     },

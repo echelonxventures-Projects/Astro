@@ -84,6 +84,11 @@ If the face image is unclear or features cannot be distinguished, politely expla
     return NextResponse.json({ reading })
   } catch (error) {
     logError('Error analyzing face', error, { userId: session.user.id })
-    return NextResponse.json({ error: 'Failed to analyze face' }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: `Failed to analyze face: ${(error instanceof Error ? error.message : 'Unknown error').slice(0, 300)}`,
+      },
+      { status: 502 }
+    )
   }
 }
